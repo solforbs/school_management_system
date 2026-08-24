@@ -1,66 +1,92 @@
 <x-layouts::app :title="__('Import Timetable')">
-    <div class="p-4">
-
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="border-b border-gray-200 px-6 py-4 bg-gray-50 rounded-t-lg">
-                <h4 class="text-lg font-semibold text-gray-900 mb-0">Import Timetable</h4>
-                <small class="text-sm text-gray-500">
-                    Upload a CSV or Excel file for a single class. This replaces that class's existing timetable
-                    &mdash; other classes are never affected.
-                </small>
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Import Timetable</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Upload a CSV or Excel file to bulk import a schedule for a single class. 
+                    <br>This replaces that class's existing timetable — other classes are never affected.
+                </flux:text>
             </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('timetable.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Timetables
+                </flux:button>
+            </div>
+        </div>
 
-            @if (session('error'))
-                <div class="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        @if (session('error'))
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm font-medium text-red-800 dark:text-red-400">
                     {{ session('error') }}
                 </div>
-            @endif
+            </div>
+        @endif
 
-            @if ($errors->any())
-                <div class="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    <ul class="list-disc list-inside">
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented the import:</p>
+                    <ul class="list-disc list-inside space-y-1">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
                         @endforeach
                     </ul>
                 </div>
-            @endif
+            </div>
+        @endif
 
+        <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
             <form action="{{ route('timetable.import.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
-                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <flux:select name="class_id" label="Class">
-                        <flux:select.option value="">Select Class</flux:select.option>
-                        @foreach ($classes as $schoolClass)
-                            <flux:select.option value="{{ $schoolClass->id }}"
-                                :selected="old('class_id') == $schoolClass->id">
-                                {{ $schoolClass->name }}
-                            </flux:select.option>
-                        @endforeach
-                    </flux:select>
+                <div class="p-6 md:p-8 space-y-8">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:select name="class_id" label="Target Class" required>
+                            <flux:select.option value="">Select a class...</flux:select.option>
+                            @foreach ($classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id') == $schoolClass->id">
+                                    {{ $schoolClass->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                    <flux:input type="file" name="file" label="CSV / XLS / XLSX File" accept=".csv,.txt,.xls,.xlsx"
-                        required />
-
-                    <div class="md:col-span-2 rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-                        <p class="font-medium text-gray-800 mb-1">Expected columns (header row required):</p>
-                        <p>Day &middot; Start Time &middot; End Time &middot; Subject &middot; Teacher Email
-                            (optional) &middot; Room (optional)</p>
-                        <p class="mt-2">Rows with Subject left blank, or set to "BREAK"/"LUNCH", are skipped
-                            automatically.</p>
-                        <a href="{{ route('timetable.import.template') }}"
-                            class="inline-block mt-2 text-blue-600 hover:underline">Download a blank CSV template
-                            &rarr;</a>
+                        <flux:input type="file" name="file" label="CSV / XLS / XLSX File" accept=".csv,.txt,.xls,.xlsx" required />
                     </div>
+
+                    <div class="rounded-xl border border-blue-200/50 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800/30 p-5 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <flux:icon icon="information-circle" class="size-5 text-blue-500 mt-0.5 shrink-0" />
+                            <div class="text-sm text-blue-800 dark:text-blue-300">
+                                <p class="font-semibold mb-2 text-blue-900 dark:text-blue-200">Formatting Instructions:</p>
+                                <ul class="list-disc list-inside space-y-1.5 mb-4">
+                                    <li><strong>Expected Columns:</strong> Day, Start Time, End Time, Subject, Teacher Email (optional), Room (optional).</li>
+                                    <li>A header row is required.</li>
+                                    <li>Rows where the Subject is blank, or exactly "BREAK" or "LUNCH", will be skipped automatically.</li>
+                                </ul>
+                                <a href="{{ route('timetable.import.template') }}" class="inline-flex items-center gap-1.5 font-semibold hover:text-blue-600 transition-colors bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-md border border-blue-200/50 dark:border-blue-800/30 shadow-sm">
+                                    <flux:icon icon="arrow-down-tray" class="size-4" />
+                                    Download Blank CSV Template
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
-                <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
-                    <a href="{{ route('timetable.index') }}"
-                        class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <div class="border-t border-zinc-200 dark:border-zinc-800 px-6 py-4 bg-zinc-50/50 dark:bg-zinc-800/20 flex justify-end gap-3">
+                    <flux:button href="{{ route('timetable.index') }}" variant="subtle" class="font-semibold shadow-sm">
                         Cancel
-                    </a>
-                    <flux:button variant="primary" type="submit">Upload &amp; Merge</flux:button>
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" icon="arrow-up-tray" class="font-semibold shadow-sm px-6">
+                        Upload & Merge
+                    </flux:button>
                 </div>
             </form>
         </div>

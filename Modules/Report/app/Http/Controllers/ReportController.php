@@ -41,6 +41,9 @@ class ReportController extends Controller
 
         abort_unless($user->can('export report'), 403);
 
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
+
         if ($user->hasRole('Admin') || $user->hasRole('Director')) {
             return $this->exportWorkbook($user);
         }
@@ -50,11 +53,14 @@ class ReportController extends Controller
 
     private function exportWorkbook(User $user): StreamedResponse
     {
+        @ini_set('memory_limit', '512M');
+
         ['filename' => $filename, 'spreadsheet' => $spreadsheet] = $this->export->forUser($user);
 
         $writer = new Xlsx($spreadsheet);
 
         return response()->streamDownload(function () use ($writer) {
+            @ini_set('memory_limit', '512M');
             $writer->save('php://output');
         }, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

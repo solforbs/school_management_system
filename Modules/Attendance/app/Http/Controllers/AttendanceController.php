@@ -49,6 +49,46 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Export attendance logs to CSV stream with active filters applied.
+     */
+    public function export(Request $request)
+    {
+        abort_unless(Auth::user()->can('view attendance'), 403);
+
+        $user = Auth::user();
+        $institutionId = $this->resolveInstitutionId($user);
+        $institution = $institutionId ? Institution::find($institutionId) : null;
+
+        abort_unless($institution, 404, 'No institution found.');
+
+        $query = $this->scopedAttendanceLogs($institution, $user, $request)
+            ->orderByDesc('occurred_at');
+
+        $filename = 'attendance-logs-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Student Name', 'Admission No', 'Device / Terminal', 'Status', 'Verify Mode', 'Date & Time']);
+
+            $query->chunk(500, function ($logs) use ($handle) {
+                foreach ($logs as $log) {
+                    $row = $this->toDisplayRow($log);
+                    fputcsv($handle, [
+                        $row['student_name'],
+                        $row['admission_number'],
+                        $row['device_name'],
+                        $row['status_label'],
+                        $row['verify_mode_label'],
+                        $row['occurred_at'],
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
      * List student attendance recorded on devices belonging to an institution.
      */
     public function institutionAttendance(Request $request, int $institution)

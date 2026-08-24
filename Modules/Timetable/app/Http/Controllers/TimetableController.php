@@ -75,6 +75,11 @@ class TimetableController extends Controller
 
         $grid = null;
         $periods = collect();
+        $totalWeeklyPeriods = $entries->count();
+        $uniqueStreamsCount = $entries->pluck('class_id')->filter()->unique()->count();
+        $uniqueSubjectsCount = $entries->pluck('subject')->filter()->unique()->count();
+        $currentDayName = now()->format('l');
+        $todayPeriodsCount = $entries->where('day_of_week', $currentDayName)->count();
 
         if ($isTeacher || $selectedClass) {
             $periods = $entries
@@ -90,7 +95,23 @@ class TimetableController extends Controller
             }
         }
 
-        return view('timetable::index', compact('classes', 'selectedClass', 'grid', 'periods', 'days', 'isStudent', 'isParent', 'isTeacher', 'showPicker'));
+        return view('timetable::index', compact(
+            'classes',
+            'selectedClass',
+            'entries',
+            'grid',
+            'periods',
+            'days',
+            'isStudent',
+            'isParent',
+            'isTeacher',
+            'showPicker',
+            'totalWeeklyPeriods',
+            'uniqueStreamsCount',
+            'uniqueSubjectsCount',
+            'todayPeriodsCount',
+            'currentDayName'
+        ));
     }
 
     /**

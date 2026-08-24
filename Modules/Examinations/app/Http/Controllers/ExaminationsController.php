@@ -20,21 +20,70 @@ class ExaminationsController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         abort_unless(Auth::user()->can('view examination'), 403);
 
+        $baseQuery = Examination::query();
+        $this->scopeToViewer($baseQuery);
+
+        $today = now()->startOfDay();
+        $totalExams = (clone $baseQuery)->count();
+        $upcomingCount = (clone $baseQuery)->whereDate('exam_date', '>=', $today)->count();
+        $pastCount = (clone $baseQuery)->whereDate('exam_date', '<', $today)->count();
+        $distinctSubjectsCount = (clone $baseQuery)->distinct('subject_id')->count('subject_id');
+
         $query = Examination::with(['institution', 'schoolClass', 'subject']);
         $this->scopeToViewer($query);
+
+        if ($request->filled('search')) {
+            $search = $request->string('search')->trim();
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('term', 'like', "%{$search}%")
+                    ->orWhereHas('subject', fn ($sq) => $sq->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('schoolClass', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($request->filled('subject_id')) {
+            $query->where('subject_id', $request->input('subject_id'));
+        }
+
+        if ($request->filled('class_id')) {
+            $query->where('class_id', $request->input('class_id'));
+        }
+
+        if ($request->filled('timeline')) {
+            $timeline = $request->input('timeline');
+            if ($timeline === 'today') {
+                $query->whereDate('exam_date', $today);
+            } elseif ($timeline === 'upcoming') {
+                $query->whereDate('exam_date', '>', $today);
+            } elseif ($timeline === 'past') {
+                $query->whereDate('exam_date', '<', $today);
+            }
+        }
 
         $examinations = $this->applySort(
             $query,
             sortable: ['title', 'exam_date', 'total_marks'],
             defaultColumn: 'exam_date',
             defaultDirection: 'asc',
-        )->get();
+        )->paginate(15)->withQueryString();
 
-        return view('examinations::index', compact('examinations'));
+        $subjects = $this->scopedSubjects();
+        $classes = $this->scopedClasses();
+
+        return view('examinations::index', compact(
+            'examinations',
+            'subjects',
+            'classes',
+            'totalExams',
+            'upcomingCount',
+            'pastCount',
+            'distinctSubjectsCount'
+        ));
     }
 
     /**

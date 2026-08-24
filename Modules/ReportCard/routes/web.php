@@ -16,5 +16,6 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::delete('report-cards/settings/grading-bands/{gradingBand}', [ReportSettingsController::class, 'destroyGradingBand'])->name('reportcard.gradingbands.destroy');
 
     Route::get('report-cards', [ReportCardController::class, 'index'])->name('reportcard.index');
+    Route::get('report-cards/{reportcard}/pdf', [ReportCardController::class, 'pdf'])->name('reportcard.pdf');
     Route::get('report-cards/{reportcard}', [ReportCardController::class, 'show'])->name('reportcard.show');
 });

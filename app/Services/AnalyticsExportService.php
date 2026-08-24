@@ -247,15 +247,19 @@ class AnalyticsExportService
     {
         $start = now()->subDays(29)->startOfDay();
 
-        $counts = $query->where('occurred_at', '>=', $start)
-            ->get(['occurred_at'])
-            ->groupBy(fn ($log) => $log->occurred_at->format('Y-m-d'))
-            ->map->count();
+        $counts = (clone $query)
+            ->where('occurred_at', '>=', $start)
+            ->toBase()
+            ->selectRaw('DATE(occurred_at) as log_date, count(*) as total')
+            ->groupBy('log_date')
+            ->pluck('total', 'log_date');
 
         $rows = collect();
         for ($i = 29; $i >= 0; $i--) {
             $date = now()->subDays($i);
-            $rows->push([$date->format('Y-m-d'), $counts->get($date->format('Y-m-d'), 0)]);
+            $key = $date->format('Y-m-d');
+            $count = (int) ($counts->get($key) ?? $counts->get($date->format('Y-m-d 00:00:00')) ?? 0);
+            $rows->push([$key, $count]);
         }
 
         $this->addSheet($spreadsheet, 'Attendance (30 days)', ['Date', 'Check-ins'], $rows);

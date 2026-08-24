@@ -92,4 +92,39 @@ class Fee extends Model
 
         return 'pending';
     }
+
+    public function scopePaid($query)
+    {
+        return $query->whereColumn('amount_paid', '>=', 'amount');
+    }
+
+    public function scopePartial($query)
+    {
+        return $query->where('amount_paid', '>', 0)->whereColumn('amount_paid', '<', 'amount');
+    }
+
+    public function scopeOverdue($query)
+    {
+        return $query->whereColumn('amount_paid', '<', 'amount')->where('due_date', '<', now()->toDateString());
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('amount_paid')->orWhere('amount_paid', '<=', 0);
+        })->where(function ($q) {
+            $q->whereNull('due_date')->orWhere('due_date', '>=', now()->toDateString());
+        });
+    }
+
+    public function scopeWithStatus($query, string $status)
+    {
+        return match ($status) {
+            'paid' => $query->paid(),
+            'partial' => $query->partial(),
+            'overdue' => $query->overdue(),
+            'pending' => $query->pending(),
+            default => $query,
+        };
+    }
 }

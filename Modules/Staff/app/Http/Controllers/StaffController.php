@@ -33,20 +33,57 @@ class StaffController extends Controller
     {
         abort_unless(Auth::user()->can('view staff'), 403);
 
+        $institution = currentInstitution();
+        $institutionId = $institution?->id ?? 0;
+
         $query = StaffDetails::with(['user', 'institution']);
 
         if (! isAdmin()) {
-            $query->where('institution_id', currentInstitution()?->id ?? 0);
+            $query->where('institution_id', $institutionId);
         }
+
+        $search = request('search');
+        if (! empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('staff_number', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', 'LIKE', "%{$search}%")
+                    ->orWhere('job_title', 'LIKE', "%{$search}%")
+                    ->orWhere('department', 'LIKE', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('email', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        $department = request('department');
+        if (! empty($department)) {
+            $query->where('department', $department);
+        }
+
+        $status = request('status');
+        if (! empty($status)) {
+            $query->where('status', $status);
+        }
+
+        $baseQuery = StaffDetails::query();
+        if (! isAdmin()) {
+            $baseQuery->where('institution_id', $institutionId);
+        }
+
+        $totalStaffCount = (clone $baseQuery)->count();
+        $departments = (clone $baseQuery)->whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
+        $deptCount = count($departments);
+        $totalPayroll = (float) (clone $baseQuery)->sum('salary');
 
         $staff = $this->applySort(
             $query,
             sortable: ['name', 'staff_number', 'job_title', 'department', 'salary'],
             defaultColumn: 'created_at',
             defaultDirection: 'desc',
-        )->paginate(10)->withQueryString();
+        )->paginate(15)->withQueryString();
 
-        return view('staff::index', compact('staff'));
+        return view('staff::index', compact('staff', 'departments', 'totalStaffCount', 'deptCount', 'totalPayroll', 'institution'));
     }
 
     /**

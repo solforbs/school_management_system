@@ -36,17 +36,43 @@ class ResultController extends Controller
             ->when($classId, fn ($q) => $q->where('class_id', $classId))
             ->when($request->filled('examination_id'), fn ($q) => $q->where('examination_id', $request->integer('examination_id')));
 
+        $search = $request->string('search');
+        if ($search->isNotEmpty()) {
+            $query->where(function ($q) use ($search) {
+                $q->where('grade', $search)
+                    ->orWhereHas('student', function ($sq) use ($search) {
+                        $sq->where('name', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('student.studentUserDetails', function ($suq) use ($search) {
+                        $suq->where('admission_number', 'LIKE', "%{$search}%")
+                            ->orWhere('student_number', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('examination', function ($eq) use ($search) {
+                        $eq->where('title', 'LIKE', "%{$search}%")
+                            ->orWhere('term', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        $kpiQuery = clone $query;
+        $totalResultsCount = $kpiQuery->count();
+        $avgScore = $totalResultsCount > 0 ? round((float) $kpiQuery->avg('marks_obtained'), 1) : 0;
+        $highScore = $totalResultsCount > 0 ? (float) $kpiQuery->max('marks_obtained') : 0;
+        $passingCount = $totalResultsCount > 0 ? (clone $kpiQuery)->where('marks_obtained', '>=', 50)->count() : 0;
+        $passRate = $totalResultsCount > 0 ? round(($passingCount / $totalResultsCount) * 100, 1) : 100;
+
         $results = $this->applySort(
             $query,
             sortable: ['marks_obtained', 'grade'],
             defaultColumn: 'grade',
             defaultDirection: 'asc',
-        )->paginate(10)->withQueryString();
+        )->paginate(15)->withQueryString();
 
         $classes = $this->scopedClasses();
         $examinations = $this->scopedExaminations($classId);
+        $institution = currentInstitution();
 
-        return view('result::index', compact('results', 'classes', 'examinations'));
+        return view('result::index', compact('results', 'classes', 'examinations', 'totalResultsCount', 'avgScore', 'highScore', 'passRate', 'institution'));
     }
 
     /**

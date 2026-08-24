@@ -20,24 +20,67 @@ class TeacherController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         abort_unless(Auth::user()->can('view teacher'), 403);
 
-        $query = TeacherDetails::with(['teacher', 'institution']);
+        $institution = currentInstitution();
+        $institutionId = $institution?->id ?? 0;
 
+        $baseQuery = TeacherDetails::query();
         if (! isAdmin()) {
-            $query->where('institution_id', currentInstitution()?->id ?? 0);
+            $baseQuery->where('institution_id', $institutionId);
+        }
+
+        // DB-level KPIs with zero hydration overhead
+        $totalTeachers = (clone $baseQuery)->count();
+        $totalActive = (clone $baseQuery)->where('is_active', true)->count();
+        $totalDepartments = (clone $baseQuery)->whereNotNull('department')->where('department', '!=', '')->distinct()->count('department');
+
+        // Get distinct departments list for dropdown
+        $departments = (clone $baseQuery)->whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
+
+        $query = (clone $baseQuery)->with(['teacher', 'institution']);
+
+        // Search Filter
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_number', 'LIKE', "%{$search}%")
+                    ->orWhere('department', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', 'LIKE', "%{$search}%")
+                    ->orWhere('qualification', 'LIKE', "%{$search}%")
+                    ->orWhereHas('teacher', function ($tq) use ($search) {
+                        $tq->where('name', 'LIKE', "%{$search}%")
+                            ->orWhere('email', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        // Department Filter
+        if ($request->filled('department')) {
+            $query->where('department', $request->input('department'));
+        }
+
+        // Status Filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
         }
 
         $teachers = $this->applySort(
             $query,
-            sortable: ['employee_number', 'department', 'phone'],
+            sortable: ['employee_number', 'department', 'phone', 'status', 'created_at'],
             defaultColumn: 'created_at',
             defaultDirection: 'desc',
-        )->paginate(10)->withQueryString();
+        )->paginate(12)->withQueryString();
 
-        return view('teacher::index', compact('teachers'));
+        return view('teacher::index', [
+            'teachers' => $teachers,
+            'totalTeachers' => $totalTeachers,
+            'totalActive' => $totalActive,
+            'totalDepartments' => $totalDepartments,
+            'departments' => $departments,
+            'institution' => $institution,
+        ]);
     }
 
     /**
@@ -48,8 +91,9 @@ class TeacherController extends Controller
         abort_unless(Auth::user()->can('create teacher'), 403);
 
         $institutions = isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
+        $institution = currentInstitution();
 
-        return view('teacher::create', compact('institutions'));
+        return view('teacher::create', compact('institutions', 'institution'));
     }
 
     /**
@@ -70,40 +114,46 @@ class TeacherController extends Controller
             'qualification' => 'nullable|string|max:255',
             'hire_date' => 'nullable|date',
             'address' => 'nullable|string',
-            'status' => 'nullable|in:active,on_leave,suspended,resigned,terminated',
-            'notes' => 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'status' => 'nullable|string|in:active,on_leave,suspended,resigned,terminated',
+            'notes' => 'nullable|string',
         ]);
 
-        $validated['institution_id'] = isAdmin() ? $validated['institution_id'] : currentInstitution()?->id;
+        $institutionId = isAdmin() ? $validated['institution_id'] : currentInstitution()?->id;
 
-        abort_unless($validated['institution_id'], 422, 'No institution selected.');
+        DB::beginTransaction();
 
         try {
-            DB::transaction(function () use ($request, $validated) {
-                $teacher = User::create([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'password' => Hash::make($validated['password']),
-                ]);
-                $teacher->syncRoles('Teacher');
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
 
-                $teacherData = collect($validated)
-                    ->except(['name', 'email', 'password'])
-                    ->toArray();
-                $teacherData['teacher_id'] = $teacher->id;
-                $teacherData['is_active'] = $request->boolean('is_active', true);
+            $user->assignRole('Teacher');
 
-                $teacher->teacherUserDetails()->create($teacherData);
-            });
+            TeacherDetails::create([
+                'teacher_id' => $user->id,
+                'institution_id' => $institutionId,
+                'phone' => $validated['phone'] ?? null,
+                'employee_number' => $validated['employee_number'] ?? null,
+                'department' => $validated['department'] ?? null,
+                'qualification' => $validated['qualification'] ?? null,
+                'hire_date' => $validated['hire_date'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'is_active' => $request->boolean('is_active', true),
+                'status' => $validated['status'] ?? 'active',
+                'notes' => $validated['notes'] ?? null,
+            ]);
 
-            return redirect()->route('teacher.index')->with('success', 'Teacher created successfully!');
+            DB::commit();
+
+            return redirect()->route('teacher.index')->with('success', 'Teacher added successfully.');
         } catch (\Exception $e) {
-            Log::error('Teacher creation failed: '.$e->getMessage());
+            DB::rollBack();
+            Log::error('Error creating teacher: '.$e->getMessage());
 
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Failed to create teacher: '.$e->getMessage());
+            return back()->withInput()->withErrors(['error' => 'An error occurred while creating the teacher. Please try again.']);
         }
     }
 
@@ -114,11 +164,13 @@ class TeacherController extends Controller
     {
         abort_unless(Auth::user()->can('view teacher'), 403);
 
-        $teacherDetails = TeacherDetails::with(['teacher', 'institution'])->where('teacher_id', $id)->firstOrFail();
+        $teacherDetails = TeacherDetails::with(['teacher', 'institution'])
+            ->where('teacher_id', $id)
+            ->firstOrFail();
 
-        $this->authorizeAccessTo($teacherDetails);
+        $institution = currentInstitution();
 
-        return view('teacher::show', compact('teacherDetails'));
+        return view('teacher::show', compact('teacherDetails', 'institution'));
     }
 
     /**
@@ -128,13 +180,11 @@ class TeacherController extends Controller
     {
         abort_unless(Auth::user()->can('edit teacher'), 403);
 
-        $teacherDetails = TeacherDetails::with('teacher')->where('teacher_id', $id)->firstOrFail();
-
-        $this->authorizeAccessTo($teacherDetails);
-
+        $teacher = TeacherDetails::with('teacher')->where('teacher_id', $id)->firstOrFail();
         $institutions = isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
+        $institution = currentInstitution();
 
-        return view('teacher::edit', compact('teacherDetails', 'institutions'));
+        return view('teacher::edit', compact('teacher', 'institutions', 'institution'));
     }
 
     /**
@@ -142,15 +192,15 @@ class TeacherController extends Controller
      */
     public function update(Request $request, $id)
     {
-        abort_unless(Auth::user()->can('update teacher'), 403);
+        abort_unless(Auth::user()->can('edit teacher'), 403);
 
         $teacherDetails = TeacherDetails::where('teacher_id', $id)->firstOrFail();
-
-        $this->authorizeAccessTo($teacherDetails);
+        $user = $teacherDetails->teacher;
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,'.$id,
+            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
+            'password' => 'nullable|string|min:8',
             'institution_id' => ['nullable', 'exists:institutions,id'],
             'phone' => 'nullable|string|max:20',
             'employee_number' => 'nullable|string|max:100|unique:teacher_details,employee_number,'.$teacherDetails->id,
@@ -158,35 +208,48 @@ class TeacherController extends Controller
             'qualification' => 'nullable|string|max:255',
             'hire_date' => 'nullable|date',
             'address' => 'nullable|string',
-            'status' => 'nullable|in:active,on_leave,suspended,resigned,terminated',
-            'notes' => 'nullable|string',
             'is_active' => 'nullable|boolean',
+            'status' => 'nullable|string|in:active,on_leave,suspended,resigned,terminated',
+            'notes' => 'nullable|string',
         ]);
 
-        $validated['institution_id'] = isAdmin() ? $validated['institution_id'] : currentInstitution()?->id;
+        $institutionId = isAdmin() ? $validated['institution_id'] : currentInstitution()?->id;
 
-        abort_unless($validated['institution_id'], 422, 'No institution selected.');
+        DB::beginTransaction();
 
         try {
-            DB::transaction(function () use ($request, $validated, $teacherDetails) {
-                $teacherDetails->teacher->update([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                ]);
+            $userUpdates = [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+            ];
 
-                $teacherData = collect($validated)->except(['name', 'email'])->toArray();
-                $teacherData['is_active'] = $request->boolean('is_active');
+            if (! empty($validated['password'])) {
+                $userUpdates['password'] = Hash::make($validated['password']);
+            }
 
-                $teacherDetails->update($teacherData);
-            });
+            $user->update($userUpdates);
 
-            return redirect()->route('teacher.show', $id)->with('success', 'Teacher updated successfully!');
+            $teacherDetails->update([
+                'institution_id' => $institutionId,
+                'phone' => $validated['phone'] ?? null,
+                'employee_number' => $validated['employee_number'] ?? null,
+                'department' => $validated['department'] ?? null,
+                'qualification' => $validated['qualification'] ?? null,
+                'hire_date' => $validated['hire_date'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'is_active' => $request->boolean('is_active', true),
+                'status' => $validated['status'] ?? $teacherDetails->status,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('teacher.show', $user->id)->with('success', 'Teacher updated successfully.');
         } catch (\Exception $e) {
-            Log::error('Teacher update failed: '.$e->getMessage());
+            DB::rollBack();
+            Log::error('Error updating teacher: '.$e->getMessage());
 
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Failed to update teacher: '.$e->getMessage());
+            return back()->withInput()->withErrors(['error' => 'An error occurred while updating the teacher.']);
         }
     }
 
@@ -198,26 +261,24 @@ class TeacherController extends Controller
         abort_unless(Auth::user()->can('delete teacher'), 403);
 
         $teacherDetails = TeacherDetails::where('teacher_id', $id)->firstOrFail();
+        $user = $teacherDetails->teacher;
 
-        $this->authorizeAccessTo($teacherDetails);
+        DB::beginTransaction();
 
-        $teacher = User::findOrFail($id);
-        $teacherDetails->delete();
-        $teacher->delete();
+        try {
+            $teacherDetails->delete();
+            if ($user) {
+                $user->delete();
+            }
 
-        return redirect()->route('teacher.index')->with('success', 'Teacher removed successfully!');
-    }
+            DB::commit();
 
-    /**
-     * Ensure a non-admin viewer only manages teachers from their currently
-     * active institution.
-     */
-    private function authorizeAccessTo(TeacherDetails $teacherDetails): void
-    {
-        if (isAdmin()) {
-            return;
+            return redirect()->route('teacher.index')->with('success', 'Teacher removed successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting teacher: '.$e->getMessage());
+
+            return back()->withErrors(['error' => 'An error occurred while deleting the teacher.']);
         }
-
-        abort_unless($teacherDetails->institution_id === currentInstitution()?->id, 403);
     }
 }

@@ -7,7 +7,6 @@
     "FeeManagement": true,
     "Examinations": true,
     "Timetable": true,
-    "Library": true,
     "Curriculum": true,
     "Report": true,
     "Classes": true,

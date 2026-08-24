@@ -58,8 +58,16 @@ class FeeReceiptController extends Controller
         try {
             $extracted = $this->ocr->extractReceiptDetails($file->getRealPath(), $file->getMimeType());
         } catch (\Throwable $e) {
+            $errorMessage = $e->getMessage();
+
+            if (str_contains(strtolower($errorMessage), 'tesseract')) {
+                $userFriendlyMessage = 'The AI scanning engine is currently unavailable on this server. Please contact your system administrator.';
+            } else {
+                $userFriendlyMessage = "We couldn't process this receipt. Please ensure the image is clear and in a supported format, then try again.";
+            }
+
             return redirect()->route('feemanagement.receipts.create')
-                ->with('error', "Couldn't read this receipt: {$e->getMessage()}");
+                ->with('error', $userFriendlyMessage);
         }
 
         // PDFs pass through as-is (Intervention can't process them);

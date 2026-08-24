@@ -48,11 +48,10 @@ test('the admin sees a system-wide analytics dashboard', function () {
     $response->assertOk();
     $response->assertSee('Reports & Analytics');
     $response->assertSee('Riverside Academy');
-    $response->assertSee('Pending Approvals');
     $response->assertSee('Needs Your Attention');
     $response->assertSee('Lakeside College');
     $response->assertSee('Growth');
-    $response->assertSee('Fee Collection Trend');
+    $response->assertSee('Global Fee Collection Velocity');
     $response->assertSee('Institutions by Type');
 });
 
@@ -117,7 +116,7 @@ test('a director sees a robust analytics dashboard for their own institution', f
 
     $response->assertOk();
     $response->assertSee('Riverside Academy');
-    $response->assertSee('Fee Collection Trend');
+    $response->assertSee('Fee Collection Velocity Trend');
     $response->assertSee('Student Enrollment');
     $response->assertSee('Enrollment Status');
     $response->assertSee('Recent Students');

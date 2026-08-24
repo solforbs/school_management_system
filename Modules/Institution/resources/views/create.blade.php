@@ -1,147 +1,154 @@
-<x-layouts::app :title="__('Institution')">
-    <div class="p-4">
-
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="border-b border-gray-200 px-6 py-4 bg-gray-50 rounded-t-lg">
-                <h4 class="text-lg font-semibold text-gray-900 mb-0">Create Institution</h4>
-                <small class="text-sm text-gray-500">
-                    Enter the institution's details below.
-                </small>
+<x-layouts::app :title="__('Create Workspace')">
+    <div x-data="{ 
+            photoPreview: null,
+            updatePhotoPreview() {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                };
+                if (this.$refs.photo.files[0]) {
+                    reader.readAsDataURL(this.$refs.photo.files[0]);
+                }
+            }
+        }" 
+        class="pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8"
+    >
+        {{-- Welcome Header --}}
+        <div class="pt-2 pb-12 text-center px-4">
+            <div class="inline-flex size-16 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-500/10 mb-6 shadow-sm ring-1 ring-violet-500/20">
+                <flux:icon icon="sparkles" class="size-8 text-violet-600 dark:text-violet-400" />
             </div>
+            <h1 class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+                Welcome to <span class="text-violet-600 dark:text-violet-400">Solforbs!</span>
+            </h1>
+            <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+                Let's set up your school's workspace. Follow the steps below to configure your institution.
+            </p>
+        </div>
 
-            <form action="{{ route('institution.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
+        <form action="{{ route('institution.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
 
-                <div class="p-6">
+            <x-stepper.layout defaultActive="step-1">
+                
+                {{-- Sidebar --}}
+                <x-slot:sidebar>
+                    <x-stepper.step id="step-1" title="Basics & Branding" description="Name, Code, Logo" />
+                    <x-stepper.step id="step-2" title="Contact Details" description="Email & Phone" />
+                    <x-stepper.step id="step-3" title="Location" description="Address & Directions" />
+                </x-slot:sidebar>
 
-                    {{-- Basic Information --}}
-                    <h5 class="text-md font-semibold text-gray-800 mb-3">Basic Information</h5>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-
+                {{-- Sections --}}
+                <x-stepper.section id="step-1" title="Basics & Branding" description="Set up the primary identity of this institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <flux:input type="text" name="name" label="Institution Name"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                value="{{ old('name') }}" required />
+                            <flux:input type="text" name="name" label="School Name"
+                                value="{{ old('name') }}" required placeholder="e.g. Riverside Academy" />
                         </div>
 
-                        <div class="md:col-span-1">
-                            <flux:input type="text" name="code" label="Institution Code"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                value="{{ old('code') }}" required />
+                        <div class="relative">
+                            <flux:input type="text" name="code" label="Short Code"
+                                x-on:input="$el.value = $el.value.toUpperCase()"
+                                maxlength="5"
+                                class="uppercase"
+                                value="{{ old('code') }}" required placeholder="e.g. RA" />
                         </div>
 
                         <div>
-                            <flux:select name="type" label="Institution Type"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <flux:select.option value="School">School</flux:select.option>
-                                <flux:select.option value="College">College</flux:select.option>
-                                <flux:select.option value="University">University</flux:select.option>
-                                <flux:select.option value="Training Centre">Training Centre</flux:select.option>
+                            <flux:select name="type" label="Institution Type">
+                                <flux:select.option value="School" :selected="old('type') == 'School'">School</flux:select.option>
+                                <flux:select.option value="College" :selected="old('type') == 'College'">College</flux:select.option>
+                                <flux:select.option value="University" :selected="old('type') == 'University'">University</flux:select.option>
+                                <flux:select.option value="Training Centre" :selected="old('type') == 'Training Centre'">Training Centre</flux:select.option>
                             </flux:select>
                         </div>
 
-                    </div>
-
-                    {{-- Branding --}}
-                    <h5 class="text-md font-semibold text-gray-800 mb-3">Branding</h5>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <flux:input type="file" name="logo" label="Logo" accept="image/*" />
-                            <p class="mt-1 text-xs text-gray-500">Used on the letterhead of generated report cards.
-                            </p>
+                        {{-- Live Image Preview & Drag and Drop --}}
+                        <div class="md:col-span-2 mt-2">
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">School Logo (Optional)</label>
+                            
+                            <div class="flex items-center gap-6">
+                                <div class="shrink-0">
+                                    <span class="inline-block size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
+                                        <span x-show="!photoPreview" class="text-zinc-400">
+                                            <flux:icon icon="photo" class="size-8" />
+                                        </span>
+                                        <img x-show="photoPreview" :src="photoPreview" class="w-full h-full object-contain bg-white" style="display:none;">
+                                    </span>
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-violet-500 dark:hover:border-violet-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
+                                        <div class="space-y-1 text-center">
+                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-8 text-zinc-400 group-hover:text-violet-500 transition" />
+                                            <div class="flex text-sm text-zinc-600 dark:text-zinc-400 justify-center">
+                                                <label for="file-upload" class="relative cursor-pointer bg-transparent rounded-md font-medium text-violet-600 hover:text-violet-500 focus-within:outline-none">
+                                                    <span>Upload a file</span>
+                                                    <input id="file-upload" name="logo" type="file" class="sr-only" x-ref="photo" x-on:change="updatePhotoPreview" accept="image/*">
+                                                </label>
+                                                <p class="pl-1">or drag and drop</p>
+                                            </div>
+                                            <p class="text-xs text-zinc-500">PNG, JPG up to 2MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </x-stepper.section>
 
-                    {{-- Contact --}}
-                    <h5 class="text-md font-semibold text-gray-800 mb-3">Contact Information</h5>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
+                <x-stepper.section id="step-2" title="Contact Details" description="How people can reach out to this institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            {{-- <label class="block text-sm font-medium text-gray-700 mb-1">Email</label> --}}
-                            <flux:input label="Email" type="email" name="email"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                value="{{ old('email') }}" />
+                            <flux:input label="Official Email" type="email" name="email"
+                                value="{{ old('email') }}" placeholder="admin@school.com" />
                         </div>
-
                         <div>
-                            <flux:input type="text" name="phone" label="Phone"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                value="{{ old('phone') }}" />
+                            <flux:input type="url" name="website" label="Website URL"
+                                value="{{ old('website') }}" placeholder="https://www.school.com" />
                         </div>
-
+                        <div>
+                            <flux:input type="text" name="phone" label="Main Phone"
+                                value="{{ old('phone') }}" placeholder="+254..." />
+                        </div>
                         <div>
                             <flux:input type="text" name="alternate_phone" label="Alternative Phone"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                 value="{{ old('alternate_phone') }}" />
                         </div>
-
-                        <div class="md:col-span-3">
-                            <flux:input type="url" name="website" label="Website"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                value="{{ old('website') }}" />
-                        </div>
-
                     </div>
+                </x-stepper.section>
 
-                    {{-- Address --}}
-                    <h5 class="text-md font-semibold text-gray-800 mb-3">Address</h5>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
+                <x-stepper.section id="step-3" title="Location" description="The physical and postal address.">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <flux:input type="text" name="country" readonly label="Country"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                class="bg-zinc-50"
                                 value="{{ old('country', 'Kenya') }}" />
                         </div>
-
                         <div>
-                            <flux:input type="text" name="county" label="County"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            <flux:input type="text" name="county" label="State / County"
                                 value="{{ old('county') }}" />
                         </div>
-
                         <div>
-                            <flux:input type="text" name="city" label="City"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            <flux:input type="text" name="city" label="City / Town"
                                 value="{{ old('city') }}" />
                         </div>
-
-                        <div>
+                        <div class="md:col-span-3">
                             <flux:input type="text" name="postal_address" label="Postal Address"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                 value="{{ old('postal_address') }}" />
                         </div>
-
-                        <div class="md:col-span-4">
-                            <flux:textarea name="physical_address" rows="3" label="Physical Address"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                {{ old('physical_address') }}</textarea>
+                        <div class="md:col-span-3">
+                            <flux:textarea name="physical_address" rows="2" label="Physical Address / Directions">{{ old('physical_address') }}</flux:textarea>
                         </div>
-
                     </div>
+                </x-stepper.section>
 
-                </div>
+                <x-slot:actions>
+                    <flux:button href="{{ route('institution.index') }}" variant="subtle">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary" class="px-6 font-semibold">Create Workspace</flux:button>
+                </x-slot:actions>
 
-                <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
-
-                    <a href="{{ route('institution.index') }}"
-                        class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Cancel
-                    </a>
-
-                    <flux:button variant="primary" type="submit"
-                        class="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Save Institution
-                    </flux:button>
-
-                </div>
-
-            </form>
-
-        </div>
-
+            </x-stepper.layout>
+        </form>
     </div>
 </x-layouts::app>

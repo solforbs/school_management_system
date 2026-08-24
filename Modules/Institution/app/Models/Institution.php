@@ -185,7 +185,17 @@ class Institution extends Model
 
     public function students()
     {
-        return $this->hasManyThrough(User::class, StudentDetails::class, 'user_id', 'id', 'id', 'institution_id');
+        return $this->hasManyThrough(User::class, StudentDetails::class, 'institution_id', 'id', 'id', 'student_id');
+    }
+
+    public function studentDetails()
+    {
+        return $this->hasMany(StudentDetails::class);
+    }
+
+    public function teacherDetails()
+    {
+        return $this->hasMany(TeacherDetails::class);
     }
 
     public function parents()

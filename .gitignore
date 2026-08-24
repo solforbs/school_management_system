@@ -23,3 +23,7 @@ yarn-error.log
 /.vscode
 /.zed
 /public/*.sql
+
+# Local AI rules & scratch files
+.ai/
+test_rel.php

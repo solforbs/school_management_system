@@ -55,17 +55,45 @@ class ParentController extends Controller
             ])->with('error', 'No institution found for this user.');
         }
 
-        // Get parents with their students (children) eager loaded
+        $query = $institution->parents()
+            ->with(['children' => function ($query) use ($institution) {
+                $query->where('institution_id', $institution->id)
+                    ->with('student');
+            }, 'parent']);
+
+        $search = request('search');
+        if (! empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhereHas('parent', function ($pq) use ($search) {
+                        $pq->where('parent_phone', 'LIKE', "%{$search}%")
+                            ->orWhere('parent_occupation', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('children', function ($cq) use ($search) {
+                        $cq->where('admission_number', 'LIKE', "%{$search}%")
+                            ->orWhere('student_number', 'LIKE', "%{$search}%")
+                            ->orWhere('student_id', $search)
+                            ->orWhereHas('student', function ($sq) use ($search) {
+                                $sq->where('name', 'LIKE', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        $filter = request('filter');
+        if ($filter === 'with_students') {
+            $query->whereHas('children');
+        } elseif ($filter === 'multi_child') {
+            $query->has('children', '>', 1);
+        }
+
         $parents = $this->applySort(
-            $institution->parents()
-                ->with(['children' => function ($query) use ($institution) {
-                    $query->where('institution_id', $institution->id)
-                        ->with('student'); // Load the student user details
-                }, 'parent']),
+            $query,
             sortable: ['name'],
             defaultColumn: 'created_at',
             defaultDirection: 'desc',
-        )->get();
+        )->paginate(15)->withQueryString();
 
         return view('parent::index', compact('parents', 'institution'));
     }

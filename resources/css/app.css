@@ -2,6 +2,8 @@
 @import '../../vendor/livewire/flux/dist/flux.css';
 
 @source '../views';
+@source '../../Modules/**/*.blade.php';
+@source '../../Modules/**/*.php';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
@@ -9,6 +11,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+    --color-solforbs-cyan: #00A3FF;
+    --color-solforbs-blue: #0047FF;
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     --color-zinc-50: #fafafa;
@@ -23,7 +27,7 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
+    --color-accent: #4f46e5;
     --color-accent-content: var(--color-neutral-800);
     --color-accent-foreground: var(--color-white);
 }
@@ -132,4 +136,75 @@ select:focus[data-flux-control] {
     .animate-ping {
         animation: none !important;
     }
+}
+
+/* --- Custom Premium SaaS Sidebar Styles --- */
+[data-flux-sidebar-item] {
+    border-radius: 9999px !important;
+}
+
+[data-flux-sidebar-item][data-current] {
+    background: linear-gradient(to right, #7c3aed, #4f46e5) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2), 0 2px 4px -2px rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-flux-sidebar-item][data-current] [data-flux-icon] {
+    color: white !important;
+}
+/* --- Custom Premium SaaS Button Styles --- */
+[data-flux-button] {
+    border-radius: 9999px !important;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Primary / accent variant button */
+[data-flux-button][data-variant="primary"] {
+    background: linear-gradient(to right, #7c3aed, #4f46e5) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2), 0 2px 4px -2px rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-flux-button][data-variant="primary"]:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px);
+}
+
+/* --- SVG Chart Animations --- */
+@keyframes drawLine {
+    0% {
+        stroke-dashoffset: 100;
+        opacity: 0;
+    }
+    1% {
+        opacity: 1;
+    }
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+@keyframes fadeArea {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* --- Livewire Navigation Progress Bar --- */
+#nprogress .bar {
+    background: var(--color-accent) !important;
+    height: 3px !important;
+}
+#nprogress .peg {
+    box-shadow: 0 0 10px var(--color-accent), 0 0 5px var(--color-accent) !important;
+}
+#nprogress .spinner-icon {
+    border-top-color: var(--color-accent) !important;
+    border-left-color: var(--color-accent) !important;
 }

@@ -26,19 +26,47 @@ class FeeManagementController extends Controller
     {
         abort_unless(Auth::user()->can('view feemanagement'), 403);
 
+        $baseQuery = Fee::query();
+        $this->scopeToViewer($baseQuery);
+
+        $totalBilled = (clone $baseQuery)->sum('amount');
+        $totalCollected = (clone $baseQuery)->sum('amount_paid');
+        $totalOutstanding = $totalBilled - $totalCollected;
+        $totalFeesCount = (clone $baseQuery)->count();
+        $paidCount = (clone $baseQuery)->paid()->count();
+        $partialCount = (clone $baseQuery)->partial()->count();
+        $overdueCount = (clone $baseQuery)->overdue()->count();
+
         $query = Fee::with(['student.studentUserDetails', 'institution', 'parent']);
         $this->scopeToViewer($query);
+
+        if ($request->filled('search')) {
+            $search = $request->string('search')->trim();
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhereHas('student', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%")
+                            ->orWhereHas('studentUserDetails', function ($uq) use ($search) {
+                                $uq->where('admission_number', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->withStatus($request->status);
+        }
+
+        if ($request->filled('fee_type') && $request->fee_type !== 'all') {
+            $query->where('fee_type', $request->fee_type);
+        }
 
         $fees = $this->applySort(
             $query,
             sortable: ['title', 'amount', 'amount_paid', 'due_date', 'created_at'],
             defaultColumn: 'created_at',
             defaultDirection: 'desc',
-        )->paginate(10)->withQueryString();
-
-        if ($request->filled('status')) {
-            $fees = $fees->where('status', $request->string('status'));
-        }
+        )->paginate(15)->withQueryString();
 
         $defaulterQuery = Fee::query();
         $this->scopeToViewer($defaulterQuery);
@@ -49,7 +77,20 @@ class FeeManagementController extends Controller
             ->unique()
             ->count();
 
-        return view('feemanagement::index', compact('fees', 'defaulterCount'));
+        $institution = currentInstitution();
+
+        return view('feemanagement::index', compact(
+            'fees',
+            'defaulterCount',
+            'totalBilled',
+            'totalCollected',
+            'totalOutstanding',
+            'totalFeesCount',
+            'paidCount',
+            'partialCount',
+            'overdueCount',
+            'institution'
+        ));
     }
 
     /**
@@ -163,8 +204,10 @@ class FeeManagementController extends Controller
         $this->scopeToViewer($query);
 
         $fee = $query->findOrFail($id);
+        $students = $this->scopedStudentDetails()->with(['student', 'institution'])->get();
+        $feeManagement = $fee;
 
-        return view('feemanagement::edit', compact('fee'));
+        return view('feemanagement::edit', compact('fee', 'feeManagement', 'students'));
     }
 
     /**
