@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 
 // use Modules\Student\Database\Factories\StudentDetailsFactory;
@@ -62,7 +63,7 @@ class StudentDetails extends Model
 
     public function schoolClass()
     {
-        return $this->belongsTo(\Modules\Classes\Models\SchoolClass::class, 'class_id');
+        return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 
     public function institution()
