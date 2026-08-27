@@ -19,35 +19,6 @@ class LessonReportController extends Controller
     use Sortable;
 
     /**
-     * Display a listing of the resource: pick a class, see its daily and
-     * weekly lesson attendance reports.
-     */
-    public function index(Request $request)
-    {
-        abort_unless(Auth::user()->can('view lesson'), 403);
-
-        $classes = $this->scopedClasses();
-
-        $selectedClass = null;
-        $classId = $request->integer('class_id') ?: $classes->first()?->id;
-        if ($classId) {
-            $selectedClass = $classes->firstWhere('id', $classId);
-        }
-
-        $reports = collect();
-        if ($selectedClass) {
-            $reports = $this->applySort(
-                LessonReport::where('class_id', $selectedClass->id),
-                sortable: ['type', 'period_start', 'total_lessons', 'attended_count', 'not_attended_count', 'recovered_count'],
-                defaultColumn: 'period_start',
-                defaultDirection: 'desc',
-            )->limit(30)->get();
-        }
-
-        return view('lesson::reports.index', compact('classes', 'selectedClass', 'reports'));
-    }
-
-    /**
      * Show the specified resource, including a fresh day-by-day breakdown
      * (not just the stored totals) so corrections since generation show up.
      */

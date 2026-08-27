@@ -19,15 +19,6 @@ class ReportController extends Controller
         private AnalyticsExportService $export,
     ) {}
 
-    public function index()
-    {
-        abort_unless(Auth::user()->can('view report'), 403);
-
-        $stats = $this->analytics->forUser(Auth::user());
-
-        return view('report::index', compact('stats'));
-    }
-
     /**
      * Admins and Directors get the full "export everything" workbook
      * (institutions/users/students/parents/fees/devices/attendance/messages,

@@ -57,12 +57,12 @@
 
             <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
                 <a href="{{ route('lesson.index', ['class_id' => $lesson->class_id, 'date' => $lesson->lesson_date->format('Y-m-d')]) }}"
-                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50" wire:navigate>
                     Back to List
                 </a>
                 @can('edit lesson')
                     <a href="{{ route('lesson.edit', $lesson->id) }}"
-                        class="px-4 py-2 bg-yellow-500 border border-transparent rounded-md text-sm font-medium text-white hover:bg-yellow-600">
+                        class="px-4 py-2 bg-yellow-500 border border-transparent rounded-md text-sm font-medium text-white hover:bg-yellow-600" wire:navigate>
                         Edit
                     </a>
                 @endcan

@@ -57,6 +57,23 @@ class AdmsController extends Controller
 
         $table = $request->query('table', '');
 
+        // A booting device asks for its options before anything else, and
+        // that exchange is the only chance the server gets to tell it which
+        // timezone to keep its clock in.
+        //
+        // Commands come first, though. This URL delivered queued commands
+        // long before the handshake existed, and some firmware polls here
+        // rather than /getrequest - answering with options while a command
+        // waits would strand it, which looks exactly like a command that
+        // was sent and ignored. The timezone goes out on the next ask.
+        if (config('zkteco-adms.response.send_options_handshake', true)
+            && $table === ''
+            && $request->isMethod('GET')
+            && $request->has('options')
+            && ! $this->commandManager->hasUndeliveredCommands($serialNumber)) {
+            return $this->optionsHandshake($serialNumber);
+        }
+
         Log::debug('cdata request', [
             'method' => $request->method(),
             'device' => $serialNumber,
@@ -236,6 +253,70 @@ class AdmsController extends Controller
         $this->deviceManager->updateActivity($sn, $request->ip(), $attributes);
 
         return $sn;
+    }
+
+    /**
+     * Answer the ADMS options handshake, pinning the device's timezone.
+     *
+     * The terminal keeps its own clock, and left to itself it drifts off
+     * local time. TimeZone here is the server's own offset, so the device
+     * tracks sms.solforbs.com rather than a second setting somebody has to
+     * remember to keep in step.
+     *
+     * The block carries the least it can. Every field omitted here is one a
+     * terminal that already works keeps deciding for itself:
+     *
+     *   ATTLOGStamp/OPERLOGStamp - tell a device how much history the server
+     *     already holds; wrong, and it withholds a backlog.
+     *   TransFlag - which record types to send at all.
+     *   TransTimes/TransInterval - when to send them.
+     *
+     * This device has been uploading correctly without ever being told any
+     * of that, so naming them here could only change something that is
+     * currently right.
+     */
+    private function optionsHandshake(string $serialNumber): Response
+    {
+        $lines = [
+            'GET OPTION FROM: '.$serialNumber,
+            'ErrorDelay='.config('zkteco-adms.response.error_delay', 60),
+            'Delay='.config('zkteco-adms.response.delay', 30),
+            'TimeZone='.$this->serverTimezoneOffset(),
+            'Realtime='.config('zkteco-adms.response.realtime', 1),
+            'Encrypt='.config('zkteco-adms.response.encrypt', 0),
+        ];
+
+        Log::debug('options handshake', [
+            'device' => $serialNumber,
+            'timezone' => $this->serverTimezoneOffset(),
+        ]);
+
+        return response(implode("\n", $lines)."\n", 200)
+            ->header('Content-Type', 'text/plain');
+    }
+
+    /**
+     * The server's offset from UTC, in whole hours, as the TimeZone field.
+     *
+     * Derived from the application timezone so "match the server" stays true
+     * on its own. An explicit config value overrides it for firmware that
+     * wants the offset in minutes instead.
+     *
+     * No guard around the timezone itself: an app.timezone PHP won't accept
+     * stops Laravel from booting long before a device can reach this.
+     */
+    private function serverTimezoneOffset(): int
+    {
+        $configured = config('zkteco-adms.response.timezone_offset');
+
+        if ($configured !== null && $configured !== '') {
+            return (int) $configured;
+        }
+
+        $offset = (new DateTimeZone((string) config('app.timezone', 'UTC')))
+            ->getOffset(new DateTimeImmutable('now'));
+
+        return intdiv($offset, 3600);
     }
 
     /**

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Models\Devices;
+use App\Services\ClockSyncOutcome;
+use App\Services\DeviceClockSync;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -79,6 +81,39 @@ class DevicesController extends Controller
         $device->linkZktecoDevice($validated['name'] ?? null, $validated['ip_address'] ?? null);
 
         return redirect()->route('devices.index')->with('success', 'Device updated successfully.');
+    }
+
+    /**
+     * Queue a one-off clock sync for a terminal.
+     *
+     * The device keeps its own clock and only takes instruction when it
+     * polls, so this queues rather than sets: the terminal picks the command
+     * up on its next check-in. The moment queued is the server's own wall
+     * clock, and the device's timezone is stamped to match, so the punches
+     * it sends back are read in the same zone we just set it to.
+     */
+    public function setTime(Devices $device, DeviceClockSync $clock)
+    {
+        abort_unless(isAdmin() || $device->institution_id === currentInstitution()?->id, 403);
+
+        $outcome = $clock->sync($device);
+
+        return match ($outcome) {
+            ClockSyncOutcome::NeverConnected => back()->with(
+                'error',
+                'That device has never connected, so there is nothing to send a clock to yet.'
+            ),
+            ClockSyncOutcome::QueueFull => back()->with(
+                'error',
+                'This device has too many commands waiting already. Let it check in, then try again.'
+            ),
+            ClockSyncOutcome::Queued => back()->with('success', sprintf(
+                'Clock sync queued for %s. It will set itself to %s (%s) on its next check-in — about 30 seconds if it is online.',
+                $device->serial_number,
+                $clock->currentServerTime()->format('D, d M Y H:i'),
+                $clock->timezone(),
+            )),
+        };
     }
 
     public function destroy(Request $request, Devices $device)

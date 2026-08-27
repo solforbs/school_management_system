@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Curriculum\Models\Curriculum;
 use Modules\Examinations\Models\Examination;
@@ -75,6 +76,7 @@ class Institution extends Model
 
         // Subscription
         'subscription_plan',
+        'selected_plan_id',
         'subscription_started_at',
         'subscription_expires_at',
 
@@ -145,6 +147,55 @@ class Institution extends Model
     public function hasActiveSubscription(): bool
     {
         return $this->subscription_plan !== null && $this->subscriptionActive();
+    }
+
+    /**
+     * The plan this school picked at onboarding but hasn't yet paid a
+     * period for. Null once they're actually subscribed.
+     */
+    public function selectedPlan()
+    {
+        return $this->belongsTo(Plan::class, 'selected_plan_id');
+    }
+
+    /**
+     * Where the school stands on billing, in one shape the dashboard
+     * banner can render without re-deriving any of it.
+     *
+     * Four states, and they are mutually exclusive:
+     *  - subscribed: paid, with a renewal date ahead
+     *  - lifetime:   paid, with nothing to renew
+     *  - trial:      never subscribed, still inside the free window
+     *  - lapsed:     expired or trial over - the gate is closing/closed
+     *
+     * `days` is whole days from today, negative once the date is past.
+     *
+     * @return array{state: string, plan: ?Plan, date: ?Carbon, days: ?int}
+     */
+    public function billingStatus(): array
+    {
+        if ($this->hasActiveSubscription()) {
+            $expires = $this->subscription_expires_at;
+
+            return [
+                'state' => $expires ? 'subscribed' : 'lifetime',
+                'plan' => $this->plan,
+                'date' => $expires,
+                'days' => $expires ? (int) now()->startOfDay()->diffInDays($expires->copy()->startOfDay(), false) : null,
+            ];
+        }
+
+        // Never subscribed: the free window runs from approval, falling
+        // back to signup for a school still awaiting it.
+        $trialEnds = ($this->subscription_expires_at ?? $this->approved_at ?? $this->created_at)?->copy()->addDays(14);
+        $onTrial = $this->subscription_plan === null && $trialEnds && $trialEnds->isFuture();
+
+        return [
+            'state' => $onTrial ? 'trial' : 'lapsed',
+            'plan' => $this->plan ?? $this->selectedPlan,
+            'date' => $onTrial ? $trialEnds : $this->subscription_expires_at,
+            'days' => $trialEnds ? (int) now()->startOfDay()->diffInDays($trialEnds->copy()->startOfDay(), false) : null,
+        ];
     }
 
     /**

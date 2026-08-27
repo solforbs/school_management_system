@@ -5,11 +5,13 @@ namespace Modules\Classes\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Curriculum\Models\Curriculum;
 use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
 use Modules\Lesson\Models\Lesson;
 use Modules\Result\Models\Result;
 use Modules\Student\Models\StudentDetails;
+use Modules\Subject\Models\SubjectTeacher;
 use Modules\Timetable\Models\TimetableEntry;
 
 class SchoolClass extends Model
@@ -26,6 +28,7 @@ class SchoolClass extends Model
         'institution_id',
         'name',
         'level',
+        'curriculum_id',
         'class_teacher_id',
         'capacity',
     ];
@@ -33,6 +36,17 @@ class SchoolClass extends Model
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    /**
+     * Which curriculum this class sits on, and so which grading scale its
+     * results are marked against. Null while a school hasn't split its
+     * classes across curricula, in which case the school-wide scale
+     * applies.
+     */
+    public function curriculum()
+    {
+        return $this->belongsTo(Curriculum::class);
     }
 
     public function classTeacher()
@@ -43,6 +57,11 @@ class SchoolClass extends Model
     public function students()
     {
         return $this->hasMany(StudentDetails::class, 'class_id');
+    }
+
+    public function subjectTeachers()
+    {
+        return $this->hasMany(SubjectTeacher::class, 'class_id');
     }
 
     public function timetableEntries()

@@ -4,13 +4,11 @@ namespace Modules\Lesson\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Lesson\Models\Lesson;
 use Modules\Student\Models\StudentDetails;
-use Modules\Timetable\Models\TimetableEntry;
 
 class LessonController extends Controller
 {
@@ -20,52 +18,6 @@ class LessonController extends Controller
      * Display a listing of the resource: pick a class and a date, see that
      * day's timetable periods with their attended / not attended status.
      */
-    public function index(Request $request)
-    {
-        abort_unless(Auth::user()->can('view lesson'), 403);
-
-        $classes = $this->scopedClasses();
-
-        $selectedClass = null;
-        $classId = $request->integer('class_id') ?: $classes->first()?->id;
-        if ($classId) {
-            $selectedClass = $classes->firstWhere('id', $classId);
-        }
-
-        $date = $request->filled('date') ? Carbon::parse($request->string('date')) : Carbon::today();
-
-        $rows = collect();
-        if ($selectedClass) {
-            $entries = TimetableEntry::with('teacher')
-                ->where('class_id', $selectedClass->id)
-                ->where('day_of_week', $date->format('l'))
-                ->orderBy('start_time')
-                ->get();
-
-            $lessons = Lesson::where('class_id', $selectedClass->id)
-                ->whereDate('lesson_date', $date)
-                ->get()
-                ->keyBy('timetable_entry_id');
-
-            $rows = $entries->map(fn (TimetableEntry $entry) => [
-                'entry' => $entry,
-                'lesson' => $lessons->get($entry->id),
-            ]);
-        }
-
-        $recent = collect();
-        if ($selectedClass) {
-            $recent = $this->applySort(
-                Lesson::with('timetableEntry')->where('class_id', $selectedClass->id),
-                sortable: ['lesson_date', 'status'],
-                defaultColumn: 'lesson_date',
-                defaultDirection: 'desc',
-            )->limit(10)->get();
-        }
-
-        return view('lesson::index', compact('classes', 'selectedClass', 'date', 'rows', 'recent'));
-    }
-
     /**
      * Bulk save the attended / not attended status for every period shown
      * in the selected class's day grid.

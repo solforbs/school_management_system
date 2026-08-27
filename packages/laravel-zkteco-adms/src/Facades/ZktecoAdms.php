@@ -34,6 +34,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static int sendClearLogsCommand(string $serialNumber)
  * @method static int sendClearDataCommand(string $serialNumber)
  * @method static int sendRebootCommand(string $serialNumber)
+ * @method static int sendSetTimeCommand(string $serialNumber, \DateTimeInterface $time)
  * @method static CommandManager commandManager()
  * @method static DeviceCommandBuilder commandBuilder()
  *

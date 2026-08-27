@@ -1,9 +1,3 @@
-# School Management Platform — Startup Idea
-
-## Overview
-I want to build a modern, AI-powered school management platform for primary and secondary schools in Kenya, starting with private schools in Eastleigh, Nairobi, and eventually expanding across Kenya and other African countries.
-
-The goal is not to create just another school management system. The goal is to build the digital operating system that schools rely on every day.
 
 ---
 

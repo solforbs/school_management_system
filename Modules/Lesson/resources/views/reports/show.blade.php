@@ -16,7 +16,7 @@
 
             <div class="flex gap-2">
                 <flux:button href="{{ route('lesson.reports.index', ['class_id' => $report->class_id]) }}"
-                    variant="ghost">Back</flux:button>
+                    variant="ghost" wire:navigate>Back</flux:button>
                 <flux:button href="{{ route('lesson.reports.download', $report->id) }}" icon="arrow-down-tray"
                     variant="primary">Download PDF</flux:button>
             </div>

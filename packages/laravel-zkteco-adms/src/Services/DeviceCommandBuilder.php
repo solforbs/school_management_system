@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Athwari\LaravelZktecoAdms\Services;
 
+use DateTimeInterface;
+
 /**
  * Fluent API for building and queuing device commands.
  */
@@ -35,6 +37,18 @@ class DeviceCommandBuilder
     public function reboot(string $serialNumber): int
     {
         return $this->commandManager->sendRebootCommand($serialNumber);
+    }
+
+    /**
+     * Set the device's clock to a given moment.
+     *
+     * The wall clock the terminal ends up showing is the one the passed
+     * time carries, so hand it a time already in the timezone the device
+     * should display.
+     */
+    public function setTime(string $serialNumber, DateTimeInterface $time): int
+    {
+        return $this->commandManager->sendSetTimeCommand($serialNumber, $time);
     }
 
     /**

@@ -23,6 +23,7 @@
         "livewire/blaze": "^1.0",
         "livewire/flux": "^2.13.1",
         "livewire/livewire": "^4.1",
+        "mhmiton/laravel-modules-livewire": "^7.0",
         "nwidart/laravel-modules": "^13.0",
         "phpoffice/phpspreadsheet": "*",
         "smalot/pdfparser": "^2.12",

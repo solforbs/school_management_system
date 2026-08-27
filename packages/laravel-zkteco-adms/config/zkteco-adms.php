@@ -53,6 +53,30 @@ return [
     |
     */
     'response' => [
+        /*
+         * Answer a booting device's `options=all` request with the ADMS
+         * "GET OPTION FROM" block. This is the documented way to tell a
+         * terminal which timezone to keep its clock in - without it the
+         * device has nothing to anchor to and drifts off local time.
+         *
+         * The block deliberately omits ATTLOGStamp/OPERLOGStamp so that
+         * enabling it cannot disturb the attendance bookkeeping of a device
+         * that is already syncing happily.
+         */
+        'send_options_handshake' => env('ZKTECO_SEND_OPTIONS_HANDSHAKE', true),
+
+        /*
+         * Offset sent as the device's TimeZone. Left null it is derived from
+         * the application timezone, so the terminal tracks the server by
+         * definition rather than by a second value someone has to remember
+         * to keep in step.
+         *
+         * Units are hours, which is what most push firmware expects
+         * (TimeZone=3 for EAT). If a device misreads it, some builds want
+         * minutes instead - set ZKTECO_DEVICE_TIMEZONE_OFFSET=180.
+         */
+        'timezone_offset' => env('ZKTECO_DEVICE_TIMEZONE_OFFSET'),
+
         'stamp' => 9999999999,
         'error_delay' => 60,
         'delay' => 30,

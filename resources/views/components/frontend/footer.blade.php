@@ -2,7 +2,7 @@
     <x-frontend.container class="py-16">
         <div class="grid gap-12 lg:grid-cols-3">
             <div class="lg:max-w-sm">
-                <a href="{{ route('home') }}" class="flex items-center gap-2 font-semibold text-zinc-900 dark:text-white">
+                <a href="{{ route('home') }}" class="flex items-center gap-2 font-semibold text-zinc-900 dark:text-white" wire:navigate>
                     <span class="flex size-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
                         <x-app-logo-icon class="size-4 fill-current" />
                     </span>

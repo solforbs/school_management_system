@@ -1,7 +1,7 @@
 <x-layouts::app :title="$message->name">
     <div class="p-4">
         <div class="mb-4">
-            <flux:button href="{{ route('messages.index') }}" icon="arrow-left" variant="ghost">
+            <flux:button href="{{ route('messages.index') }}" icon="arrow-left" variant="ghost" wire:navigate>
                 {{ __('Back to messages') }}
             </flux:button>
         </div>

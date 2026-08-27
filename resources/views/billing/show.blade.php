@@ -66,7 +66,14 @@
                     @forelse ($payments as $payment)
                         <flux:table.row>
                             <flux:table.cell>{{ $payment->created_at->format('d M Y H:i') }}</flux:table.cell>
-                            <flux:table.cell>{{ $payment->plan?->name }}</flux:table.cell>
+                            <flux:table.cell>
+                                {{ $payment->plan?->name }}
+                                {{-- Says what the money was for. Without this a setup
+                                     fee is indistinguishable from a plan payment. --}}
+                                @if ($payment->isSetupFee())
+                                    <flux:badge size="sm" color="zinc" class="ml-1">Setup fee</flux:badge>
+                                @endif
+                            </flux:table.cell>
                             <flux:table.cell>KES {{ number_format($payment->amount, 2) }}</flux:table.cell>
                             <flux:table.cell>
                                 <flux:badge :color="match ($payment->status) {

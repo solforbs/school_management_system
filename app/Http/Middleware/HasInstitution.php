@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\OnboardingController;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -53,7 +54,12 @@ class HasInstitution
         // Anyone else without an institution yet (a brand new sign-up, or a
         // Director who hasn't registered their school) is sent to onboard.
         if ($institutionCount === 0) {
-            return redirect()->route('institution.create');
+            // The school can't be registered until the setup fee is
+            // settled. With no fee configured, setupFeeSettled() is true
+            // for everyone and this is the same single step it always was.
+            return OnboardingController::setupFeeSettled($user)
+                ? redirect()->route('institution.create')
+                : redirect()->route('onboarding.plan');
         }
 
         // The institution routes themselves - including where choosing

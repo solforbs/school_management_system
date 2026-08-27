@@ -39,7 +39,11 @@ class FeePaymentReminder extends Notification
 
         return $mail
             ->line('Total outstanding: KES '.number_format($total, 2))
-            ->line('Kindly settle this balance at your earliest convenience. If you have already paid, please disregard this message.');
+            // A week, because that is exactly when the next reminder goes
+            // out (Monday, see routes/console.php). Asking for action by
+            // then makes the two agree instead of nagging someone who was
+            // never given a deadline to miss.
+            ->line('Kindly settle this balance within the next seven days. If you have already paid, please disregard this message.');
     }
 
     public function toSms(): string
@@ -47,6 +51,6 @@ class FeePaymentReminder extends Notification
         $total = number_format($this->fees->sum('balance'), 2);
         $names = $this->fees->pluck('student.name')->filter()->unique()->implode(', ');
 
-        return "Fee reminder: KES {$total} is outstanding for {$names}. Please settle at your earliest convenience.";
+        return "Fee reminder: KES {$total} is outstanding for {$names}. Kindly settle within the next 7 days. If you have already paid, please ignore this message.";
     }
 }

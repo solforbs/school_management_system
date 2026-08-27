@@ -102,10 +102,39 @@ test('a ready report card is sent to the parent by both email and sms with a one
     $expectedUrl = route('reportcard.download', $reportCard->download_token);
 
     expect($sms['mobile'])->toBe(712345678)
+        // The text stands on its own for a parent the email never reaches:
+        // a warm greeting, whose report card it is, and the link itself.
         ->and($sms['message'])->toContain($expectedUrl)
-        ->and($sms['message'])->toContain('Jane Wanjiru');
+        ->and($sms['message'])->toContain('Dear Parent')
+        ->and($sms['message'])->toContain('Jane')
+        ->and($sms['message'])->toContain($reportCard->institution->name)
+        ->and($sms['message'])->toContain('Thank you for walking this journey with us')
+        ->and($sms['message'])->toContain('opens once');
 
     Mail::assertQueued(ReportCardMail::class, fn (ReportCardMail $mail) => $mail->downloadUrl === $expectedUrl);
+});
+
+test('a failing mailer still lets the sms through, since that is the fallback', function () {
+    stubReportCardServices();
+
+    $reportCard = makeReadyReportCard();
+
+    Mail::shouldReceive('to')->once()->andThrow(new RuntimeException('mailer offline'));
+
+    $sms = null;
+    $this->mock(SmsService::class)
+        ->shouldReceive('send')
+        ->once()
+        ->andReturnUsing(function (int $mobile, string $message) use (&$sms) {
+            $sms = $message;
+
+            return ['success' => true];
+        });
+
+    $this->artisan('reportcards:send-ready')->assertSuccessful();
+
+    expect($sms)->toContain(route('reportcard.download', $reportCard->fresh()->download_token))
+        ->and($reportCard->fresh()->status)->toBe('sent');
 });
 
 test('the download link serves the pdf once and then expires', function () {

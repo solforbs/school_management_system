@@ -49,6 +49,9 @@ class PermissionSeeder extends Seeder
             'reportcard' => ['view', 'edit'],
             'staff' => ['view', 'create', 'edit', 'update', 'delete'],
             'payroll' => ['view', 'create', 'edit', 'update', 'delete'],
+            // What the school spends. The Accountant's to keep, the
+            // Director's to read - the outgoing side of fee management.
+            'expenditure' => ['view', 'create', 'edit', 'update', 'delete'],
             // Enrolling and revoking the offline sync clients. A Director's
             // call, not an Accountant's - a device inherits its account's
             // reach, so handing one out is a security decision.
@@ -91,8 +94,9 @@ class PermissionSeeder extends Seeder
      *   creating or deleting a school is an Admin-only, platform-level
      *   action.
      * - Accountant: finance-focused subset of a Director's access - staff
-     *   payroll and fee management. They read the school's staff and
-     *   students to bill and pay them, but manage neither.
+     *   payroll, fee management and the school's expenditure. They read the
+     *   school's staff and students to bill and pay them, but manage
+     *   neither.
      * - Parent/Student: read-only access scoped to their own records.
      */
     private function createRolesAndAssignPermissions(): void
@@ -134,6 +138,7 @@ class PermissionSeeder extends Seeder
             'view reportcard', 'edit reportcard',
             'view staff', 'create staff', 'edit staff', 'update staff', 'delete staff',
             'view payroll', 'create payroll', 'edit payroll', 'update payroll', 'delete payroll',
+            'view expenditure', 'create expenditure', 'edit expenditure', 'update expenditure', 'delete expenditure',
             'view syncdevice', 'create syncdevice', 'delete syncdevice',
             'view account', 'create account', 'edit account', 'update account',
             'view finance', 'create finance', 'edit finance', 'update finance',
@@ -165,6 +170,14 @@ class PermissionSeeder extends Seeder
             'edit payroll',
             'update payroll',
             'delete payroll',
+
+            // Spending is the Accountant's book to keep end-to-end,
+            // including the headings it's filed under.
+            'view expenditure',
+            'create expenditure',
+            'edit expenditure',
+            'update expenditure',
+            'delete expenditure',
 
             'view student',
             'view parent',
@@ -218,8 +231,9 @@ class PermissionSeeder extends Seeder
         $student->syncPermissions($studentPermissions);
 
         // 6. Teacher Role (Views their school's academic data; can only
-        // record results for the subjects/classes they're timetabled to
-        // teach. No lesson-attendance or report-card access - those are
+        // record results for the subjects they've been assigned in a class
+        // - or, if they're its class teacher, for every subject in their
+        // own class. No lesson-attendance or report-card access - those are
         // Director/Parent/Student concerns - and no curriculum access,
         // which is Director-only.
         $teacher = Role::firstOrCreate(['name' => 'Teacher', 'guard_name' => 'web']);

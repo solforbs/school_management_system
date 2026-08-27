@@ -14,49 +14,6 @@ use Modules\Subject\Models\Subject;
 class SelectionsController extends Controller
 {
     /**
-     * Show the student's compulsory subjects and their elective picker.
-     *
-     * Selections is a student-only, self-service page - not a Director
-     * managed module - so it's gated by role rather than a permission.
-     */
-    public function index()
-    {
-        abort_unless(Auth::user()->hasRole('Student'), 403);
-
-        $studentDetails = StudentDetails::where('student_id', Auth::id())->first();
-
-        if (! $studentDetails) {
-            return view('selections::index', [
-                'studentDetails' => null,
-                'institution' => null,
-                'compulsorySubjects' => collect(),
-                'electiveSubjects' => collect(),
-                'selectedIds' => [],
-            ]);
-        }
-
-        $institution = Institution::find($studentDetails->institution_id);
-
-        $compulsorySubjects = Subject::where('institution_id', $studentDetails->institution_id)
-            ->where('is_compulsory', true)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
-        $electiveSubjects = Subject::where('institution_id', $studentDetails->institution_id)
-            ->where('is_compulsory', false)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
-        $selectedIds = SubjectSelection::where('student_id', Auth::id())->pluck('subject_id')->all();
-
-        return view('selections::index', compact(
-            'studentDetails', 'institution', 'compulsorySubjects', 'electiveSubjects', 'selectedIds'
-        ));
-    }
-
-    /**
      * Save the student's elective subject picks.
      */
     public function store(Request $request)

@@ -5,39 +5,12 @@ namespace Modules\Curriculum\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Modules\Curriculum\Actions\SaveCurriculum;
 use Modules\Curriculum\Models\Curriculum;
-use Modules\Institution\Models\Institution;
 use Modules\Student\Models\StudentDetails;
 
 class CurriculumController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        abort_unless(Auth::user()->can('view curriculum'), 403);
-
-        $query = Curriculum::with('institution');
-        $this->scopeToViewer($query);
-
-        $curricula = $query->orderBy('name')->get();
-
-        return view('curriculum::index', compact('curricula'));
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        abort_unless(Auth::user()->can('create curriculum'), 403);
-
-        $institutions = isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
-
-        return view('curriculum::create', compact('institutions'));
-    }
-
     /**
      * Store a newly created resource in storage.
      */
@@ -45,9 +18,9 @@ class CurriculumController extends Controller
     {
         abort_unless(Auth::user()->can('create curriculum'), 403);
 
-        $data = $this->validated($request);
+        $data = $request->validate(SaveCurriculum::rules());
 
-        Curriculum::create($data);
+        SaveCurriculum::handle($data, $this->institutionId());
 
         return redirect()->route('curriculum.index')->with('success', 'Curriculum created successfully!');
     }
@@ -66,19 +39,6 @@ class CurriculumController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        abort_unless(Auth::user()->can('edit curriculum'), 403);
-
-        $curriculum = $this->scopedCurriculum($id);
-        $institutions = isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
-
-        return view('curriculum::edit', compact('curriculum', 'institutions'));
-    }
-
-    /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, $id)
@@ -86,9 +46,9 @@ class CurriculumController extends Controller
         abort_unless(Auth::user()->can('update curriculum'), 403);
 
         $curriculum = $this->scopedCurriculum($id);
-        $data = $this->validated($request);
+        $data = $request->validate(SaveCurriculum::rules());
 
-        $curriculum->update($data);
+        SaveCurriculum::handle($data, $this->institutionId($curriculum), $curriculum);
 
         return redirect()->route('curriculum.index')->with('success', 'Curriculum updated!');
     }
@@ -106,19 +66,17 @@ class CurriculumController extends Controller
         return back()->with('success', 'Curriculum deleted successfully!');
     }
 
-    private function validated(Request $request): array
+    /**
+     * The school a curriculum belongs to. Never a client-submitted one for
+     * a non-admin.
+     */
+    private function institutionId(?Curriculum $curriculum = null): int
     {
-        $validated = $request->validate([
-            'institution_id' => ['nullable', 'exists:institutions,id'],
-            'name' => 'required|string|max:255',
-            'status' => 'required|in:active,dismissed',
-        ]);
+        $institutionId = $curriculum?->institution_id ?? currentInstitution()?->id;
 
-        $validated['institution_id'] = isAdmin() ? $validated['institution_id'] : currentInstitution()?->id;
+        abort_unless($institutionId, 422, 'No institution selected.');
 
-        abort_unless($validated['institution_id'], 422, 'No institution selected.');
-
-        return $validated;
+        return $institutionId;
     }
 
     private function scopeToViewer($query): void

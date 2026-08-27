@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" >
 
 <head>
@@ -291,8 +291,11 @@
         </flux:toast.group>
     @endpersist
 
+    @include('partials.flash-toasts')
+
     @fluxScripts
     @stack('scripts')
 </body>
 
 </html>
+

@@ -23,9 +23,17 @@ class Setting extends Model
         ],
     ];
 
+    /**
+     * The one-off fee a school pays to be set up, charged during director
+     * onboarding before their institution is created. Zero or unset means
+     * onboarding asks for no payment at all.
+     */
+    public const SETUP_FEE = 'onboarding_setup_fee';
+
     protected $fillable = [
         'key',
         'enabled',
+        'value',
     ];
 
     protected function casts(): array
@@ -33,6 +41,38 @@ class Setting extends Model
         return [
             'enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * A setting that carries an amount or a string rather than a yes/no.
+     * Cached the same way isEnabled() is, and busted by put().
+     */
+    public static function value(string $key, ?string $default = null): ?string
+    {
+        $stored = Cache::rememberForever(
+            "settings.value.{$key}",
+            // Coalesced to '' because rememberForever treats a cached null
+            // as a miss and would re-query on every single request.
+            fn () => static::query()->where('key', $key)->value('value') ?? '',
+        );
+
+        return $stored === '' ? $default : $stored;
+    }
+
+    public static function put(string $key, ?string $value): void
+    {
+        static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+
+        Cache::forget("settings.value.{$key}");
+    }
+
+    /**
+     * The setup fee as an amount. Never negative, whatever is in the row -
+     * a negative fee would mean handing money back at signup.
+     */
+    public static function setupFee(): float
+    {
+        return max(0.0, round((float) static::value(self::SETUP_FEE, '0'), 2));
     }
 
     /**

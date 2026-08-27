@@ -50,7 +50,7 @@
                                 <flux:table.cell>{{ $contactMessage->created_at->diffForHumans() }}</flux:table.cell>
                                 <flux:table.cell>
                                     <flux:button href="{{ route('messages.show', $contactMessage) }}" icon="eye"
-                                        variant="primary" color="emerald">
+                                        variant="primary" color="emerald" wire:navigate>
                                         {{ __('View') }}
                                     </flux:button>
                                     <form action="{{ route('messages.destroy', $contactMessage) }}" method="POST"

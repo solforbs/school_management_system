@@ -8,6 +8,8 @@ use Livewire\Component;
 new #[Title('Site Settings')] class extends Component {
     public array $toggles = [];
 
+    public string $setupFee = '0';
+
     public function mount(): void
     {
         abort_unless(isAdmin(), 403);
@@ -15,6 +17,25 @@ new #[Title('Site Settings')] class extends Component {
         foreach (array_keys(Setting::FEATURES) as $key) {
             $this->toggles[$key] = Setting::isEnabled($key);
         }
+
+        $this->setupFee = (string) Setting::setupFee();
+    }
+
+    /**
+     * Saved on submit rather than live: a fee typed digit by digit would
+     * otherwise be briefly stored as "5", then "50", then "500".
+     */
+    public function saveSetupFee(): void
+    {
+        abort_unless(isAdmin(), 403);
+
+        $this->validate(['setupFee' => 'required|numeric|min:0|max:10000000']);
+
+        Setting::put(Setting::SETUP_FEE, (string) round((float) $this->setupFee, 2));
+
+        $this->setupFee = (string) Setting::setupFee();
+
+        Flux::toast(variant: 'success', text: __('Setup fee saved.'));
     }
 
     public function updated(string $name, $value): void
@@ -49,5 +70,22 @@ new #[Title('Site Settings')] class extends Component {
                     <flux:switch wire:model.live="toggles.{{ $key }}" />
                 </div>
             @endforeach
+        </flux:card>
+
+        <flux:card class="mt-6 max-w-2xl">
+            <flux:heading size="sm">{{ __('Onboarding setup fee') }}</flux:heading>
+            <flux:text size="sm" class="mb-4 text-zinc-500">
+                {{ __('A one-off charge a director settles before registering their school. Set it to 0 to let schools register without paying anything up front. Plans are billed separately, after the trial.') }}
+            </flux:text>
+
+            <form wire:submit="saveSetupFee" class="flex flex-wrap items-end gap-3">
+                <flux:input type="number" step="0.01" min="0" wire:model="setupFee"
+                    :label="__('Amount') . ' (' . \App\Models\Plan::CURRENCY . ')'" class="max-w-48" />
+
+                <flux:button type="submit" variant="primary">
+                    <span wire:loading.remove wire:target="saveSetupFee">{{ __('Save') }}</span>
+                    <span wire:loading wire:target="saveSetupFee">{{ __('Saving…') }}</span>
+                </flux:button>
+            </form>
         </flux:card>
     </div>

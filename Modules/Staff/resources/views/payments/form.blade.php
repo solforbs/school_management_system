@@ -1,4 +1,4 @@
-@php
+﻿@php
     $isEdit = !is_null($payment);
     $selectedStaffId = old('staff_details_id', $payment?->staff_details_id);
     $periodVal = old('period', $payment?->period ? $payment->period->format('Y-m') : now()->format('Y-m'));
@@ -16,7 +16,7 @@
     allowances: {{ (float) ($allowancesVal ?: 0) }},
     deductions: {{ (float) ($deductionsVal ?: 0) }},
     staffSalaries: {
-        @foreach ($staffMembers as $s)
+        @foreach ($this->staffMembers as $s)
             '{{ $s->id }}': {{ (float) ($s->salary ?: 0) }},
         @endforeach
     },
@@ -37,7 +37,7 @@
             <select name="staff_details_id" required @change="onStaffChange($event.target.value)"
                 class="w-full px-3.5 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 <option value="">Select Staff Member</option>
-                @foreach ($staffMembers as $s)
+                @foreach ($this->staffMembers as $s)
                     <option value="{{ $s->id }}" {{ $selectedStaffId == $s->id ? 'selected' : '' }}>
                         {{ $s->name }} ({{ $s->staff_number ?? 'EMP-S-' . $s->id }}) - {{ $s->job_title ?? 'Staff' }}
                     </option>
@@ -121,3 +121,4 @@
             class="w-full px-3.5 py-2 bg-white border border-zinc-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">{{ $notesVal }}</textarea>
     </div>
 </div>
+

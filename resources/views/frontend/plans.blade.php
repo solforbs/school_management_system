@@ -1,54 +1,52 @@
 <x-layouts::frontend.app title="Plans">
     <x-frontend.page-hero eyebrow="Plans"
-        description="Example pricing shown below for illustration — actual rates depend on your school's size and needs. Get in touch and we'll confirm a quote.">
+        description="Pick the plan that matches your school today — actual rates depend on your size and needs, so get in touch and we'll confirm a quote.">
         Simple pricing that grows with your school
     </x-frontend.page-hero>
 
     <section class="py-4 sm:py-8">
         <x-frontend.container>
-            <div class="grid gap-8 lg:grid-cols-3 lg:items-start">
-                <x-frontend.pricing-card name="Starter" price="KES 15,000" period="/term"
-                    description="For schools just getting started with digital records."
-                    :ctaHref="route('register')" ctaLabel="Get started free" data-animate
-                    style="--reveal-delay:0ms">
-                    <x-frontend.check-item>Up to 300 students</x-frontend.check-item>
-                    <x-frontend.check-item>Admissions & student records</x-frontend.check-item>
-                    <x-frontend.check-item>Attendance — manual or biometric</x-frontend.check-item>
-                    <x-frontend.check-item>Fee tracking per student</x-frontend.check-item>
-                    <x-frontend.check-item>Exams & report cards</x-frontend.check-item>
-                    <x-frontend.check-item>Email support</x-frontend.check-item>
-                </x-frontend.pricing-card>
+            @if ($plans->isEmpty())
+                {{-- No plan is on sale. Better to say so and point at a human
+                     than to render an empty grid. --}}
+                <div class="mx-auto max-w-xl text-center" data-animate>
+                    <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        We're putting together pricing for the coming term.
+                        <a href="{{ route('contact') }}" wire:navigate
+                            class="font-medium text-indigo-600 hover:underline dark:text-indigo-400">Get in touch</a>
+                        and we'll put a quote together for your school.
+                    </p>
+                </div>
+            @else
+                <div @class([
+                    'grid gap-8 lg:items-start',
+                    'lg:grid-cols-2' => $plans->count() === 2,
+                    'lg:grid-cols-3' => $plans->count() !== 2,
+                ])>
+                    @foreach ($plans as $plan)
+                        {{-- A quoted plan has no price to sign up against, so it
+                             points at a person instead of the register form. --}}
+                        <x-frontend.pricing-card :name="$plan->name" :price="$plan->priceLabel()" :period="$plan->periodLabel()" :description="$plan->description"
+                            :featured="$plan->is_featured"
+                            :ctaHref="$plan->isSelfServe() ? route('register') : route('contact')"
+                            :ctaLabel="$plan->isSelfServe() ? 'Get started' : 'Talk to us'"
+                            :data-animate="$plan->is_featured ? 'scale' : true"
+                            style="--reveal-delay:{{ $loop->index * 90 }}ms">
+                            @forelse ($plan->inclusions() as $inclusion)
+                                <x-frontend.check-item>{{ $inclusion }}</x-frontend.check-item>
+                            @empty
+                                <x-frontend.check-item>Get in touch for what's included</x-frontend.check-item>
+                            @endforelse
+                        </x-frontend.pricing-card>
+                    @endforeach
+                </div>
 
-                <x-frontend.pricing-card name="Growth" price="KES 35,000" period="/term"
-                    description="For schools ready to run everything in one place." :featured="true"
-                    :ctaHref="route('register')" ctaLabel="Get started free" data-animate="scale"
-                    style="--reveal-delay:90ms">
-                    <x-frontend.check-item>Up to 1,000 students</x-frontend.check-item>
-                    <x-frontend.check-item>Everything in Starter</x-frontend.check-item>
-                    <x-frontend.check-item>M-Pesa fee payments</x-frontend.check-item>
-                    <x-frontend.check-item>Parent chat assistant</x-frontend.check-item>
-                    <x-frontend.check-item>Timetable & class management</x-frontend.check-item>
-                    <x-frontend.check-item>Role-based staff accounts</x-frontend.check-item>
-                    <x-frontend.check-item>Priority support</x-frontend.check-item>
-                </x-frontend.pricing-card>
-
-                <x-frontend.pricing-card name="Enterprise" price="Custom" :period="null"
-                    description="For multi-branch institutions and larger deployments."
-                    :ctaHref="route('contact')" ctaLabel="Talk to us" data-animate
-                    style="--reveal-delay:180ms">
-                    <x-frontend.check-item>Unlimited students</x-frontend.check-item>
-                    <x-frontend.check-item>Everything in Growth</x-frontend.check-item>
-                    <x-frontend.check-item>Multi-branch / multi-institution support</x-frontend.check-item>
-                    <x-frontend.check-item>Dedicated onboarding</x-frontend.check-item>
-                    <x-frontend.check-item>Custom integrations</x-frontend.check-item>
-                </x-frontend.pricing-card>
-            </div>
-
-            <p class="mx-auto mt-10 max-w-2xl text-center text-sm text-zinc-500 dark:text-zinc-500">
-                Prices above are illustrative examples, not confirmed rates. <a href="{{ route('contact') }}"
-                    wire:navigate class="font-medium text-indigo-600 hover:underline dark:text-indigo-400">Contact us</a>
-                for pricing based on your school's size.
-            </p>
+                <p class="mx-auto mt-10 max-w-2xl text-center text-sm text-zinc-500 dark:text-zinc-500">
+                    Rates vary with your school's size and needs. <a href="{{ route('contact') }}" wire:navigate
+                        class="font-medium text-indigo-600 hover:underline dark:text-indigo-400">Contact us</a>
+                    for a quote based on your enrolment.
+                </p>
+            @endif
         </x-frontend.container>
     </section>
 
@@ -59,13 +57,16 @@
             </x-frontend.section-heading>
 
             <div class="mt-16 grid gap-6 sm:grid-cols-3">
-                <x-frontend.feature-card icon="lock-closed" title="An isolated workspace" data-animate style="--reveal-delay:0ms">
+                <x-frontend.feature-card icon="lock-closed" title="An isolated workspace" data-animate
+                    style="--reveal-delay:0ms">
                     Your school's students, staff and records stay in their own private space on the platform.
                 </x-frontend.feature-card>
-                <x-frontend.feature-card icon="shield-check" title="Role-based access" data-animate style="--reveal-delay:80ms">
+                <x-frontend.feature-card icon="shield-check" title="Role-based access" data-animate
+                    style="--reveal-delay:80ms">
                     Every staff account only sees what its role allows, from day one.
                 </x-frontend.feature-card>
-                <x-frontend.feature-card icon="chat-bubble-left-right" title="The parent assistant" data-animate style="--reveal-delay:160ms">
+                <x-frontend.feature-card icon="chat-bubble-left-right" title="The parent assistant" data-animate
+                    style="--reveal-delay:160ms">
                     Verified, self-service answers for parents on every plan, not just the higher tiers.
                 </x-frontend.feature-card>
             </div>
@@ -80,7 +81,8 @@
 
             <div class="mt-12 space-y-8" data-animate>
                 <div>
-                    <h3 class="text-base font-semibold text-zinc-900 dark:text-white">How does school approval work?</h3>
+                    <h3 class="text-base font-semibold text-zinc-900 dark:text-white">How does school approval work?
+                    </h3>
                     <p class="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                         After you register and set up your school's workspace, our team reviews and activates it
                         before your staff can sign in and start using it.
@@ -93,7 +95,8 @@
                     </p>
                 </div>
                 <div>
-                    <h3 class="text-base font-semibold text-zinc-900 dark:text-white">Is my school's data separate from other schools?</h3>
+                    <h3 class="text-base font-semibold text-zinc-900 dark:text-white">Is my school's data separate from
+                        other schools?</h3>
                     <p class="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                         Yes. Every institution gets its own isolated workspace — students, staff and records are
                         never shared across schools.
@@ -105,12 +108,13 @@
 
     <section class="py-20 sm:py-28">
         <x-frontend.container>
-            <x-frontend.cta-band heading="Not sure which plan fits?" description="Tell us about your school and we'll help you figure it out.">
+            <x-frontend.cta-band heading="Not sure which plan fits?"
+                description="Tell us about your school and we'll help you figure it out.">
                 <flux:button :href="route('contact')" variant="primary" wire:navigate>
                     Talk to us
                 </flux:button>
                 <flux:button :href="route('register')" variant="ghost" wire:navigate>
-                    Get started free
+                    Get started
                 </flux:button>
             </x-frontend.cta-band>
         </x-frontend.container>

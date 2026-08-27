@@ -33,4 +33,13 @@ class Subject extends Model
     {
         return $this->hasMany(Examination::class);
     }
+
+    /**
+     * Who teaches this subject, and to which class. One row per
+     * (class, teacher) pair - a subject taught in five classes has five.
+     */
+    public function teacherAssignments()
+    {
+        return $this->hasMany(SubjectTeacher::class);
+    }
 }

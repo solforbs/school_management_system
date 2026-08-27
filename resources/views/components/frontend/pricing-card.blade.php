@@ -6,6 +6,10 @@
     'featured' => false,
     'ctaLabel' => 'Get started',
     'ctaHref' => '#',
+    // A plan can grant every module the system has, which stacked in one
+    // column ran the card far past the fold. Two columns keeps the price
+    // and the button in view alongside what you get for it.
+    'columns' => 2,
 ])
 
 <div {{ $attributes->class([
@@ -30,7 +34,15 @@
         @endif
     </div>
 
-    <ul class="mt-8 flex-1 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+    {{-- Grid rather than CSS columns: multi-column flows items top-to-bottom
+         and can split one across a column break, which looks broken next to
+         a tick. A grid keeps each item whole and reads left-to-right. Single
+         column below sm, where two would be too narrow to read. --}}
+    <ul @class([
+        'mt-8 flex-1 text-sm text-zinc-600 dark:text-zinc-400',
+        'grid gap-x-5 gap-y-3 sm:grid-cols-2' => $columns > 1,
+        'space-y-3' => $columns <= 1,
+    ])>
         {{ $slot }}
     </ul>
 

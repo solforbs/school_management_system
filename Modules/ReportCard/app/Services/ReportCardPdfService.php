@@ -5,9 +5,13 @@ namespace Modules\ReportCard\Services;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Modules\Curriculum\Models\Curriculum;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Models\ReportTemplate;
-use Modules\Result\Models\Result;
+use Modules\ReportCard\Support\InstitutionLogo;
+use Modules\ReportCard\Support\ReportCardProse;
+use Modules\ReportCard\Support\TermResolver;
+use Modules\Student\Models\StudentDetails;
 
 class ReportCardPdfService
 {
@@ -24,18 +28,18 @@ class ReportCardPdfService
         $institution = $reportCard->institution;
         $student = $reportCard->student;
 
-        $results = Result::where('student_id', $reportCard->student_id)
-            ->whereHas('examination', fn ($q) => $q->where('term', $reportCard->term)->where('academic_year', $reportCard->academic_year))
-            ->with('examination.subject')
-            ->get()
-            ->sortBy(fn ($result) => $result->examination?->subject?->name);
+        // The mean is graded on the scale the class's curriculum runs on,
+        // the same one each individual subject was marked against.
+        $curriculumId = GradingBandService::curriculumIdFor($reportCard->schoolClass, $institution);
+        $curriculum = $reportCard->schoolClass?->curriculum
+            ?? ($curriculumId ? Curriculum::find($curriculumId) : null);
 
-        $percentages = $results
-            ->filter(fn ($result) => $result->examination && $result->examination->total_marks > 0)
-            ->map(fn ($result) => ($result->marks_obtained / $result->examination->total_marks) * 100);
+        $builder = new ReportSheetBuilder;
+        $rows = $builder->rows($reportCard, $institution);
+        $summary = $builder->summary($rows, $institution, $curriculumId);
 
-        $meanPercentage = $percentages->isNotEmpty() ? round($percentages->avg(), 2) : null;
-        $meanGrade = $meanPercentage !== null ? GradingBandService::resolve($institution, $meanPercentage) : null;
+        $meanPercentage = $summary['mean_percentage'];
+        $meanGrade = $summary['band']?->grade;
 
         $reportCard->update([
             'mean_percentage' => $meanPercentage,
@@ -44,41 +48,37 @@ class ReportCardPdfService
 
         $template = ReportTemplate::where('institution_id', $institution->id)->first();
 
-        $tokens = [
+        $prose = ReportCardProse::render($template, [
             '{{student_name}}' => $student->name,
             '{{institution_name}}' => $institution->name,
             '{{class_name}}' => $reportCard->schoolClass?->name ?? '',
             '{{term}}' => $reportCard->term,
             '{{mean_percentage}}' => $meanPercentage !== null ? number_format($meanPercentage, 2).'%' : '—',
             '{{mean_grade}}' => $meanGrade ?? '—',
-        ];
+        ]);
 
-        $search = array_keys($tokens);
-        $replace = array_map('e', array_values($tokens));
-
-        $defaultOpening = "Dear Parent/Guardian, please find below {$tokens['{{student_name}}']}'s report card for {$tokens['{{term}}']}.";
-        $defaultClosing = 'Thank you for your continued partnership in your child\'s education.';
-
-        $openingHtml = nl2br(str_replace($search, $replace, e($template?->opening_text ?: $defaultOpening)));
-        $closingHtml = nl2br(str_replace($search, $replace, e($template?->closing_text ?: $defaultClosing)));
-
-        $logoDataUri = $this->logoDataUri($institution);
         $termHistory = $this->termHistory($reportCard);
+        $scaleBands = GradingBandService::scaleFor($institution, $curriculumId);
 
         $pdf = Pdf::loadView('reportcard::pdf.report-card', [
             'institution' => $institution,
             'student' => $student,
+            'studentDetails' => $this->studentDetails($reportCard),
             'reportCard' => $reportCard,
-            'results' => $results,
+            'rows' => $rows,
+            'summary' => $summary,
+            'curriculum' => $curriculum,
+            'pointsCeiling' => $builder->pointsCeiling($scaleBands, $curriculum),
+            'scaleBands' => $scaleBands,
             'meanPercentage' => $meanPercentage,
             'meanGrade' => $meanGrade,
-            'openingHtml' => $openingHtml,
-            'closingHtml' => $closingHtml,
+            'openingHtml' => $prose['opening'],
+            'closingHtml' => $prose['closing'],
             'signatoryName' => $template?->signatory_name,
             'signatoryTitle' => $template?->signatory_title,
-            'logoDataUri' => $logoDataUri,
+            'logoDataUri' => InstitutionLogo::dataUri($institution),
             'termHistory' => $termHistory,
-        ]);
+        ])->setPaper('a4');
 
         $path = "report-cards/{$reportCard->id}.pdf";
         Storage::disk('public')->put($path, $pdf->output());
@@ -89,12 +89,18 @@ class ReportCardPdfService
     }
 
     /**
-     * The student's completed report cards for this academic year, up to
-     * and including the current term, ordered so the PDF can show a
-     * term-over-term performance trend. If the current term's name
-     * couldn't be parsed into a term number (see TermParser), there's no
-     * reliable way to say what counts as "earlier" this year, so this
-     * falls back to just the current report card on its own.
+     * This term set against the one directly before it, for the PDF's
+     * performance comparison.
+     *
+     * Deliberately just the one term back rather than the year to date: a
+     * parent reads a report card to see whether their child moved since
+     * last term, and a third column of older figures dilutes that rather
+     * than sharpening it. Term 1 looks into the previous academic year, so
+     * the first report of a year still has something to compare against.
+     *
+     * Returns the current report card alone when its term name couldn't be
+     * numbered (see TermParser), since there is then no reliable way to say
+     * what came before it, or when no earlier report card exists.
      */
     private function termHistory(ReportCard $reportCard): Collection
     {
@@ -102,22 +108,25 @@ class ReportCardPdfService
             return collect([$reportCard]);
         }
 
-        return ReportCard::where('student_id', $reportCard->student_id)
-            ->where('academic_year', $reportCard->academic_year)
-            ->where('term_number', '<=', $reportCard->term_number)
-            ->orderBy('term_number')
-            ->get(['id', 'term', 'term_number', 'mean_percentage', 'mean_grade']);
+        $previousTerm = TermResolver::previous($reportCard->term_number, $reportCard->academic_year);
+
+        $previous = ReportCard::where('student_id', $reportCard->student_id)
+            ->where('academic_year', $previousTerm['academic_year'])
+            ->where('term_number', $previousTerm['term_number'])
+            ->first(['id', 'term', 'term_number', 'academic_year', 'mean_percentage', 'mean_grade']);
+
+        return $previous ? collect([$previous, $reportCard]) : collect([$reportCard]);
     }
 
-    private function logoDataUri($institution): ?string
+    /**
+     * Admission number, gender and UPI for the header. Absent for a school
+     * that hasn't filled the profile in, which the report shows as a dash
+     * rather than an empty gap.
+     */
+    private function studentDetails(ReportCard $reportCard): ?StudentDetails
     {
-        if (! $institution->logo || ! Storage::disk('public')->exists($institution->logo)) {
-            return null;
-        }
-
-        $mime = Storage::disk('public')->mimeType($institution->logo);
-        $contents = Storage::disk('public')->get($institution->logo);
-
-        return 'data:'.$mime.';base64,'.base64_encode($contents);
+        return StudentDetails::where('student_id', $reportCard->student_id)
+            ->where('institution_id', $reportCard->institution_id)
+            ->first();
     }
 }

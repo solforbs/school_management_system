@@ -137,7 +137,12 @@ class BillingController extends Controller
             $payment = Payment::where('reference', $request->input('data.reference'))->first();
 
             if ($payment) {
-                $this->finalize($payment);
+                // A setup fee is settled by the onboarding flow: it has no
+                // institution to activate a subscription against, and
+                // finalize() below would dereference that null.
+                $payment->isSetupFee()
+                    ? app(OnboardingController::class)->finalize($payment)
+                    : $this->finalize($payment);
             }
         }
 
@@ -154,6 +159,13 @@ class BillingController extends Controller
     private function finalize(Payment $payment): void
     {
         if ($payment->status !== 'pending') {
+            return;
+        }
+
+        // Belt and braces alongside the webhook's own check: this method
+        // activates a subscription, and a setup fee has no institution to
+        // activate one for.
+        if ($payment->isSetupFee() || ! $payment->institution) {
             return;
         }
 

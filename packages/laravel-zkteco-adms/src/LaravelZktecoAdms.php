@@ -10,6 +10,7 @@ use Athwari\LaravelZktecoAdms\Models\ZktecoDevice;
 use Athwari\LaravelZktecoAdms\Services\CommandManager;
 use Athwari\LaravelZktecoAdms\Services\DeviceCommandBuilder;
 use Athwari\LaravelZktecoAdms\Services\DeviceManager;
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 
 class LaravelZktecoAdms
@@ -158,6 +159,11 @@ class LaravelZktecoAdms
     public function sendRebootCommand(string $serialNumber): int
     {
         return $this->commandManager->sendRebootCommand($serialNumber);
+    }
+
+    public function sendSetTimeCommand(string $serialNumber, DateTimeInterface $time): int
+    {
+        return $this->commandManager->sendSetTimeCommand($serialNumber, $time);
     }
 
     public function commandManager(): CommandManager

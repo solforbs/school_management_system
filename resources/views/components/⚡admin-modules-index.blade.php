@@ -67,7 +67,7 @@ new class extends Component {
                         wire:click="disableClickedModule('{{ $module->getName() }}')">
                         Disable
                     </flux:button>
-                    <flux:button href="{{ route(strtolower($module->getName()) . '.index') }}" icon="eye">
+                    <flux:button href="{{ route(strtolower($module->getName()) . '.index') }}" icon="eye" wire:navigate>
                         Visit
                     </flux:button>
                 @else

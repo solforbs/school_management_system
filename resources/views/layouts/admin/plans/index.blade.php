@@ -2,7 +2,7 @@
     <div class="p-4">
         <div class="mb-2 flex flex-row justify-between">
             <flux:heading size="lg">Plans</flux:heading>
-            <flux:button href="{{ route('admin.plans.create') }}">Add Plan</flux:button>
+            <flux:button href="{{ route('admin.plans.create') }}" wire:navigate>Add Plan</flux:button>
         </div>
 
         <flux:card>
@@ -30,7 +30,7 @@
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="flex gap-2">
-                                    <flux:button size="sm" href="{{ route('admin.plans.edit', $plan) }}">Edit</flux:button>
+                                    <flux:button size="sm" href="{{ route('admin.plans.edit', $plan) }}" wire:navigate>Edit</flux:button>
                                     <form action="{{ route('admin.plans.destroy', $plan) }}" method="POST"
                                         onsubmit="return confirm('Delete this plan? Institutions on it will lose access to its modules.');">
                                         @csrf

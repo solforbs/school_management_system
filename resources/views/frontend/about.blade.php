@@ -10,7 +10,8 @@
                 <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">
                     Why we built this
                 </p>
-                <h2 class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
+                <h2
+                    class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
                     One shared system, instead of five disconnected ones
                 </h2>
                 <div class="mt-6 space-y-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
@@ -29,23 +30,32 @@
 
             <div class="grid grid-cols-2 gap-4" data-animate="right">
                 <div class="space-y-4">
-                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
+                    <div
+                        class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
                         <flux:icon icon="finger-print" class="size-6 text-indigo-600 dark:text-indigo-400" />
-                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Attendance that syncs itself</p>
+                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Attendance that syncs itself
+                        </p>
                     </div>
-                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
+                    <div
+                        class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
                         <flux:icon icon="banknotes" class="size-6 text-indigo-600 dark:text-indigo-400" />
-                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Fees paid by M-Pesa, tracked automatically</p>
+                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Fees paid by M-Pesa, tracked
+                            automatically</p>
                     </div>
                 </div>
                 <div class="mt-8 space-y-4">
-                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
+                    <div
+                        class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
                         <flux:icon icon="chat-bubble-left-right" class="size-6 text-indigo-600 dark:text-indigo-400" />
-                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Parents who never have to call the office</p>
+                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Parents who never have to call
+                            the office</p>
                     </div>
-                    <div class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
-                        <flux:icon icon="clipboard-document-check" class="size-6 text-indigo-600 dark:text-indigo-400" />
-                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Report cards nobody has to re-type</p>
+                    <div
+                        class="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.03]">
+                        <flux:icon icon="clipboard-document-check"
+                            class="size-6 text-indigo-600 dark:text-indigo-400" />
+                        <p class="mt-3 text-sm font-medium text-zinc-900 dark:text-white">Report cards nobody has to
+                            re-type</p>
                     </div>
                 </div>
             </div>
@@ -59,22 +69,26 @@
             </x-frontend.section-heading>
 
             <div class="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <x-frontend.feature-card icon="academic-cap" title="Built for real workflows" data-animate style="--reveal-delay:0ms">
+                <x-frontend.feature-card icon="academic-cap" title="Built for real workflows" data-animate
+                    style="--reveal-delay:0ms">
                     Designed around how school offices actually work day to day, not a generic template
                     bolted onto a school.
                 </x-frontend.feature-card>
 
-                <x-frontend.feature-card icon="shield-check" title="Secure by default" data-animate style="--reveal-delay:80ms">
+                <x-frontend.feature-card icon="shield-check" title="Secure by default" data-animate
+                    style="--reveal-delay:80ms">
                     Every institution's data is isolated, and every sensitive request from a parent is
                     verified before anything is shared.
                 </x-frontend.feature-card>
 
-                <x-frontend.feature-card icon="user-group" title="Every stakeholder, one place" data-animate style="--reveal-delay:160ms">
+                <x-frontend.feature-card icon="user-group" title="Every stakeholder, one place" data-animate
+                    style="--reveal-delay:160ms">
                     Administrators, teachers, and parents each get the view they need instead of three
                     separate tools that don't talk to each other.
                 </x-frontend.feature-card>
 
-                <x-frontend.feature-card icon="banknotes" title="Kenya-first payments" data-animate style="--reveal-delay:240ms">
+                <x-frontend.feature-card icon="banknotes" title="Kenya-first payments" data-animate
+                    style="--reveal-delay:240ms">
                     Native M-Pesa fee collection and SMS communication, because that's how the schools we
                     serve actually get paid and stay in touch.
                 </x-frontend.feature-card>
@@ -84,12 +98,13 @@
 
     <section class="pb-20 sm:pb-28">
         <x-frontend.container>
-            <x-frontend.cta-band heading="See it for yourself" description="Explore what each module does, or create your school's workspace today.">
+            <x-frontend.cta-band heading="See it for yourself"
+                description="Explore what each module does, or create your school's workspace today.">
                 <flux:button :href="route('services')" variant="outline" wire:navigate>
                     Browse services
                 </flux:button>
                 <flux:button :href="route('register')" variant="primary" wire:navigate>
-                    Get started free
+                    Get started
                 </flux:button>
             </x-frontend.cta-band>
         </x-frontend.container>
