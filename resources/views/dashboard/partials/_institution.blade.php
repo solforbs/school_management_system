@@ -36,13 +36,13 @@
             @endif
         </div>
     @else
-        {{-- Director Operational Executive KPI Tiles --}}
-        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {{-- Director Operational Executive KPI Tiles (Spacious 3-Column Grid) --}}
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <x-kpi-card title="Enrolled Students" icon="academic-cap" color="sky" :count="$stats['students_count']" href="{{ route('student.index') }}" subtext="official learner headcount" />
             <x-kpi-card title="Registered Parents" icon="users" color="indigo" :count="$stats['parents_count']" href="{{ route('parent.index') }}" subtext="guardian contact accounts" />
             <x-kpi-card title="Attendance Today" icon="clock" color="emerald" :count="$stats['attendance_today_count']" href="{{ route('attendance.index') }}" subtext="biometric check-ins" />
             <x-kpi-card title="Outstanding Fees" icon="banknotes" color="rose" count="KES {{ $currency($stats['fees_outstanding']) }}" href="{{ route('feemanagement.index', ['status' => 'overdue']) }}">
-                <span class="text-[11px] font-semibold text-rose-600 truncate block">{{ $stats['overdue_fees_count'] }} overdue defaulters</span>
+                <span class="text-xs font-semibold text-rose-600 block">{{ $stats['overdue_fees_count'] }} overdue defaulters</span>
             </x-kpi-card>
             @can('view payroll')
                 @if (isset($stats['payroll_month_total']))
