@@ -1,5 +1,5 @@
 @php
-    $currency = fn($v) => number_format((float) $v, 2);
+    $currency = fn($v) => fmod((float)$v, 1) !== 0.0 ? number_format((float) $v, 2) : number_format((float) $v);
     $pct = fn($num, $den) => $den > 0 ? min(100, round(($num / $den) * 100)) : 0;
     $scope = $stats['scope'] ?? null;
     $roleName = auth()->user()->getRoleNames()->first();
