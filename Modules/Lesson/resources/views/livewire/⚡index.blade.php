@@ -64,6 +64,12 @@ new #[Title('Lesson Attendance')] class extends Component
             403
         );
 
+        if (! $this->markable) {
+            Flux::toast(text: 'That day has passed - attendance can only be marked for today.', variant: 'warning');
+
+            return;
+        }
+
         $class = $this->selectedClass;
         abort_unless($class, 403);
 
@@ -135,6 +141,16 @@ new #[Title('Lesson Attendance')] class extends Component
         }
 
         return $query->orderBy('name')->get();
+    }
+
+    /**
+     * A day is only markable while it is still today - once it is behind us
+     * the register is closed, and the day is read-only history.
+     */
+    #[Computed]
+    public function markable(): bool
+    {
+        return ! Carbon::parse($this->date)->startOfDay()->isBefore(Carbon::today());
     }
 
     #[Computed]
@@ -216,7 +232,7 @@ new #[Title('Lesson Attendance')] class extends Component
      */
     private function loadDay(): void
     {
-        unset($this->selectedClass, $this->lessons, $this->rows, $this->recent);
+        unset($this->markable, $this->selectedClass, $this->lessons, $this->rows, $this->recent);
 
         $this->reset(['statuses', 'remarks']);
 
@@ -258,6 +274,12 @@ new #[Title('Lesson Attendance')] class extends Component
                     {{ $this->selectedClass->name }} &mdash;
                     {{ \Illuminate\Support\Carbon::parse($date)->format('l, d M Y') }}
                 </flux:heading>
+
+                @unless ($this->markable)
+                    <flux:text class="mt-1 text-sm text-zinc-500">
+                        That day has passed, so its register is closed - this is a read-only record.
+                    </flux:text>
+                @endunless
             </div>
 
             @if ($this->rows->isEmpty())
@@ -285,7 +307,8 @@ new #[Title('Lesson Attendance')] class extends Component
                                     <flux:table.cell>{{ $entry->subject }}</flux:table.cell>
                                     <flux:table.cell>{{ $entry->teacher?->name ?? '—' }}</flux:table.cell>
                                     <flux:table.cell>
-                                        <flux:select size="sm" wire:model="statuses.{{ $entry->id }}">
+                                        <flux:select size="sm" wire:model="statuses.{{ $entry->id }}"
+                                            :disabled="! $this->markable">
                                             <flux:select.option value="">Not marked</flux:select.option>
                                             <flux:select.option value="attended">Attended</flux:select.option>
                                             <flux:select.option value="not_attended">Not attended</flux:select.option>
@@ -293,7 +316,8 @@ new #[Title('Lesson Attendance')] class extends Component
                                         </flux:select>
                                     </flux:table.cell>
                                     <flux:table.cell>
-                                        <flux:input size="sm" wire:model="remarks.{{ $entry->id }}" />
+                                        <flux:input size="sm" wire:model="remarks.{{ $entry->id }}"
+                                            :disabled="! $this->markable" />
                                     </flux:table.cell>
                                 </flux:table.row>
                             @endforeach
@@ -301,15 +325,17 @@ new #[Title('Lesson Attendance')] class extends Component
                     </flux:table>
 
                     @canany(['create lesson', 'edit lesson'])
-                        <div class="mt-4 flex items-center justify-between gap-3">
-                            <flux:text class="text-xs text-zinc-500">
-                                Leave a period unmarked to skip it - saving never clears a mark already recorded.
-                            </flux:text>
-                            <flux:button type="submit" variant="primary" icon="check">
-                                <span wire:loading.remove wire:target="save">Save Attendance</span>
-                                <span wire:loading wire:target="save">Saving…</span>
-                            </flux:button>
-                        </div>
+                        @if ($this->markable)
+                            <div class="mt-4 flex items-center justify-between gap-3">
+                                <flux:text class="text-xs text-zinc-500">
+                                    Leave a period unmarked to skip it - saving never clears a mark already recorded.
+                                </flux:text>
+                                <flux:button type="submit" variant="primary" icon="check">
+                                    <span wire:loading.remove wire:target="save">Save Attendance</span>
+                                    <span wire:loading wire:target="save">Saving…</span>
+                                </flux:button>
+                            </div>
+                        @endif
                     @endcanany
                 </form>
             @endif
