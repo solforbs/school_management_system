@@ -177,8 +177,9 @@ new #[Title('Lesson Reports')] class extends Component
             @endforeach
         </flux:select>
 
-        <flux:button href="{{ route('lesson.index') }}" icon="arrow-left" variant="ghost" wire:navigate>
-            Back to Lesson Attendance
+        <flux:button href="{{ route('lesson.index', ['class_id' => $this->selectedClass?->id]) }}" icon="clock"
+            variant="ghost" wire:navigate>
+            Mark Attendance
         </flux:button>
     </div>
 
