@@ -28,7 +28,7 @@ class LessonController extends Controller
 
         $validated = $request->validate([
             'class_id' => 'required|exists:classes,id',
-            'date' => 'required|date',
+            'date' => 'required|date|after_or_equal:today',
             'statuses' => 'required|array|min:1',
             'statuses.*.timetable_entry_id' => 'required|integer|exists:timetable_entries,id',
             'statuses.*.status' => 'required|in:attended,not_attended,recovered',
