@@ -239,7 +239,7 @@ test('the livewire lesson grid marks a day in place', function () {
         'institution_id' => $institution->id,
         'class_id' => $class->id,
         'subject' => 'Chemistry',
-        'day_of_week' => 'Monday',
+        'day_of_week' => now()->format('l'),
         'start_time' => '10:00',
         'end_time' => '11:00',
     ]);
@@ -247,8 +247,8 @@ test('the livewire lesson grid marks a day in place', function () {
     Livewire::actingAs($director)
         ->test('lesson::index')
         ->set('classId', (string) $class->id)
-        // A Monday, so the entry above is timetabled that day.
-        ->set('date', '2026-08-24')
+        // Today, which is the only day still open for marking.
+        ->set('date', now()->toDateString())
         ->assertSee('Chemistry')
         ->set('statuses.'.$entry->id, 'attended')
         ->set('remarks.'.$entry->id, 'Covered acids and bases')
