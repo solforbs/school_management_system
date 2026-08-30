@@ -76,7 +76,19 @@ class SmsService
         $decodedResponse = json_decode($response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decodedResponse)) {
-            return ['success' => false, 'error' => 'Invalid JSON response', 'raw_response' => $response];
+            \Illuminate\Support\Facades\Log::error('HostPinnacle invalid response', [
+                'http_code' => $httpCode,
+                'curl_error' => $error,
+                'raw_response' => $response,
+                'json_error' => json_last_error_msg(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Invalid JSON response',
+                'raw_response' => $response,
+                'http_code' => $httpCode,
+            ];
         }
 
         return $this->normaliseResponse($decodedResponse);
