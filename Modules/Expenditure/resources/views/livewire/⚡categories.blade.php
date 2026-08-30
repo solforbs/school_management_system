@@ -204,7 +204,7 @@ new #[Title('Expenditure Categories')] class extends Component
 
 <div class="p-4">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <flux:button href="{{ route('expenditure.index') }}" icon="arrow-left" variant="ghost" wire:navigate>
+        <flux:button href="{{ route('expenditure.index') }}" icon="arrow-left" variant="ghost" wire:navigate.hover>
             Back to Expenditure
         </flux:button>
 

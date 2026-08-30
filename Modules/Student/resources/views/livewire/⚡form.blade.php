@@ -1,351 +1,473 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Livewire\WithFileUploads;
-use Modules\Student\Actions\SaveStudent;
+use Modules\Institution\Models\Institution;
+use Modules\Parent\Models\ParentDetails;
 use Modules\Student\Models\StudentDetails;
+use Modules\Classes\Models\SchoolClass;
 
-new #[Title('Student')] class extends Component
+new #[Title('Student Form')] class extends Component
 {
-    use WithFileUploads;
-
     public ?User $student = null;
-
-    // Account
-    public string $name = '';
-
-    public string $email = '';
-
-    public string $password = '';
-
-    public $profile_image = null;
-
-    // Personal
-    public string $phone = '';
-
-    public string $date_of_birth = '';
-
-    public string $gender = '';
-
-    public string $admission_number = '';
-
-    public string $student_number = '';
-
-    public string $enrollment_status = 'active';
-
-    public bool $is_active = true;
-
-    // Address
-    public string $address = '';
-
-    public string $city = '';
-
-    public string $state = '';
-
-    public string $country = '';
-
-    // Parent
-    public string $parent_id = '';
-
-    public string $parent_name = '';
-
-    public string $parent_phone = '';
-
-    public string $parent_email = '';
-
-    public string $parent_occupation = '';
-
-    // Guardian
-    public string $guardian_name = '';
-
-    public string $guardian_phone = '';
-
-    public string $guardian_email = '';
-
-    public string $guardian_relationship = '';
-
-    // Additional
-    public string $medical_conditions = '';
-
-    public string $allergies = '';
-
-    public string $special_needs = '';
-
-    public string $notes = '';
 
     public function mount(?int $studentId = null): void
     {
         if ($studentId === null) {
             abort_unless(auth()->user()->can('create student'), 403);
-
             return;
         }
 
         abort_unless(auth()->user()->can('edit student'), 403);
 
-        $this->student = User::with(['studentUserDetails', 'studentParent'])->findOrFail($studentId);
-        $this->authorizeStudentAccess($this->student);
-
-        $details = $this->student->studentUserDetails;
-        $parent = $details?->parent_id ? User::find($details->parent_id) : null;
-
-        $this->fill([
-            'name' => (string) $this->student->name,
-            'email' => (string) $this->student->email,
-            'phone' => (string) $details?->phone,
-            'date_of_birth' => $details?->date_of_birth ? substr((string) $details->date_of_birth, 0, 10) : '',
-            'gender' => (string) $details?->gender,
-            'admission_number' => (string) $details?->admission_number,
-            'student_number' => (string) $details?->student_number,
-            'enrollment_status' => (string) ($details?->enrollment_status ?: 'active'),
-            'is_active' => (bool) $details?->is_active,
-            'address' => (string) $details?->address,
-            'city' => (string) $details?->city,
-            'state' => (string) $details?->state,
-            'country' => (string) $details?->country,
-            'parent_name' => (string) ($parent?->name ?? $details?->parent_name),
-            'parent_phone' => (string) $details?->parent_phone,
-            'parent_email' => (string) ($parent?->email ?? $details?->parent_email),
-            'parent_occupation' => (string) $details?->parent_occupation,
-            'guardian_name' => (string) $details?->guardian_name,
-            'guardian_phone' => (string) $details?->guardian_phone,
-            'guardian_email' => (string) $details?->guardian_email,
-            'guardian_relationship' => (string) $details?->guardian_relationship,
-            'medical_conditions' => (string) $details?->medical_conditions,
-            'allergies' => (string) $details?->allergies,
-            'special_needs' => (string) $details?->special_needs,
-            'notes' => (string) $details?->notes,
-        ]);
-    }
-
-    public function save(): void
-    {
-        $saver = app(SaveStudent::class);
-
-        if ($this->student) {
-            abort_unless(auth()->user()->can('update student'), 403);
-            $this->authorizeStudentAccess($this->student);
-
-            $validated = $this->validate(SaveStudent::updateRules());
-
-            $saver->update($this->student, $validated, $this->profile_image);
-
-            session()->flash('success', 'Student updated successfully!');
-
-            $this->redirectRoute('student.show', $this->student->id, navigate: true);
-
-            return;
-        }
-
-        abort_unless(auth()->user()->can('create student'), 403);
-
-        $validated = $this->validate(SaveStudent::createRules());
-
-        $saver->create($validated, $this->institutionId(), $this->profile_image);
-
-        session()->flash('success', 'Student created successfully!');
-
-        $this->redirectRoute('student.index', navigate: true);
-    }
-
-    /**
-     * Optional text fields post an empty string when untouched; the rules
-     * and columns behind them expect null.
-     */
-    protected function prepareForValidation($attributes)
-    {
-        foreach ($attributes as $key => $value) {
-            if ($value === '' && ! in_array($key, ['name', 'email', 'password'], true)) {
-                $attributes[$key] = null;
-            }
-        }
-
-        return $attributes;
-    }
-
-    /**
-     * A parent can have more than one student, so existing parents are
-     * offered for linking rather than making a duplicate account each time.
-     */
-    #[Computed]
-    public function existingParents(): Collection
-    {
-        return User::role('Parent')->orderBy('name')->get();
-    }
-
-    private function institutionId(): int
-    {
-        $institutionId = currentInstitution()?->id;
-
-        abort_unless($institutionId, 422, 'No institution selected.');
-
-        return $institutionId;
-    }
-
-    /**
-     * A Parent may only reach their own children, a Student only
-     * themselves, and everyone else only students in whichever institution
-     * is currently active for them. Admin is unrestricted.
-     */
-    private function authorizeStudentAccess(User $student): void
-    {
-        if (isAdmin()) {
-            return;
-        }
-
+        $this->student = User::with('studentUserDetails')->findOrFail($studentId);
+        
         $user = auth()->user();
 
         if ($user->hasRole('Parent')) {
-            abort_unless(
-                StudentDetails::where('student_id', $student->id)->where('parent_id', $user->id)->exists(),
-                403
-            );
-
+            abort_unless($this->student->id === $user->id, 403);
             return;
         }
 
-        if ($user->hasRole('Student')) {
-            abort_unless($student->id === $user->id, 403);
-
-            return;
-        }
-
-        $studentInstitutionId = StudentDetails::where('student_id', $student->id)->value('institution_id');
-
+        $studentInstitutionId = StudentDetails::where('student_id', $this->student->id)->value('institution_id');
         abort_unless($studentInstitutionId && $studentInstitutionId === currentInstitution()?->id, 403);
     }
-}; ?>
 
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $student ? 'Edit Student' : 'Add Student' }}
-            </h4>
+    #[Computed]
+    public function parents()
+    {
+        return User::role('Parent')
+            ->when(! isAdmin(), function ($q) {
+                $q->where(function ($sq) {
+                    $sq->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()))
+                        ->orDoesntHave('children');
+                });
+            })
+            ->with(['parent', 'children.student.studentUserDetails'])
+            ->get();
+    }
+    
+    #[Computed]
+    public function classes()
+    {
+        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('name')
+            ->get();
+    }
+    
+    #[Computed]
+    public function institutions()
+    {
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
+    }
+}; ?>
+<div>
+@if($student)
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Student Profile</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Update personal, academic, and guardian details for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $student->name }}</span>.
+                </flux:text>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('student.show', $student->id) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Profile
+                </flux:button>
+            </div>
         </div>
 
-        <form wire:submit="save">
-            <div class="space-y-8 p-6">
-                @if (! $student)
-                    <div>
-                        <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Account</h5>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <flux:input label="Full Name" wire:model="name" />
-                            <flux:input type="email" label="Email" wire:model="email" />
-                            <flux:input type="password" label="Password" wire:model="password" viewable />
-                        </div>
-                    </div>
-                @endif
-
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Personal</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <flux:input label="Phone" wire:model="phone" />
-                        <flux:input type="date" label="Date of Birth" wire:model="date_of_birth" />
-                        <flux:select label="Gender" wire:model="gender">
-                            <flux:select.option value="">Not stated</flux:select.option>
-                            <flux:select.option value="male">Male</flux:select.option>
-                            <flux:select.option value="female">Female</flux:select.option>
-                            <flux:select.option value="other">Other</flux:select.option>
-                        </flux:select>
-
-                        <flux:input label="Admission Number" wire:model="admission_number" />
-                        <flux:input label="Student Number" wire:model="student_number" />
-                        <flux:select label="Enrollment Status" wire:model="enrollment_status">
-                            @foreach (['active', 'expelled', 'graduated', 'suspended', 'transferred', 'withdrawn', 'dropped'] as $option)
-                                <flux:select.option value="{{ $option }}">{{ ucfirst($option) }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-
-                        <div class="md:col-span-2">
-                            <flux:input type="file" label="Profile Photo" wire:model="profile_image"
-                                accept="image/*"
-                                description="{{ $student ? 'Leave empty to keep the current photo.' : 'Used on the biometric device.' }}" />
-                            <div wire:loading wire:target="profile_image" class="mt-1 text-xs text-zinc-500">
-                                Uploading…
-                            </div>
-                            @if ($profile_image)
-                                <img src="{{ $profile_image->temporaryUrl() }}" alt="Preview"
-                                    class="mt-2 size-20 rounded-md object-cover" />
-                            @endif
-                        </div>
-
-                        <flux:checkbox wire:model="is_active" label="Active" />
-                    </div>
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented this student from being updated:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
+            </div>
+        @endif
 
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Address</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <div class="md:col-span-4">
-                            <flux:textarea label="Address" rows="2" wire:model="address" />
-                        </div>
-                        <flux:input label="City" wire:model="city" />
-                        <flux:input label="County / State" wire:model="state" />
-                        <flux:input label="Country" wire:model="country" />
-                    </div>
-                </div>
+        <form action="{{ route('student.update', $student->id) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
 
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Parent</h5>
-                    @if (! $student)
-                        <flux:select label="Link an existing parent" wire:model.live="parent_id" class="mb-4"
-                            description="A parent can have more than one student. Pick one here, or fill in the fields below to create a new parent.">
-                            <flux:select.option value="">Create from the details below</flux:select.option>
-                            @foreach ($this->existingParents as $parent)
-                                <flux:select.option value="{{ $parent->id }}">
-                                    {{ $parent->name }} ({{ $parent->email }})
+            <x-stepper.layout defaultActive="academic">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="academic" title="Academic Info" description="Account & school details." isLast="false" />
+                    <x-stepper.step id="personal" title="Personal Info" description="Demographics & photo." isLast="false" />
+                    <x-stepper.step id="guardian" title="Guardianship" description="Parent & emergency contacts." isLast="false" />
+                    <x-stepper.step id="medical" title="Health & Medical" description="Allergies & extra notes." isLast="true" />
+                </x-slot:sidebar>
+
+                {{-- Step 1: Academic --}}
+                <x-stepper.section id="academic" title="Academic & Account Setup" description="Core student credentials and classroom allocation.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="name" label="Full Legal Name" value="{{ old('name', $student->name) }}" placeholder="e.g. Jane Doe" required />
+                        
+                        <flux:input type="email" name="email" label="School Email Address" value="{{ old('email', $student->email) }}" placeholder="jane.doe@school.edu" autocomplete="new-password" required />
+                        
+                        <flux:input type="password" name="password" label="New Password (optional)" placeholder="Leave blank to keep existing password" autocomplete="new-password" />
+
+                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number', $student->studentUserDetails?->admission_number) }}" placeholder="e.g. ADM-2024-001" />
+
+                        <flux:input type="text" name="student_number" label="Student Number" value="{{ old('student_number', $student->studentUserDetails?->student_number) }}" placeholder="e.g. STU-10492" />
+
+                        <input type="hidden" name="class_id" value="">
+                        <flux:select name="class_id" label="Class / Grade" placeholder="Choose a classroom...">
+                            @foreach ($this->classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id', $student->studentUserDetails?->class_id) == $schoolClass->id">
+                                    {{ $schoolClass->name }} ({{ $schoolClass->level }})
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
-                    @endif
 
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <flux:input label="Parent Name" wire:model="parent_name" :disabled="$parent_id !== ''" />
-                        <flux:input label="Parent Phone" wire:model="parent_phone" :disabled="$parent_id !== ''" />
-                        <flux:input type="email" label="Parent Email" wire:model="parent_email"
-                            :disabled="$parent_id !== ''" />
-                        <flux:input label="Occupation" wire:model="parent_occupation"
-                            :disabled="$parent_id !== ''" />
+                        <flux:select name="enrollment_status" label="Enrollment Status">
+                            @php $status = old('enrollment_status', $student->studentUserDetails?->enrollment_status); @endphp
+                            <flux:select.option value="active" :selected="$status == 'active'">Active</flux:select.option>
+                            <flux:select.option value="inactive" :selected="$status == 'inactive'">Inactive</flux:select.option>
+                            <flux:select.option value="graduated" :selected="$status == 'graduated'">Graduated</flux:select.option>
+                            <flux:select.option value="suspended" :selected="$status == 'suspended'">Suspended</flux:select.option>
+                            <flux:select.option value="transferred" :selected="$status == 'transferred'">Transferred</flux:select.option>
+                            <flux:select.option value="expelled" :selected="$status == 'expelled'">Expelled</flux:select.option>
+                            <flux:select.option value="withdrawn" :selected="$status == 'withdrawn'">Withdrawn</flux:select.option>
+                            <flux:select.option value="dropped" :selected="$status == 'dropped'">Dropped</flux:select.option>
+                        </flux:select>
                     </div>
-                </div>
+                </x-stepper.section>
 
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Guardian</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <flux:input label="Guardian Name" wire:model="guardian_name" />
-                        <flux:input label="Guardian Phone" wire:model="guardian_phone" />
-                        <flux:input type="email" label="Guardian Email" wire:model="guardian_email" />
-                        <flux:input label="Relationship" wire:model="guardian_relationship" />
+                {{-- Step 2: Personal --}}
+                <x-stepper.section id="personal" title="Personal Details" description="Demographics, background information, and profile media.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="phone" label="Phone Number (Optional)" value="{{ old('phone', $student->studentUserDetails?->phone) }}" placeholder="+1 (555) 000-0000" />
+
+                        <flux:input type="date" name="date_of_birth" label="Date of Birth" value="{{ old('date_of_birth', $student->studentUserDetails?->date_of_birth ? \Carbon\Carbon::parse($student->studentUserDetails->date_of_birth)->format('Y-m-d') : '') }}" />
+
+                        <flux:select name="gender" label="Gender">
+                            @php $gender = old('gender', $student->studentUserDetails?->gender); @endphp
+                            <flux:select.option value="">Select Gender...</flux:select.option>
+                            <flux:select.option value="male" :selected="$gender == 'male'">Male</flux:select.option>
+                            <flux:select.option value="female" :selected="$gender == 'female'">Female</flux:select.option>
+                            <flux:select.option value="other" :selected="$gender == 'other'">Other</flux:select.option>
+                        </flux:select>
+
+                        <div class="md:col-span-2 space-y-2" x-data="{ photoName: null, photoPreview: null }">
+                            <flux:label>Profile Photo</flux:label>
+                            
+                            <div class="flex items-center gap-4">
+                                @php $currentPhoto = $student->studentUserDetails?->profile_photo; @endphp
+                                <div class="size-16 rounded-full shrink-0 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden">
+                                    <div x-show="photoPreview !== null" x-cloak>
+                                        <img x-bind:src="photoPreview" class="size-16 object-cover">
+                                    </div>
+                                    <div x-show="photoPreview === null && '{{ $currentPhoto }}' !== ''" x-cloak>
+                                        <img src="{{ $currentPhoto ? Storage::disk('public')->url($currentPhoto) : '' }}" class="size-16 object-cover">
+                                    </div>
+                                    <div x-show="photoPreview === null && '{{ $currentPhoto }}' === ''" x-cloak>
+                                        <flux:icon icon="user" class="size-6 text-zinc-400" />
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <input type="file" name="profile_image" accept="image/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none cursor-pointer bg-white dark:bg-zinc-800 transition-colors"
+                                        x-ref="photo"
+                                        x-on:change="
+                                            photoName = $refs.photo.files[0].name;
+                                            const reader = new FileReader();
+                                            reader.onload = (e) => { photoPreview = e.target.result; };
+                                            reader.readAsDataURL($refs.photo.files[0]);
+                                        "
+                                    />
+                                    <p class="text-xs text-zinc-400 mt-1">Supported formats: JPG, PNG, WEBP. Max size 2MB.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <flux:textarea name="address" label="Home Address" rows="3" placeholder="Full residential address...">{{ old('address', $student->studentUserDetails?->address) }}</flux:textarea>
+                        </div>
                     </div>
-                </div>
+                </x-stepper.section>
 
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Additional</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <flux:textarea label="Medical Conditions" rows="2" wire:model="medical_conditions" />
-                        <flux:textarea label="Allergies" rows="2" wire:model="allergies" />
-                        <flux:textarea label="Special Needs" rows="2" wire:model="special_needs" />
-                        <flux:textarea label="Notes" rows="2" wire:model="notes" />
+                {{-- Step 3: Guardian --}}
+                <x-stepper.section id="guardian" title="Guardian / Parent Details" description="Emergency contacts and billing entities.">
+                    <div class="bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/80 dark:border-zinc-800 rounded-xl p-6 mb-6">
+                        <h4 class="text-sm font-semibold text-zinc-900 dark:text-white mb-4">Primary Parent</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <flux:input type="text" name="parent_name" label="Parent Name" value="{{ old('parent_name', $student->parentUserDetails?->parent_name ?? $student->studentUserDetails?->parent_name) }}" placeholder="e.g. Richard Doe" />
+                            <flux:input type="text" name="parent_phone" label="Parent Phone" value="{{ old('parent_phone', $student->parentUserDetails?->parent_phone ?? $student->studentUserDetails?->parent_phone) }}" />
+                            <flux:input type="email" name="parent_email" label="Parent Email" value="{{ old('parent_email', $student->parentUserDetails?->email ?? $student->studentUserDetails?->parent_email) }}" autocomplete="new-password" />
+                            <flux:input type="text" name="parent_occupation" label="Parent Occupation" value="{{ old('parent_occupation', $student->parentUserDetails?->parent_occupation ?? $student->studentUserDetails?->parent_occupation) }}" />
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('student.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">
-                        {{ $student ? 'Update Student' : 'Save Student' }}
-                    </span>
-                    <span wire:loading wire:target="save">Saving…</span>
-                </flux:button>
-            </div>
+                    <div class="pt-2">
+                        <div class="flex items-center gap-2 mb-4">
+                            <flux:icon icon="shield-exclamation" class="size-5 text-zinc-400" />
+                            <h4 class="text-sm font-semibold text-zinc-900 dark:text-white">Secondary Guardian Details <span class="text-xs font-normal text-zinc-500">(Optional)</span></h4>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <flux:input type="text" name="guardian_name" label="Guardian Name" value="{{ old('guardian_name', $student->studentUserDetails?->guardian_name) }}" />
+                            <flux:input type="text" name="guardian_phone" label="Guardian Phone" value="{{ old('guardian_phone', $student->studentUserDetails?->guardian_phone) }}" />
+                            <flux:input type="email" name="guardian_email" label="Guardian Email" value="{{ old('guardian_email', $student->studentUserDetails?->guardian_email) }}" />
+                            <flux:input type="text" name="guardian_relationship" label="Relationship to Student" value="{{ old('guardian_relationship', $student->studentUserDetails?->guardian_relationship) }}" placeholder="e.g. Uncle, Grandmother" />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 4: Medical --}}
+                <x-stepper.section id="medical" title="Medical & Additional Info" description="Important health notes and final status.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:textarea name="medical_conditions" label="Medical Conditions" rows="3" placeholder="List any known medical conditions...">{{ old('medical_conditions', $student->studentUserDetails?->medical_conditions) }}</flux:textarea>
+                        
+                        <flux:textarea name="allergies" label="Allergies" rows="3" placeholder="List any allergies (food, medical, etc)...">{{ old('allergies', $student->studentUserDetails?->allergies) }}</flux:textarea>
+                        
+                        <div class="md:col-span-2">
+                            <flux:textarea name="special_needs" label="Special Educational Needs" rows="3" placeholder="Details of any special educational support required...">{{ old('special_needs', $student->studentUserDetails?->special_needs) }}</flux:textarea>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <flux:textarea name="notes" label="General Internal Notes" rows="2" placeholder="Any other internal notes for the staff...">{{ old('notes', $student->studentUserDetails?->notes) }}</flux:textarea>
+                        </div>
+                        
+                        <div class="md:col-span-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                            <flux:checkbox name="is_active" value="1" label="Account is Active" :checked="old('is_active', $student->studentUserDetails?->is_active ?? true)" />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('student.show', $student->id) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Changes
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
         </form>
     </div>
+
+@else
+
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Enroll New Student</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Enter the student's personal, academic, and guardian details.
+                </flux:text>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Directory
+                </flux:button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented this student from being saved:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('student.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <x-stepper.layout defaultActive="academic">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="academic" title="Academic Info" description="Account & school details." isLast="false" />
+                    <x-stepper.step id="personal" title="Personal Info" description="Demographics & photo." isLast="false" />
+                    <x-stepper.step id="guardian" title="Guardianship" description="Parent & emergency contacts." isLast="false" />
+                    <x-stepper.step id="medical" title="Medical Profile" description="Allergies & special needs." isLast="true" />
+                </x-slot:sidebar>
+
+                {{-- Step 1: Academic --}}
+                <x-stepper.section id="academic" title="Account & Academic Info" description="Core details required for system access and tracking.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <flux:input type="text" name="name" label="Full Name" value="{{ old('name') }}" placeholder="e.g. John Doe" required />
+                        </div>
+                        
+                        <flux:input type="email" name="email" label="Student Email" value="{{ old('email') }}" placeholder="john.doe@school.edu" autocomplete="new-password" required />
+                        <flux:input type="password" name="password" label="Temporary Password" placeholder="Minimum 8 characters..." autocomplete="new-password" required />
+                        
+                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number') }}" placeholder="e.g. ADM-2026-001" />
+                        <flux:input type="text" name="student_number" label="Student Number / ID" value="{{ old('student_number') }}" placeholder="e.g. STU-8492" />
+                        
+                        <input type="hidden" name="class_id" value="">
+                        <flux:select name="class_id" label="Class / Grade" placeholder="Select classroom...">
+                            <flux:select.option value="">Unassigned Class</flux:select.option>
+                            @foreach ($this->classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id') == $schoolClass->id">
+                                    {{ $schoolClass->name }} ({{ $schoolClass->level }})
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select name="enrollment_status" label="Enrollment Status">
+                            <flux:select.option value="active" :selected="old('enrollment_status', 'active') == 'active'">Active</flux:select.option>
+                            <flux:select.option value="inactive" :selected="old('enrollment_status', 'inactive') == 'inactive'">Inactive</flux:select.option>
+                            <flux:select.option value="graduated" :selected="old('enrollment_status', 'graduated') == 'graduated'">Graduated</flux:select.option>
+                            <flux:select.option value="suspended" :selected="old('enrollment_status', 'suspended') == 'suspended'">Suspended</flux:select.option>
+                            <flux:select.option value="transferred" :selected="old('enrollment_status', 'transferred') == 'transferred'">Transferred</flux:select.option>
+                        </flux:select>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 2: Personal --}}
+                <x-stepper.section id="personal" title="Personal Information" description="Contact and demographic details.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="phone" label="Phone Number (Optional)" value="{{ old('phone') }}" placeholder="+254 700 000 000" />
+                        <flux:input type="date" name="date_of_birth" label="Date of Birth" value="{{ old('date_of_birth') }}" />
+                        
+                        <flux:select name="gender" label="Gender">
+                            <flux:select.option value="">Select Gender...</flux:select.option>
+                            <flux:select.option value="male" :selected="old('gender') == 'male'">Male</flux:select.option>
+                            <flux:select.option value="female" :selected="old('gender') == 'female'">Female</flux:select.option>
+                            <flux:select.option value="other" :selected="old('gender') == 'other'">Other</flux:select.option>
+                        </flux:select>
+
+                        <div class="md:col-span-2 space-y-2">
+                            <flux:label>Profile Photo <span class="text-rose-500">*</span></flux:label>
+                            <input type="file" name="profile_image" required accept="image/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none cursor-pointer bg-white dark:bg-zinc-800 transition-colors" />
+                            <p class="text-xs text-zinc-500">Required for biometric sync. Supported formats: JPG, PNG, WEBP. Max size 2MB.</p>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <flux:textarea name="address" label="Home Address" rows="3" placeholder="Full residential address...">{{ old('address') }}</flux:textarea>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 3: Guardian --}}
+                <x-stepper.section id="guardian" title="Guardian / Parent Details" description="Emergency contacts and billing entities.">
+                    <div class="bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/80 dark:border-zinc-800 rounded-xl p-6 mb-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h4 class="text-sm font-semibold text-zinc-900 dark:text-white">Primary Parent</h4>
+                                <p class="text-xs text-zinc-500 mt-1">Select how you want to link this student's parent.</p>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white dark:bg-zinc-800 p-1 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-sm">
+                                <label class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700 dark:has-[:checked]:bg-sky-900/30 dark:has-[:checked]:text-sky-400 text-zinc-600 dark:text-zinc-400">
+                                    <input type="radio" name="parent_mode" value="new" class="hidden" checked> Add New Parent
+                                </label>
+                                <label class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700 dark:has-[:checked]:bg-sky-900/30 dark:has-[:checked]:text-sky-400 text-zinc-600 dark:text-zinc-400">
+                                    <input type="radio" name="parent_mode" value="existing" class="hidden"> Link Existing
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="existing-parent-fields" class="hidden">
+                            <flux:select name="parent_id" label="Select Existing Parent" class="w-full">
+                                <flux:select.option value="">Choose a parent...</flux:select.option>
+                                @foreach ($this->parents as $parent)
+                                    <flux:select.option value="{{ $parent->id }}" :selected="old('parent_id') == $parent->id">
+                                        {{ $parent->name }} ({{ $parent->email }})
+                                    </flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <p class="text-xs text-zinc-500 mt-2">Only parents registered at your institution will be shown.</p>
+                        </div>
+
+                        <div id="new-parent-fields" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <flux:input type="text" name="parent_name" label="Parent Name" value="{{ old('parent_name') }}" placeholder="e.g. Richard Doe" />
+                            <flux:input type="text" name="parent_phone" label="Parent Phone" value="{{ old('parent_phone') }}" placeholder="e.g. 0700000000" />
+                            <flux:input type="email" name="parent_email" label="Parent Email" value="{{ old('parent_email') }}" autocomplete="new-password" placeholder="e.g. parent@example.com" />
+                            <flux:input type="text" name="parent_occupation" label="Parent Occupation" value="{{ old('parent_occupation') }}" placeholder="e.g. Engineer" />
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <div class="flex items-center gap-2 mb-4">
+                            <flux:icon icon="shield-exclamation" class="size-5 text-zinc-400" />
+                            <h4 class="text-sm font-semibold text-zinc-900 dark:text-white">Secondary Guardian Details <span class="text-xs font-normal text-zinc-500">(Optional)</span></h4>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <flux:input type="text" name="guardian_name" label="Guardian Name" value="{{ old('guardian_name') }}" />
+                            <flux:input type="text" name="guardian_phone" label="Guardian Phone" value="{{ old('guardian_phone') }}" />
+                            <flux:input type="email" name="guardian_email" label="Guardian Email" value="{{ old('guardian_email') }}" />
+                            <flux:input type="text" name="guardian_relationship" label="Relationship to Student" value="{{ old('guardian_relationship') }}" placeholder="e.g. Uncle, Grandmother" />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 4: Medical --}}
+                <x-stepper.section id="medical" title="Medical & Additional Info" description="Important health notes and final status.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:textarea name="medical_conditions" label="Medical Conditions" rows="3" placeholder="List any known medical conditions...">{{ old('medical_conditions') }}</flux:textarea>
+                        
+                        <flux:textarea name="allergies" label="Allergies" rows="3" placeholder="List any allergies (food, medical, etc)...">{{ old('allergies') }}</flux:textarea>
+                        
+                        <div class="md:col-span-2">
+                            <flux:textarea name="special_needs" label="Special Educational Needs" rows="3" placeholder="Details of any special educational support required...">{{ old('special_needs') }}</flux:textarea>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <flux:textarea name="notes" label="General Internal Notes" rows="2" placeholder="Any other internal notes for the staff...">{{ old('notes') }}</flux:textarea>
+                        </div>
+                        
+                        <div class="md:col-span-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                            <flux:checkbox name="is_active" value="1" label="Mark student account as active immediately" checked />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('student.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Create Student
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
+        </form>
+    </div>
+
+    {{-- Interactive Parent Mode Toggle Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const newFields = document.getElementById('new-parent-fields');
+            const existingFields = document.getElementById('existing-parent-fields');
+            const modeRadios = document.querySelectorAll('input[name="parent_mode"]');
+
+            function applyMode() {
+                const checked = document.querySelector('input[name="parent_mode"]:checked');
+                const mode = checked ? checked.value : 'new';
+                if (newFields && existingFields) {
+                    newFields.classList.toggle('hidden', mode !== 'new');
+                    existingFields.classList.toggle('hidden', mode !== 'existing');
+                }
+            }
+
+            modeRadios.forEach(radio => radio.addEventListener('change', applyMode));
+            applyMode();
+        });
+    </script>
+@endif
 </div>

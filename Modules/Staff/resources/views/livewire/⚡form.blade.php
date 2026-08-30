@@ -1,46 +1,17 @@
 <?php
 
+use App\Models\User;
+use Illuminate\Support\Collection;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Institution\Models\Institution;
 use Modules\Staff\Actions\SaveStaff;
 use Modules\Staff\Models\StaffDetails;
 
 new #[Title('Staff')] class extends Component
 {
     public ?StaffDetails $staff = null;
-
-    public string $name = '';
-
-    public string $email = '';
-
-    public string $phone = '';
-
-    public string $staff_number = '';
-
-    public string $job_title = '';
-
-    public string $department = '';
-
-    public string $employment_type = 'full_time';
-
-    public string $hire_date = '';
-
-    public string $salary = '';
-
-    public string $address = '';
-
-    public string $status = 'active';
-
-    public string $notes = '';
-
-    public bool $is_active = true;
-
-    // System access
-    public bool $create_account = false;
-
-    public string $password = '';
-
-    public string $system_role = 'Accountant';
 
     public function mount(?int $staffId = null): void
     {
@@ -52,176 +23,339 @@ new #[Title('Staff')] class extends Component
 
         abort_unless(auth()->user()->can('edit staff'), 403);
 
-        $this->staff = StaffDetails::with('user')->findOrFail($staffId);
-        $this->authorizeAccessTo($this->staff);
-
-        $this->fill([
-            'name' => (string) $this->staff->name,
-            'email' => (string) $this->staff->email,
-            'phone' => (string) $this->staff->phone,
-            'staff_number' => (string) $this->staff->staff_number,
-            'job_title' => (string) $this->staff->job_title,
-            'department' => (string) $this->staff->department,
-            'employment_type' => (string) ($this->staff->employment_type ?: 'full_time'),
-            'hire_date' => $this->staff->hire_date?->format('Y-m-d') ?? '',
-            'salary' => (string) ($this->staff->salary ?? ''),
-            'address' => (string) $this->staff->address,
-            'status' => (string) ($this->staff->status ?: 'active'),
-            'notes' => (string) $this->staff->notes,
-            'is_active' => (bool) $this->staff->is_active,
-            'system_role' => $this->staff->user?->roles->first()?->name ?? 'Accountant',
-        ]);
+        $this->staff = $this->scoped()->with('user')->findOrFail($staffId);
     }
 
-    public function save(): void
+    #[Computed]
+    public function institutions(): Collection
     {
-        $wantsAccount = $this->create_account;
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
+    }
 
-        if ($this->staff) {
-            abort_unless(auth()->user()->can('update staff'), 403);
-            $this->authorizeAccessTo($this->staff);
+    #[Computed]
+    public function systemRoles(): array
+    {
+        return SaveStaff::SYSTEM_ROLES;
+    }
 
-            $validated = $this->validate(SaveStaff::rules($wantsAccount, $this->staff));
+    private function scoped()
+    {
+        $query = StaffDetails::query();
 
-            SaveStaff::update($this->staff, $validated, $this->institutionId(), $wantsAccount);
-
-            session()->flash('success', 'Staff member updated successfully!');
-
-            $this->redirectRoute('staff.show', $this->staff->id, navigate: true);
-
-            return;
+        if (! isAdmin()) {
+            $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
-        abort_unless(auth()->user()->can('create staff'), 403);
-
-        $validated = $this->validate(SaveStaff::rules($wantsAccount));
-
-        SaveStaff::create($validated, $this->institutionId(), $wantsAccount);
-
-        session()->flash('success', 'Staff member created successfully!');
-
-        $this->redirectRoute('staff.index', navigate: true);
-    }
-
-    protected function prepareForValidation($attributes)
-    {
-        foreach ($attributes as $key => $value) {
-            if ($value === '' && ! in_array($key, ['name'], true)) {
-                $attributes[$key] = null;
-            }
-        }
-
-        return $attributes;
-    }
-
-    private function institutionId(): int
-    {
-        $institutionId = $this->staff?->institution_id ?? currentInstitution()?->id;
-
-        abort_unless($institutionId, 422, 'No institution selected.');
-
-        return $institutionId;
-    }
-
-    private function authorizeAccessTo(StaffDetails $staff): void
-    {
-        if (isAdmin()) {
-            return;
-        }
-
-        abort_unless($staff->institution_id === currentInstitution()?->id, 403);
+        return $query;
     }
 }; ?>
-
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $staff ? 'Edit Staff Member' : 'Add Staff Member' }}
-            </h4>
+<div>
+    @if($staff)
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Staff Member</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Update profile and access rights for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $staff->name }}</span>.
+                </flux:text>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('staff.show', $staff) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Profile
+                </flux:button>
+            </div>
         </div>
 
-        <form wire:submit="save">
-            <div class="space-y-8 p-6">
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Details</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <flux:input label="Full Name" wire:model="name" />
-                        <flux:input type="email" label="Email" wire:model="email"
-                            description="Required only if they get a login." />
-                        <flux:input label="Phone" wire:model="phone" />
-                        <flux:input label="Staff Number" wire:model="staff_number" />
-                        <flux:input label="Job Title" wire:model="job_title" placeholder="e.g. Bursar" />
-                        <flux:input label="Department" wire:model="department" />
-                        <flux:select label="Employment Type" wire:model="employment_type">
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented this staff member from being saved:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('staff.update', $staff) }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            <x-stepper.layout defaultActive="personal-info">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="personal-info" title="Personal Info" description="Name, contact details." isLast="false" />
+                    <x-stepper.step id="employment-details" title="Employment" description="Role, salary, status." isLast="false" />
+                    <x-stepper.step id="system-access" title="System Access" description="Login credentials." isLast="true" />
+                </x-slot:sidebar>
+
+                {{-- Step 1: Personal Information --}}
+                <x-stepper.section id="personal-info" title="Personal Information" description="Update the basic contact information for this staff member.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <flux:input type="text" name="name" label="Full Name" value="{{ old('name', $staff->name) }}" required />
+                        </div>
+                        <flux:input type="email" name="email" label="Email Address" value="{{ old('email', $staff->email) }}" />
+                        <flux:input type="text" name="phone" label="Phone Number" value="{{ old('phone', $staff->phone) }}" />
+                        <div class="md:col-span-2">
+                            <flux:textarea name="address" rows="3" label="Physical Address">{{ old('address', $staff->address) }}</flux:textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <flux:textarea name="notes" rows="2" label="Additional Notes">{{ old('notes', $staff->notes) }}</flux:textarea>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 2: Employment Details --}}
+                <x-stepper.section id="employment-details" title="Employment Details" description="Update their role, department, and compensation within the institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:select name="institution_id" label="Institution">
+                            @foreach ($this->institutions as $institution)
+                                <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $staff->institution_id) == $institution->id">
+                                    {{ $institution->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        
+                        <flux:input type="text" name="staff_number" label="Staff Number" value="{{ old('staff_number', $staff->staff_number) }}" />
+                        
+                        <flux:input type="text" name="job_title" label="Job Title" value="{{ old('job_title', $staff->job_title) }}" />
+                        
+                        <flux:input type="text" name="department" label="Department" value="{{ old('department', $staff->department) }}" />
+                        
+                        <flux:select name="employment_type" label="Employment Type">
                             @foreach (['full_time', 'part_time', 'contract', 'volunteer'] as $type)
-                                <flux:select.option value="{{ $type }}">
+                                <flux:select.option value="{{ $type }}" :selected="old('employment_type', $staff->employment_type) === $type">
                                     {{ ucfirst(str_replace('_', ' ', $type)) }}
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
-                        <flux:input type="date" label="Hire Date" wire:model="hire_date" />
-                        <flux:input type="number" step="0.01" min="0" label="Salary" wire:model="salary" />
-                        <flux:select label="Status" wire:model="status">
-                            @foreach (['active', 'on_leave', 'suspended', 'resigned', 'terminated'] as $option)
-                                <flux:select.option value="{{ $option }}">
-                                    {{ ucfirst(str_replace('_', ' ', $option)) }}
-                                </flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        <flux:checkbox wire:model="is_active" label="Active" />
-                    </div>
-                </div>
-
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">System Access</h5>
-
-                    @if ($staff?->user)
-                        <flux:text class="mb-3 block text-zinc-500">
-                            Signs in as <span class="font-medium">{{ $staff->user->email }}</span>. Fill in a
-                            password below only to change it.
-                        </flux:text>
-
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <flux:input type="password" label="New Password" wire:model="password" viewable />
-                            <flux:select label="Role" wire:model="system_role">
-                                @foreach (\Modules\Staff\Actions\SaveStaff::SYSTEM_ROLES as $role)
-                                    <flux:select.option value="{{ $role }}">{{ $role }}</flux:select.option>
-                                @endforeach
-                            </flux:select>
-                        </div>
-                    @else
-                        <flux:checkbox wire:model.live="create_account" label="Give this staff member a login"
-                            description="They'll be able to sign in with the email above." />
-
-                        @if ($create_account)
-                            <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <flux:input type="password" label="Password" wire:model="password" viewable />
-                                <flux:select label="Role" wire:model="system_role">
-                                    @foreach (\Modules\Staff\Actions\SaveStaff::SYSTEM_ROLES as $role)
-                                        <flux:select.option value="{{ $role }}">{{ $role }}</flux:select.option>
+                        
+                        <flux:input type="date" name="hire_date" label="Hire Date" value="{{ old('hire_date', optional($staff->hire_date)->format('Y-m-d')) }}" />
+                        
+                        <flux:input type="number" step="0.01" min="0" name="salary" label="Monthly Salary" value="{{ old('salary', $staff->salary) }}" />
+                        
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <flux:select name="status" label="Status">
+                                    @foreach (['active', 'on_leave', 'suspended', 'resigned', 'terminated'] as $status)
+                                        <flux:select.option value="{{ $status }}" :selected="old('status', $staff->status) === $status">
+                                            {{ ucfirst(str_replace('_', ' ', $status)) }}
+                                        </flux:select.option>
                                     @endforeach
                                 </flux:select>
                             </div>
-                        @endif
+                            <div class="flex items-end pb-2">
+                                <flux:checkbox name="is_active" value="1" label="Is Active Profile" :checked="old('is_active', $staff->is_active)" />
+                            </div>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 3: System Access --}}
+                <x-stepper.section id="system-access" title="System Access" description="Manage login credentials and system permissions.">
+                    
+                    @if ($staff->hasSystemAccess())
+                        <div class="bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-4 flex items-start gap-3 mb-6">
+                            <flux:icon icon="check-circle" class="size-5 text-emerald-500 mt-0.5 shrink-0" />
+                            <div class="text-sm text-emerald-800 dark:text-emerald-300">
+                                This staff member currently has system access. You can update their role or reset their password below. Unchecking the box will revoke their access.
+                            </div>
+                        </div>
+                    @else
+                        <div class="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-800/30 rounded-xl p-4 flex items-start gap-3 mb-6">
+                            <flux:icon icon="shield-check" class="size-5 text-indigo-500 mt-0.5 shrink-0" />
+                            <div class="text-sm text-indigo-800 dark:text-indigo-300">
+                                This staff member does not have system access yet. Tick the box below to generate a user account.
+                            </div>
+                        </div>
                     @endif
-                </div>
 
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <flux:textarea label="Address" rows="2" wire:model="address" />
-                    <flux:textarea label="Notes" rows="2" wire:model="notes" />
-                </div>
-            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <flux:checkbox name="create_account" value="1" label="Allow system login" :checked="old('create_account', $staff->hasSystemAccess())" />
+                        </div>
+                        
+                        <flux:select name="system_role" label="System Role">
+                            @php
+                                $currentRole = $staff->user?->getRoleNames()->first();
+                            @endphp
+                            @foreach ($this->systemRoles as $role)
+                                <flux:select.option value="{{ $role }}" :selected="old('system_role', $currentRole) === $role">
+                                    {{ $role }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        
+                        <flux:input type="password" name="password" label="New Password" description="Leave blank to keep current password." placeholder="Enter new password if changing..." />
+                    </div>
+                </x-stepper.section>
 
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('staff.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">{{ $staff ? 'Update Staff' : 'Save Staff' }}</span>
-                    <span wire:loading wire:target="save">Saving…</span>
-                </flux:button>
-            </div>
+                <x-slot:actions>
+                    <flux:button href="{{ route('staff.show', $staff) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Changes
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
         </form>
     </div>
+
+    @else
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Add Staff Member</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Register a new staff member and configure their access rights.
+                </flux:text>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('staff.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Staff
+                </flux:button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented this staff member from being saved:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('staff.store') }}" method="POST">
+            @csrf
+
+            <x-stepper.layout defaultActive="personal-info">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="personal-info" title="Personal Info" description="Name, contact details." isLast="false" />
+                    <x-stepper.step id="employment-details" title="Employment" description="Role, salary, status." isLast="false" />
+                    <x-stepper.step id="system-access" title="System Access" description="Login credentials." isLast="true" />
+                </x-slot:sidebar>
+
+                {{-- Step 1: Personal Information --}}
+                <x-stepper.section id="personal-info" title="Personal Information" description="Provide the basic contact information for the new staff member.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <flux:input type="text" name="name" label="Full Name" value="{{ old('name') }}" placeholder="e.g. Jane Doe" required />
+                        </div>
+                        <flux:input type="email" name="email" label="Email Address" value="{{ old('email') }}" placeholder="e.g. jane@example.com" />
+                        <flux:input type="text" name="phone" label="Phone Number" value="{{ old('phone') }}" placeholder="e.g. +1 234 567 8900" />
+                        <div class="md:col-span-2">
+                            <flux:textarea name="address" rows="3" label="Physical Address" placeholder="Enter full address...">{{ old('address') }}</flux:textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <flux:textarea name="notes" rows="2" label="Additional Notes" placeholder="Any private notes about this staff member...">{{ old('notes') }}</flux:textarea>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 2: Employment Details --}}
+                <x-stepper.section id="employment-details" title="Employment Details" description="Define their role, department, and compensation within the institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:select name="institution_id" label="Institution">
+                            <flux:select.option value="">Select Institution</flux:select.option>
+                            @foreach ($this->institutions as $institution)
+                                <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
+                                    {{ $institution->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        
+                        <flux:input type="text" name="staff_number" label="Staff Number" value="{{ old('staff_number') }}" placeholder="e.g. STF-001" />
+                        
+                        <flux:input type="text" name="job_title" label="Job Title" value="{{ old('job_title') }}" placeholder="e.g. Senior Teacher" />
+                        
+                        <flux:input type="text" name="department" label="Department" value="{{ old('department') }}" placeholder="e.g. Science" />
+                        
+                        <flux:select name="employment_type" label="Employment Type">
+                            @foreach (['full_time', 'part_time', 'contract', 'volunteer'] as $type)
+                                <flux:select.option value="{{ $type }}" :selected="old('employment_type', 'full_time') === $type">
+                                    {{ ucfirst(str_replace('_', ' ', $type)) }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        
+                        <flux:input type="date" name="hire_date" label="Hire Date" value="{{ old('hire_date') }}" />
+                        
+                        <flux:input type="number" step="0.01" min="0" name="salary" label="Monthly Salary" value="{{ old('salary') }}" placeholder="0.00" />
+                        
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <flux:select name="status" label="Status">
+                                    @foreach (['active', 'on_leave', 'suspended', 'resigned', 'terminated'] as $status)
+                                        <flux:select.option value="{{ $status }}" :selected="old('status', 'active') === $status">
+                                            {{ ucfirst(str_replace('_', ' ', $status)) }}
+                                        </flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                            </div>
+                            <div class="flex items-end pb-2">
+                                <flux:checkbox name="is_active" value="1" label="Is Active Profile" checked />
+                            </div>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 3: System Access --}}
+                <x-stepper.section id="system-access" title="System Access" description="Configure login credentials and permissions for the platform.">
+                    <div class="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200/50 dark:border-indigo-800/30 rounded-xl p-4 flex items-start gap-3 mb-6">
+                        <flux:icon icon="shield-check" class="size-5 text-indigo-500 mt-0.5 shrink-0" />
+                        <div class="text-sm text-indigo-800 dark:text-indigo-300">
+                            <strong>Optional.</strong> Tick the box below to generate a user account for this staff member.
+                            Different roles grant different permissions (e.g. Accountants can only manage payroll and fees).
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <flux:checkbox name="create_account" value="1" label="Give this staff member a system login" :checked="(bool) old('create_account')" />
+                        </div>
+                        
+                        <flux:select name="system_role" label="System Role">
+                            @foreach ($this->systemRoles as $role)
+                                <flux:select.option value="{{ $role }}" :selected="old('system_role') === $role">
+                                    {{ $role }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        
+                        <flux:input type="password" name="password" label="Temporary Password" description="Required when creating a login." placeholder="Enter a secure password..." />
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('staff.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Staff Member
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
+        </form>
+    </div>
+    @endif
 </div>

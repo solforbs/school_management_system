@@ -91,6 +91,10 @@ class Institution extends Model
     protected function casts(): array
     {
         return [
+            'is_approved' => 'boolean',
+            'is_active' => 'boolean',
+            'min_electives' => 'integer',
+            'max_electives' => 'integer',
             'approved_at' => 'datetime',
             'subscription_started_at' => 'datetime',
             'subscription_expires_at' => 'datetime',
@@ -236,7 +240,17 @@ class Institution extends Model
 
     public function students()
     {
-        return $this->hasManyThrough(User::class, StudentDetails::class, 'user_id', 'id', 'id', 'institution_id');
+        return $this->hasManyThrough(User::class, StudentDetails::class, 'institution_id', 'id', 'id', 'student_id');
+    }
+
+    public function studentDetails()
+    {
+        return $this->hasMany(StudentDetails::class);
+    }
+
+    public function teacherDetails()
+    {
+        return $this->hasMany(TeacherDetails::class);
     }
 
     public function parents()

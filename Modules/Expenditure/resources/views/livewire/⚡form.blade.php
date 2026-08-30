@@ -186,7 +186,7 @@ new #[Title('Record Expenditure')] class extends Component
 
             <div
                 class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('expenditure.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
+                <flux:button href="{{ route('expenditure.index') }}" variant="ghost" wire:navigate.hover>Cancel</flux:button>
                 <flux:button variant="primary" type="submit">
                     <span wire:loading.remove wire:target="save">
                         {{ $expenditure ? 'Update Expenditure' : 'Save Expenditure' }}

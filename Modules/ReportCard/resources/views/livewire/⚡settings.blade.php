@@ -341,7 +341,7 @@ new #[Title('Report Card Settings')] class extends Component
                 @if ($this->curricula->isEmpty())
                     <flux:text class="text-xs text-zinc-500">
                         No curricula set up yet.
-                        <a href="{{ route('curriculum.index') }}" class="underline" wire:navigate>Add one</a> to keep
+                        <a href="{{ route('curriculum.index') }}" class="underline" wire:navigate.hover>Add one</a> to keep
                         separate 8-4-4 and CBC scales.
                     </flux:text>
                 @endif
@@ -360,7 +360,7 @@ new #[Title('Report Card Settings')] class extends Component
                                 <strong>{{ $this->curriculum->systemLabel() }}</strong>. Marks on it will be graded
                                 {{ $this->curriculum->isCbc() ? 'against expectations' : 'A to E' }}. If that is not
                                 what you want, change its system on the
-                                <a href="{{ route('curriculum.index') }}" class="underline" wire:navigate>curriculum
+                                <a href="{{ route('curriculum.index') }}" class="underline" wire:navigate.hover>curriculum
                                     page</a>.
                             </flux:callout.text>
                         </flux:callout>

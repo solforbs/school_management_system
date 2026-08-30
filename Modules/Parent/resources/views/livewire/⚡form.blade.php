@@ -12,19 +12,6 @@ new #[Title('Parent')] class extends Component
 {
     public ?User $parent = null;
 
-    public string $name = '';
-
-    public string $email = '';
-
-    public string $password = '';
-
-    public string $parent_phone = '';
-
-    public string $parent_occupation = '';
-
-    /** @var array<int, string> student ids to link to this parent */
-    public array $children = [];
-
     public function mount(?int $parentId = null): void
     {
         if ($parentId === null) {
@@ -35,90 +22,16 @@ new #[Title('Parent')] class extends Component
 
         abort_unless(auth()->user()->can('edit parent'), 403);
 
-        $this->parent = User::role('Parent')->with('parent')->findOrFail($parentId);
+        $this->parent = User::role('Parent')->with(['parent', 'children.student', 'children.institution'])->findOrFail($parentId);
         $this->authorizeAccessTo($this->parent);
-
-        $this->fill([
-            'name' => (string) $this->parent->name,
-            'email' => (string) $this->parent->email,
-            'parent_phone' => (string) $this->parent->parent?->parent_phone,
-            'parent_occupation' => (string) $this->parent->parent?->parent_occupation,
-        ]);
-
-        $this->children = StudentDetails::where('parent_id', $this->parent->id)
-            ->pluck('student_id')
-            ->map(fn ($id) => (string) $id)
-            ->all();
     }
 
-    public function save(): void
-    {
-        if ($this->parent) {
-            abort_unless(auth()->user()->can('update parent'), 403);
-            $this->authorizeAccessTo($this->parent);
-
-            $validated = $this->validate(SaveParent::updateRules($this->parent));
-
-            SaveParent::update($this->parent, $validated, $this->linkableStudentsQuery());
-
-            session()->flash('success', 'Parent updated successfully!');
-
-            $this->redirectRoute('parent.show', $this->parent->id, navigate: true);
-
-            return;
-        }
-
-        abort_unless(auth()->user()->can('create parent'), 403);
-
-        $validated = $this->validate(SaveParent::createRules());
-
-        SaveParent::create($validated, $this->linkableStudentsQuery());
-
-        session()->flash('success', 'Parent created successfully!');
-
-        $this->redirectRoute('parent.index', navigate: true);
-    }
-
-    protected function prepareForValidation($attributes)
-    {
-        foreach (['parent_phone', 'parent_occupation'] as $field) {
-            if (($attributes[$field] ?? '') === '') {
-                $attributes[$field] = null;
-            }
-        }
-
-        return $attributes;
-    }
-
-    /**
-     * Students this parent can be linked to: the ones with no parent yet,
-     * plus the ones already theirs so they stay tickable.
-     *
-     * @return Collection<int, StudentDetails>
-     */
     #[Computed]
-    public function selectableStudents(): Collection
+    public function availableStudents(): Collection
     {
-        $query = StudentDetails::with(['student', 'institution'])
-            ->where(function ($q) {
-                $q->whereNull('parent_id');
-
-                if ($this->parent) {
-                    $q->orWhere('parent_id', $this->parent->id);
-                }
-            });
-
-        if (! isAdmin()) {
-            $query->where('institution_id', currentInstitution()?->id ?? 0);
-        }
-
-        return $query->get()->sortBy(fn ($details) => $details->student?->name)->values();
+        return $this->linkableStudentsQuery()->with(['student', 'institution'])->get();
     }
 
-    /**
-     * Only students with no parent may be linked - that's what stops a link
-     * from quietly stealing a student from another parent.
-     */
     private function linkableStudentsQuery()
     {
         $query = StudentDetails::whereNull('parent_id');
@@ -130,11 +43,6 @@ new #[Title('Parent')] class extends Component
         return $query;
     }
 
-    /**
-     * A parent with no children at all isn't claimed by any institution yet,
-     * so any Director can manage them. Otherwise at least one child must be
-     * in the viewer's active institution.
-     */
     private function authorizeAccessTo(User $parent): void
     {
         if (isAdmin()) {
@@ -149,57 +57,229 @@ new #[Title('Parent')] class extends Component
         abort_unless($accessible, 403);
     }
 }; ?>
-
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $parent ? 'Edit Parent' : 'Add Parent' }}
-            </h4>
-        </div>
-
-        <form wire:submit="save">
-            <div class="space-y-8 p-6">
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <flux:input label="Full Name" wire:model="name" />
-                    <flux:input type="email" label="Email" wire:model="email" />
-                    @if (! $parent)
-                        <flux:input type="password" label="Password" wire:model="password" viewable />
-                    @endif
-                    <flux:input label="Phone" wire:model="parent_phone" />
-                    <flux:input label="Occupation" wire:model="parent_occupation" />
-                </div>
-
-                <div>
-                    <h5 class="text-md mb-1 font-semibold text-gray-800 dark:text-zinc-200">Children</h5>
-                    <flux:text class="mb-3 text-zinc-500">
-                        Only students without a parent on file are listed - linking here never takes a student
-                        from another parent.
-                    </flux:text>
-
-                    @if ($this->selectableStudents->isEmpty())
-                        <flux:text class="text-zinc-500">No unlinked students available.</flux:text>
-                    @else
-                        <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
-                            @foreach ($this->selectableStudents as $details)
-                                <flux:checkbox wire:model="children" value="{{ $details->student_id }}"
-                                    wire:key="student-{{ $details->student_id }}"
-                                    label="{{ $details->student?->name }}{{ $details->admission_number ? ' ('.$details->admission_number.')' : '' }}" />
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
+<div>
+    @if($parent)
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Parent</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Update information and linked students for {{ $parent->name }}.
+                </flux:text>
             </div>
-
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('parent.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">{{ $parent ? 'Update Parent' : 'Save Parent' }}</span>
-                    <span wire:loading wire:target="save">Saving…</span>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('parent.show', $parent->id) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Details
                 </flux:button>
             </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented this parent from being saved:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('parent.update', $parent->id) }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            <x-stepper.layout defaultActive="account-info">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="account-info" title="Account Information" description="Name, email, and password." isLast="false" />
+                    <x-stepper.step id="contact-info" title="Contact Details" description="Phone number and occupation." isLast="false" />
+                    <x-stepper.step id="link-children" title="Link Children" description="Select students for this parent." isLast="true" />
+                </x-slot:sidebar>
+
+                <x-stepper.section id="account-info" title="Account Information" description="Update the basic account details for the parent.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="name" label="Full Name" value="{{ old('name', $parent->name) }}" required />
+                        <flux:input type="email" name="email" label="Email" value="{{ old('email', $parent->email) }}" required />
+                        <div class="md:col-span-2">
+                            <flux:input type="password" name="password" label="New Password (optional)" placeholder="Leave blank to keep existing password" />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-stepper.section id="contact-info" title="Contact Details" description="Update contact and occupation details for the parent.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="parent_phone" label="Phone" value="{{ old('parent_phone', $parent->parent?->parent_phone) }}" />
+                        <flux:input type="text" name="parent_occupation" label="Occupation" value="{{ old('parent_occupation', $parent->parent?->parent_occupation) }}" />
+                    </div>
+                </x-stepper.section>
+
+                <x-stepper.section id="link-children" title="Link Children" description="Select the students you want to link to this parent account. Only students from your institution are shown.">
+                    <div class="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6">
+                        @if ($this->availableStudents->isEmpty())
+                            <div class="flex flex-col items-center justify-center py-8">
+                                <flux:icon icon="users" class="size-10 text-zinc-300 dark:text-zinc-600 mb-3" />
+                                <p class="text-sm font-medium text-zinc-900 dark:text-zinc-200">No unlinked students available.</p>
+                                <p class="text-xs text-zinc-500 mt-1">All current students are already linked to a parent.</p>
+                            </div>
+                        @else
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto pr-2">
+                                @foreach ($this->availableStudents as $studentDetails)
+                                    @php
+                                        $isLinked = $this->linkedStudentIds->contains($studentDetails->student_id);
+                                        $isChecked = collect(old('children', $this->linkedStudentIds->all()))->contains($studentDetails->student_id);
+                                    @endphp
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border {{ $isLinked ? 'border-blue-200 dark:border-blue-900/40 bg-blue-50/30 dark:bg-blue-950/10' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900' }} cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 transition-colors">
+                                        <input type="checkbox" name="children[]" value="{{ $studentDetails->student_id }}"
+                                            @checked($isChecked)
+                                            class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm font-medium text-zinc-900 dark:text-white">{{ $studentDetails->student?->name }}</span>
+                                                @if ($isLinked)
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">Currently Linked</span>
+                                                @endif
+                                            </div>
+                                            <span class="text-xs text-zinc-500">
+                                                @if ($studentDetails->admission_number)
+                                                    {{ $studentDetails->admission_number }}
+                                                @endif
+                                                @if (isAdmin())
+                                                    &mdash; {{ $studentDetails->institution?->name }}
+                                                @endif
+                                            </span>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('parent.show', $parent->id) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Changes
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
         </form>
     </div>
+
+    @else
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Create Parent</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Add a parent/guardian account and optionally link existing students to them.
+                </flux:text>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('parent.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Parents
+                </flux:button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <p class="font-semibold mb-1">{{ $errors->count() }} error(s) prevented this parent from being saved:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('parent.store') }}" method="POST">
+            @csrf
+            
+            <x-stepper.layout defaultActive="account-info">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="account-info" title="Account Information" description="Name, email, and password." isLast="false" />
+                    <x-stepper.step id="contact-info" title="Contact Details" description="Phone number and occupation." isLast="false" />
+                    <x-stepper.step id="link-children" title="Link Children" description="Select students for this parent." isLast="true" />
+                </x-slot:sidebar>
+
+                <x-stepper.section id="account-info" title="Account Information" description="Set up the basic account details for the parent.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="name" label="Full Name" value="{{ old('name') }}" required />
+                        <flux:input type="email" name="email" label="Email" value="{{ old('email') }}" required />
+                        <div class="md:col-span-2">
+                            <flux:input type="password" name="password" label="Password" required />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-stepper.section id="contact-info" title="Contact Details" description="Provide contact and occupation details for the parent.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:input type="text" name="parent_phone" label="Phone" value="{{ old('parent_phone') }}" />
+                        <flux:input type="text" name="parent_occupation" label="Occupation" value="{{ old('parent_occupation') }}" />
+                    </div>
+                </x-stepper.section>
+
+                <x-stepper.section id="link-children" title="Link Children" description="Select the students you want to link to this parent account. Only unlinked students are shown.">
+                    <div class="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6">
+                        @if ($this->availableStudents->isEmpty())
+                            <div class="flex flex-col items-center justify-center py-8">
+                                <flux:icon icon="users" class="size-10 text-zinc-300 dark:text-zinc-600 mb-3" />
+                                <p class="text-sm font-medium text-zinc-900 dark:text-zinc-200">No unlinked students available.</p>
+                                <p class="text-xs text-zinc-500 mt-1">All current students are already linked to a parent.</p>
+                            </div>
+                        @else
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto pr-2">
+                                @foreach ($this->availableStudents as $studentDetails)
+                                    <label class="flex items-start gap-3 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 transition-colors">
+                                        <input type="checkbox" name="children[]" value="{{ $studentDetails->student_id }}"
+                                            @checked(collect(old('children'))->contains($studentDetails->student_id))
+                                            class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-zinc-900 dark:text-white">{{ $studentDetails->student?->name }}</span>
+                                            <span class="text-xs text-zinc-500">
+                                                @if ($studentDetails->admission_number)
+                                                    {{ $studentDetails->admission_number }}
+                                                @endif
+                                                @if (isAdmin())
+                                                    &mdash; {{ $studentDetails->institution?->name }}
+                                                @endif
+                                            </span>
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('parent.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Parent
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
+        </form>
+    </div>
+    @endif
 </div>

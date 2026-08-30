@@ -44,7 +44,8 @@ class LessonReportService
         }
 
         $lessons = Lesson::where('class_id', $class->id)
-            ->whereBetween('lesson_date', [$start->toDateString(), $end->toDateString()])
+            ->whereDate('lesson_date', '>=', $start->toDateString())
+            ->whereDate('lesson_date', '<=', $end->toDateString())
             ->get()
             ->keyBy(fn (Lesson $lesson) => $lesson->lesson_date->format('Y-m-d').'|'.$lesson->timetable_entry_id);
 

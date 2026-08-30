@@ -96,7 +96,10 @@ class StudentController extends Controller
 
         $user = User::findOrFail($id);
         $this->authorizeStudentAccess($user);
-        $user->studentParent->delete();
+
+        if ($user->studentUserDetails) {
+            $user->studentUserDetails->delete();
+        }
         $user->delete();
 
         return redirect()->route('student.index')->with('success', 'Sutudent and Parent successfully removed from institution!');

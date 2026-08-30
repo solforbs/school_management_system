@@ -5,278 +5,432 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 use Modules\Institution\Actions\SaveInstitution;
 use Modules\Institution\Models\Institution;
 
 new #[Title('Institution')] class extends Component
 {
-    use WithFileUploads;
-
     public ?Institution $institution = null;
-
-    // Basics
-    public string $name = '';
-
-    public string $code = '';
-
-    public string $type = 'School';
-
-    public string $education_level = '';
-
-    public string $timezone = 'Africa/Nairobi';
-
-    public $logo = null;
-
-    // Contact
-    public string $email = '';
-
-    public string $phone = '';
-
-    public string $alternate_phone = '';
-
-    public string $website = '';
-
-    // Address
-    public string $country = 'Kenya';
-
-    public string $county = '';
-
-    public string $city = '';
-
-    public string $postal_address = '';
-
-    public string $physical_address = '';
-
-    // Administration
-    public string $principal_name = '';
-
-    public string $principal_phone = '';
-
-    // Academic
-    public string $min_electives = '0';
-
-    public string $max_electives = '';
-
-    // Subscription / status
-    public string $subscription_plan = '';
-
-    public string $subscription_expires_at = '';
-
-    public string $notes = '';
-
-    public bool $is_active = true;
 
     public function mount(?int $institutionId = null): void
     {
         if ($institutionId === null) {
-            // Registering a school is the self-service onboarding flow: any
-            // authenticated user may reach it (this is how a Director
-            // account comes into being). Admins own the platform, not a
-            // school, and never create one.
             abort_if(isAdmin(), 403);
 
             return;
         }
 
-        $this->institution = Institution::findOrFail($institutionId);
+        abort_unless(auth()->user()->can('edit institution'), 403);
 
-        abort_unless(
-            auth()->user()->can('edit institution') && (isAdmin() || $this->institution->user_id === auth()->id()),
-            403
-        );
-
-        $this->fill([
-            'name' => (string) $this->institution->name,
-            'code' => (string) $this->institution->code,
-            'type' => (string) ($this->institution->type ?: 'School'),
-            'education_level' => (string) $this->institution->education_level,
-            'timezone' => (string) ($this->institution->timezone ?: 'Africa/Nairobi'),
-            'email' => (string) $this->institution->email,
-            'phone' => (string) $this->institution->phone,
-            'alternate_phone' => (string) $this->institution->alternate_phone,
-            'website' => (string) $this->institution->website,
-            'country' => (string) $this->institution->country,
-            'county' => (string) $this->institution->county,
-            'city' => (string) $this->institution->city,
-            'postal_address' => (string) $this->institution->postal_address,
-            'physical_address' => (string) $this->institution->physical_address,
-            'principal_name' => (string) $this->institution->principal_name,
-            'principal_phone' => (string) $this->institution->principal_phone,
-            'min_electives' => (string) ($this->institution->min_electives ?? 0),
-            'max_electives' => (string) ($this->institution->max_electives ?? ''),
-            'subscription_plan' => (string) ($this->institution->subscription_plan ?? ''),
-            'subscription_expires_at' => $this->institution->subscription_expires_at?->format('Y-m-d') ?? '',
-            'notes' => (string) $this->institution->notes,
-            'is_active' => (bool) $this->institution->is_active,
-        ]);
+        $this->institution = $this->scoped()->findOrFail($institutionId);
     }
 
-    public function save(): void
-    {
-        $saver = app(SaveInstitution::class);
-
-        if ($this->institution) {
-            abort_unless(
-                auth()->user()->can('update institution') && (isAdmin() || $this->institution->user_id === auth()->id()),
-                403
-            );
-
-            $validated = $this->validate(SaveInstitution::updateRules($this->institution));
-
-            $saver->update($this->institution, $validated, $this->logo);
-
-            session()->flash('success', 'Institution "'.$this->institution->name.'" has been updated successfully.');
-
-            $this->redirectRoute('institution.edit', $this->institution->id, navigate: true);
-
-            return;
-        }
-
-        abort_if(isAdmin(), 403);
-
-        $validated = $this->validate(SaveInstitution::createRules());
-
-        $saver->create($validated, auth()->user(), $this->logo);
-
-        session()->flash('success', 'Institution created successfully! It will be reviewed by an Admin before it becomes fully active.');
-
-        $this->redirectRoute('institution.index', navigate: true);
-    }
-
-    protected function prepareForValidation($attributes)
-    {
-        foreach ($attributes as $key => $value) {
-            if ($value === '' && ! in_array($key, ['name', 'code', 'type', 'email', 'phone'], true)) {
-                $attributes[$key] = null;
-            }
-        }
-
-        // The upload itself is validated through the $logo property, not as
-        // part of the persisted attributes.
-        $attributes['logo'] = $this->logo;
-
-        return $attributes;
-    }
-
-    /**
-     * @return Collection<int, Plan>
-     */
     #[Computed]
     public function plans(): Collection
     {
         return Plan::where('is_active', true)->orderBy('name')->get();
     }
-}; ?>
 
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $institution ? 'Institution Settings' : 'Register Your School' }}
-            </h4>
+    private function scoped()
+    {
+        $query = Institution::query();
+
+        if (! isAdmin()) {
+            $query->where('user_id', auth()->id());
+        }
+
+        return $query;
+    }
+}; ?>
+<div>
+    @if($institution)
+    <div x-data="{ 
+            photoPreview: null,
+            updatePhotoPreview() {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                };
+                if (this.$refs.photo.files[0]) {
+                    reader.readAsDataURL(this.$refs.photo.files[0]);
+                }
+            }
+        }" 
+        class="pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8"
+    >
+        {{-- Welcome Header --}}
+        <div class="pt-2 pb-12 text-center px-4">
+            <div class="inline-flex size-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-blue-500/10 mb-6 shadow-sm ring-1 ring-blue-500/20">
+                <flux:icon icon="pencil-square" class="size-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+                Editing <span class="text-blue-600 dark:text-blue-400">{{ $institution->name }}</span>
+            </h1>
+            <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+                Update the workspace details and administrative controls below.
+            </p>
         </div>
 
-        <form wire:submit="save">
-            <div class="space-y-8 p-6">
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Basics</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <flux:input label="Name" wire:model="name" />
-                        <flux:input label="Code" wire:model="code" placeholder="e.g. SCH-001" />
-                        <flux:select label="Type" wire:model="type">
-                            @foreach (['School', 'College', 'University', 'Training Centre'] as $option)
-                                <flux:select.option value="{{ $option }}">{{ $option }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
+        <form action="{{ route('institution.update', $institution->id) }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
 
-                        @if ($institution)
-                            <flux:input label="Education Level" wire:model="education_level"
-                                placeholder="e.g. Secondary" />
-                            <flux:input label="Timezone" wire:model="timezone"
-                                description="Used when stamping device clocks." />
-                        @endif
+            <x-stepper.layout defaultActive="step-1">
+                
+                {{-- Sidebar --}}
+                <x-slot:sidebar>
+                    <x-stepper.step id="step-1" title="Basics & Branding" description="Name, Code, Logo" />
+                    <x-stepper.step id="step-2" title="Contact Details" description="Email & Phone" />
+                    <x-stepper.step id="step-3" title="Location" description="Address & Directions" />
+                    @hasrole('Admin')
+                        <x-stepper.step id="step-4" title="Admin Controls" description="Plan & Status" />
+                    @endhasrole
+                </x-slot:sidebar>
+
+                {{-- Sections --}}
+                <x-stepper.section id="step-1" title="Basics & Branding" description="Set up the primary identity of this institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <flux:input type="text" name="name" label="School Name"
+                                value="{{ old('name', $institution->name) }}" required placeholder="e.g. Riverside Academy" />
+                        </div>
+
+                        <div class="relative">
+                            <flux:input type="text" name="code" label="Short Code"
+                                x-on:input="$el.value = $el.value.toUpperCase()"
+                                maxlength="5"
+                                class="uppercase"
+                                value="{{ old('code', $institution->code) }}" required placeholder="e.g. RA" />
+                        </div>
 
                         <div>
-                            <flux:input type="file" label="Logo" wire:model="logo" accept="image/*"
-                                description="{{ $institution ? 'Leave empty to keep the current logo.' : 'Optional.' }}" />
-                            <div wire:loading wire:target="logo" class="mt-1 text-xs text-zinc-500">Uploading…</div>
-                            @if ($logo)
-                                <img src="{{ $logo->temporaryUrl() }}" alt="Preview"
-                                    class="mt-2 size-20 rounded-md object-contain" />
-                            @elseif ($institution?->logo)
-                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($institution->logo) }}"
-                                    alt="{{ $institution->name }}" class="mt-2 size-20 rounded-md object-contain" />
-                            @endif
+                            <flux:select name="type" label="Institution Type">
+                                <flux:select.option value="School" :selected="old('type', $institution->type) == 'School'">School</flux:select.option>
+                                <flux:select.option value="College" :selected="old('type', $institution->type) == 'College'">College</flux:select.option>
+                                <flux:select.option value="University" :selected="old('type', $institution->type) == 'University'">University</flux:select.option>
+                                <flux:select.option value="Training Centre" :selected="old('type', $institution->type) == 'Training Centre'">Training Centre</flux:select.option>
+                            </flux:select>
+                        </div>
+                        
+                        <div>
+                            <flux:input type="text" name="education_level" label="Education Level"
+                                value="{{ old('education_level', $institution->education_level) }}" placeholder="e.g. Primary, Secondary" />
+                        </div>
+
+                        <div>
+                            <flux:input type="text" name="timezone" label="Timezone"
+                                value="{{ old('timezone', $institution->timezone ?? 'Africa/Nairobi') }}" required />
+                        </div>
+
+                        <div>
+                            <flux:input type="number" name="min_electives" label="Minimum Electives"
+                                value="{{ old('min_electives', $institution->min_electives ?? 0) }}" required />
+                        </div>
+
+                        <div>
+                            <flux:input type="number" name="max_electives" label="Maximum Electives"
+                                value="{{ old('max_electives', $institution->max_electives) }}" />
+                        </div>
+
+                        @unlessrole('Admin')
+                            <input type="hidden" name="is_active" value="{{ $institution->is_active ? 1 : 0 }}">
+                        @endunlessrole
+
+                        {{-- Live Image Preview & Drag and Drop --}}
+                        <div class="md:col-span-2 mt-2">
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">School Logo</label>
+                            
+                            <div class="flex items-center gap-6">
+                                <div class="shrink-0">
+                                    <span class="inline-block size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
+                                        @if($institution->logo)
+                                            <img x-show="!photoPreview" src="{{ Storage::url($institution->logo) }}" class="w-full h-full object-contain bg-white">
+                                        @else
+                                            <span x-show="!photoPreview" class="text-zinc-400">
+                                                <flux:icon icon="photo" class="size-8" />
+                                            </span>
+                                        @endif
+                                        <img x-show="photoPreview" :src="photoPreview" class="w-full h-full object-contain bg-white" style="display:none;">
+                                    </span>
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
+                                        <div class="space-y-1 text-center">
+                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-8 text-zinc-400 group-hover:text-blue-500 transition" />
+                                            <div class="flex text-sm text-zinc-600 dark:text-zinc-400 justify-center">
+                                                <label for="file-upload" class="relative cursor-pointer bg-transparent rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                                                    <span>Upload a new file</span>
+                                                    <input id="file-upload" name="logo" type="file" class="sr-only" x-ref="photo" x-on:change="updatePhotoPreview" accept="image/*">
+                                                </label>
+                                                <p class="pl-1">or drag and drop</p>
+                                            </div>
+                                            <p class="text-xs text-zinc-500">PNG, JPG up to 2MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </x-stepper.section>
 
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Contact</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <flux:input type="email" label="Email" wire:model="email" />
-                        <flux:input label="Phone" wire:model="phone" />
-                        <flux:input label="Alternate Phone" wire:model="alternate_phone" />
-                        <flux:input label="Website" wire:model="website" placeholder="https://…" />
-                    </div>
-                </div>
-
-                <div>
-                    <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Address</h5>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <flux:input label="Country" wire:model="country" />
-                        <flux:input label="County" wire:model="county" />
-                        <flux:input label="City / Town" wire:model="city" />
-                        <flux:input label="Postal Address" wire:model="postal_address" />
-                        <div class="md:col-span-2">
-                            <flux:textarea label="Physical Address" rows="2" wire:model="physical_address" />
+                <x-stepper.section id="step-2" title="Contact Details" description="How people can reach out to this institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <flux:input label="Official Email" type="email" name="email"
+                                value="{{ old('email', $institution->email) }}" />
+                        </div>
+                        <div>
+                            <flux:input type="url" name="website" label="Website URL"
+                                value="{{ old('website', $institution->website) }}" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="phone" label="Main Phone"
+                                value="{{ old('phone', $institution->phone) }}" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="alternate_phone" label="Alternative Phone"
+                                value="{{ old('alternate_phone', $institution->alternate_phone) }}" />
                         </div>
                     </div>
-                </div>
+                </x-stepper.section>
 
-                @if ($institution)
-                    <div>
-                        <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Administration</h5>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                            <flux:input label="Principal Name" wire:model="principal_name" />
-                            <flux:input label="Principal Phone" wire:model="principal_phone" />
-                            <flux:input type="number" min="0" label="Min Electives" wire:model="min_electives"
-                                description="How many electives a student must pick." />
-                            <flux:input type="number" min="0" label="Max Electives" wire:model="max_electives"
-                                description="Leave empty for no upper limit." />
+                <x-stepper.section id="step-3" title="Location" description="The physical and postal address.">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <flux:input type="text" name="country" readonly label="Country"
+                                class="bg-zinc-50"
+                                value="{{ old('country', $institution->country ?? 'Kenya') }}" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="county" label="State / County"
+                                value="{{ old('county', $institution->county) }}" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="city" label="City / Town"
+                                value="{{ old('city', $institution->city) }}" />
+                        </div>
+                        <div class="md:col-span-3">
+                            <flux:input type="text" name="postal_address" label="Postal Address"
+                                value="{{ old('postal_address', $institution->postal_address) }}" />
+                        </div>
+                        <div class="md:col-span-3">
+                            <flux:textarea name="physical_address" rows="2" label="Physical Address / Directions">{{ old('physical_address', $institution->physical_address) }}</flux:textarea>
                         </div>
                     </div>
+                </x-stepper.section>
 
-                    <div>
-                        <h5 class="text-md mb-3 font-semibold text-gray-800 dark:text-zinc-200">Subscription</h5>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <flux:select label="Plan" wire:model="subscription_plan">
-                                <flux:select.option value="">No plan</flux:select.option>
+                @hasrole('Admin')
+                <x-stepper.section id="step-4" title="Admin Controls" description="Internal administrative settings.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <flux:input type="text" name="principal_name" label="Principal Name"
+                                value="{{ old('principal_name', $institution->principal_name) }}" />
+                        </div>
+                        <div>
+                            <flux:input type="tel" name="principal_phone" label="Principal Phone"
+                                value="{{ old('principal_phone', $institution->principal_phone) }}" />
+                        </div>
+                        <div>
+                            <flux:select name="subscription_plan" label="Subscription Plan">
+                                <option value="">Select Plan</option>
                                 @foreach ($this->plans as $plan)
-                                    <flux:select.option value="{{ $plan->id }}">{{ $plan->name }}</flux:select.option>
+                                    <option value="{{ $plan->id }}" {{ (string) old('subscription_plan', $institution->subscription_plan) === (string) $plan->id ? 'selected' : '' }}>
+                                        {{ $plan->name }}
+                                    </option>
                                 @endforeach
                             </flux:select>
-                            <flux:input type="date" label="Expires At" wire:model="subscription_expires_at" />
-                            <flux:checkbox wire:model="is_active" label="Active" />
+                        </div>
+                        <div>
+                            <flux:input type="date" name="subscription_expires_at" label="Subscription Expiry Date"
+                                value="{{ old('subscription_expires_at', $institution->subscription_expires_at ? \Carbon\Carbon::parse($institution->subscription_expires_at)->format('Y-m-d') : '') }}" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <flux:textarea name="notes" rows="2" label="Notes">{{ old('notes', $institution->notes) }}</flux:textarea>
+                        </div>
+                        
+                        <div class="md:col-span-2 p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
+                            <label class="text-sm font-medium text-zinc-900 dark:text-white mb-3 block">Institution Status</label>
+                            <div class="flex items-center gap-6">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="is_active" value="1"
+                                        {{ old('is_active', $institution->is_active) == 1 ? 'checked' : '' }}
+                                        class="size-4 text-blue-600 border-zinc-300 focus:ring-blue-600">
+                                    <span class="ml-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">Active</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="is_active" value="0"
+                                        {{ old('is_active', $institution->is_active) == 0 ? 'checked' : '' }}
+                                        class="size-4 text-zinc-500 border-zinc-300 focus:ring-zinc-500">
+                                    <span class="ml-2 text-sm text-zinc-500">Inactive</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
+                </x-stepper.section>
+                @endhasrole
 
-                    <flux:textarea label="Notes" rows="2" wire:model="notes" />
-                @endif
-            </div>
+                <x-slot:actions>
+                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary" class="px-6 font-semibold">Update Institution</flux:button>
+                </x-slot:actions>
 
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('institution.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">
-                        {{ $institution ? 'Save Changes' : 'Register School' }}
-                    </span>
-                    <span wire:loading wire:target="save">Saving…</span>
-                </flux:button>
-            </div>
+            </x-stepper.layout>
         </form>
     </div>
+
+    @else
+    <div x-data="{ 
+            photoPreview: null,
+            updatePhotoPreview() {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                };
+                if (this.$refs.photo.files[0]) {
+                    reader.readAsDataURL(this.$refs.photo.files[0]);
+                }
+            }
+        }" 
+        class="pb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8"
+    >
+        {{-- Welcome Header --}}
+        <div class="pt-2 pb-12 text-center px-4">
+            <div class="inline-flex size-16 items-center justify-center rounded-2xl bg-violet-50 dark:bg-violet-500/10 mb-6 shadow-sm ring-1 ring-violet-500/20">
+                <flux:icon icon="sparkles" class="size-8 text-violet-600 dark:text-violet-400" />
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+                Welcome to <span class="text-violet-600 dark:text-violet-400">Solforbs!</span>
+            </h1>
+            <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
+                Let's set up your school's workspace. Follow the steps below to configure your institution.
+            </p>
+        </div>
+
+        <form action="{{ route('institution.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+
+            <x-stepper.layout defaultActive="step-1">
+                
+                {{-- Sidebar --}}
+                <x-slot:sidebar>
+                    <x-stepper.step id="step-1" title="Basics & Branding" description="Name, Code, Logo" />
+                    <x-stepper.step id="step-2" title="Contact Details" description="Email & Phone" />
+                    <x-stepper.step id="step-3" title="Location" description="Address & Directions" />
+                </x-slot:sidebar>
+
+                {{-- Sections --}}
+                <x-stepper.section id="step-1" title="Basics & Branding" description="Set up the primary identity of this institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <flux:input type="text" name="name" label="School Name"
+                                value="{{ old('name') }}" required placeholder="e.g. Riverside Academy" />
+                        </div>
+
+                        <div class="relative">
+                            <flux:input type="text" name="code" label="Short Code"
+                                x-on:input="$el.value = $el.value.toUpperCase()"
+                                maxlength="5"
+                                class="uppercase"
+                                value="{{ old('code') }}" required placeholder="e.g. RA" />
+                        </div>
+
+                        <div>
+                            <flux:select name="type" label="Institution Type">
+                                <flux:select.option value="School" :selected="old('type') == 'School'">School</flux:select.option>
+                                <flux:select.option value="College" :selected="old('type') == 'College'">College</flux:select.option>
+                                <flux:select.option value="University" :selected="old('type') == 'University'">University</flux:select.option>
+                                <flux:select.option value="Training Centre" :selected="old('type') == 'Training Centre'">Training Centre</flux:select.option>
+                            </flux:select>
+                        </div>
+
+                        {{-- Live Image Preview & Drag and Drop --}}
+                        <div class="md:col-span-2 mt-2">
+                            <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">School Logo (Optional)</label>
+                            
+                            <div class="flex items-center gap-6">
+                                <div class="shrink-0">
+                                    <span class="inline-block size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
+                                        <span x-show="!photoPreview" class="text-zinc-400">
+                                            <flux:icon icon="photo" class="size-8" />
+                                        </span>
+                                        <img x-show="photoPreview" :src="photoPreview" class="w-full h-full object-contain bg-white" style="display:none;">
+                                    </span>
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-violet-500 dark:hover:border-violet-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
+                                        <div class="space-y-1 text-center">
+                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-8 text-zinc-400 group-hover:text-violet-500 transition" />
+                                            <div class="flex text-sm text-zinc-600 dark:text-zinc-400 justify-center">
+                                                <label for="file-upload" class="relative cursor-pointer bg-transparent rounded-md font-medium text-violet-600 hover:text-violet-500 focus-within:outline-none">
+                                                    <span>Upload a file</span>
+                                                    <input id="file-upload" name="logo" type="file" class="sr-only" x-ref="photo" x-on:change="updatePhotoPreview" accept="image/*">
+                                                </label>
+                                                <p class="pl-1">or drag and drop</p>
+                                            </div>
+                                            <p class="text-xs text-zinc-500">PNG, JPG up to 2MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-stepper.section id="step-2" title="Contact Details" description="How people can reach out to this institution.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <flux:input label="Official Email" type="email" name="email"
+                                value="{{ old('email') }}" placeholder="admin@school.com" />
+                        </div>
+                        <div>
+                            <flux:input type="url" name="website" label="Website URL"
+                                value="{{ old('website') }}" placeholder="https://www.school.com" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="phone" label="Main Phone"
+                                value="{{ old('phone') }}" placeholder="+254..." />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="alternate_phone" label="Alternative Phone"
+                                value="{{ old('alternate_phone') }}" />
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-stepper.section id="step-3" title="Location" description="The physical and postal address.">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <flux:input type="text" name="country" readonly label="Country"
+                                class="bg-zinc-50"
+                                value="{{ old('country', 'Kenya') }}" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="county" label="State / County"
+                                value="{{ old('county') }}" />
+                        </div>
+                        <div>
+                            <flux:input type="text" name="city" label="City / Town"
+                                value="{{ old('city') }}" />
+                        </div>
+                        <div class="md:col-span-3">
+                            <flux:input type="text" name="postal_address" label="Postal Address"
+                                value="{{ old('postal_address') }}" />
+                        </div>
+                        <div class="md:col-span-3">
+                            <flux:textarea name="physical_address" rows="2" label="Physical Address / Directions">{{ old('physical_address') }}</flux:textarea>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary" class="px-6 font-semibold">Create Workspace</flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
+        </form>
+    </div>
+    @endif
 </div>

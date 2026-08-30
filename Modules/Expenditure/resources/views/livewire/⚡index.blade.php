@@ -229,11 +229,11 @@ new #[Title('Expenditure')] class extends Component
     <div class="mb-2 flex flex-row flex-wrap items-end justify-between gap-3">
         <div class="flex gap-2">
             @can('create expenditure')
-                <flux:button href="{{ route('expenditure.create') }}" icon="plus" wire:navigate>
+                <flux:button href="{{ route('expenditure.create') }}" icon="plus" wire:navigate.hover>
                     Record Expenditure
                 </flux:button>
             @endcan
-            <flux:button href="{{ route('expenditure.categories.index') }}" icon="tag" variant="ghost" wire:navigate>
+            <flux:button href="{{ route('expenditure.categories.index') }}" icon="tag" variant="ghost" wire:navigate.hover>
                 Categories
             </flux:button>
         </div>
@@ -304,10 +304,10 @@ new #[Title('Expenditure')] class extends Component
                         </flux:table.cell>
                         <flux:table.cell>
                             <flux:button href="{{ route('expenditure.show', $expenditure->id) }}" icon="eye"
-                                variant="primary" color="emerald" wire:navigate>view</flux:button>
+                                variant="primary" color="emerald" wire:navigate.hover>view</flux:button>
                             @can('edit expenditure')
                                 <flux:button href="{{ route('expenditure.edit', $expenditure->id) }}" icon="pencil"
-                                    variant="primary" color="yellow" wire:navigate>edit</flux:button>
+                                    variant="primary" color="yellow" wire:navigate.hover>edit</flux:button>
                             @endcan
                             @can('delete expenditure')
                                 <flux:button type="button" icon="trash" variant="primary" color="red"

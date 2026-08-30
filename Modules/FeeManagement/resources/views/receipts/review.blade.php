@@ -1,56 +1,81 @@
 <x-layouts::app :title="__('Review Receipt')">
-    <div class="p-4">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="border-b border-gray-200 px-6 py-4 bg-gray-50 rounded-t-lg">
-                    <h4 class="text-lg font-semibold text-gray-900 mb-0">Receipt</h4>
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6 mb-2">
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex size-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-500/20">
+                    <flux:icon icon="check-badge" class="size-6 text-amber-600 dark:text-amber-400" />
                 </div>
-                <div class="p-6">
+                <div>
+                    <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Review & Confirm</flux:heading>
+                    <flux:text class="text-zinc-500 text-sm mt-1 leading-relaxed">
+                        @if ($matchedStudent)
+                            We found a match! Check the extracted details below before saving.
+                        @else
+                            We couldn't automatically match the admission number. Please select the student below.
+                        @endif
+                    </flux:text>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('feemanagement.index') }}" variant="subtle" icon="x-mark" class="hidden sm:flex">
+                    Cancel
+                </flux:button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            {{-- Left Column: The Receipt Viewer --}}
+            <div class="flex flex-col gap-4">
+                <div class="bg-zinc-100 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-2 overflow-hidden shadow-inner">
                     @if ($isPdf)
-                        <embed src="{{ $receiptUrl }}" type="application/pdf" class="w-full h-96 rounded-md border border-gray-200">
-                        <a href="{{ $receiptUrl }}" target="_blank" class="mt-2 inline-block text-sm text-blue-600 hover:underline">
-                            Open PDF in new tab
-                        </a>
+                        <embed src="{{ $receiptUrl }}" type="application/pdf" class="w-full h-[600px] rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white">
+                        <div class="mt-3 px-2 flex justify-end">
+                            <flux:button href="{{ $receiptUrl }}" target="_blank" variant="subtle" size="sm" icon="arrow-top-right-on-square">
+                                Open PDF
+                            </flux:button>
+                        </div>
                     @else
-                        <img src="{{ $receiptUrl }}" alt="Uploaded receipt" class="w-full rounded-md border border-gray-200">
+                        <img src="{{ $receiptUrl }}" alt="Uploaded receipt" class="w-full rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700">
                     @endif
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="border-b border-gray-200 px-6 py-4 bg-gray-50 rounded-t-lg">
-                    <h4 class="text-lg font-semibold text-gray-900 mb-0">Review &amp; Confirm</h4>
-                    <small class="text-sm text-gray-500">
-                        @if ($matchedStudent)
-                            Matched by admission number - check the details below before saving.
-                        @else
-                            No admission number matched a student automatically - pick one below.
-                        @endif
-                    </small>
+            {{-- Right Column: The Form --}}
+            <div class="bg-white dark:bg-zinc-900 shadow-sm rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden h-fit">
+                
+                <div class="px-6 sm:px-8 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30">
+                    <h3 class="text-base font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                        <flux:icon icon="pencil-square" class="size-5 text-amber-500" /> Verify Extracted Data
+                    </h3>
                 </div>
 
                 <form action="{{ route('feemanagement.receipts.store') }}" method="POST">
                     @csrf
                     <input type="hidden" name="token" value="{{ $token }}">
 
-                    <div class="p-6 space-y-4">
+                    <div class="p-6 sm:p-8 space-y-6">
                         <div>
                             <flux:select name="student_id" id="student_id" label="Student" required>
                                 <flux:select.option value="">Select student</flux:select.option>
                                 @foreach ($students as $studentDetails)
                                     <flux:select.option value="{{ $studentDetails->student_id }}"
-                                        {{ old('student_id', $matchedStudent?->student_id) == $studentDetails->student_id ? 'selected' : '' }}>
+                                        :selected="old('student_id', $matchedStudent?->student_id) == $studentDetails->student_id">
                                         {{ $studentDetails->student?->name }} ({{ $studentDetails->admission_number ?? '—' }})
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
                             @error('student_id')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400 font-medium">{{ $message }}</p>
                             @enderror
                             @if ($extracted['admission_number'] && ! $matchedStudent)
-                                <p class="mt-1 text-xs text-amber-600">
-                                    Receipt showed admission number "{{ $extracted['admission_number'] }}" - no match found.
-                                </p>
+                                <div class="mt-3 flex items-start gap-2 text-sm text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 p-3 rounded-lg border border-amber-200/50 dark:border-amber-500/20">
+                                    <flux:icon icon="exclamation-triangle" class="size-5 shrink-0" />
+                                    <span>OCR detected admission number <strong>"{{ $extracted['admission_number'] }}"</strong> but no exact match was found.</span>
+                                </div>
                             @endif
                         </div>
 
@@ -65,42 +90,47 @@
                                 @endforelse
                             </flux:select>
                             @error('fee_id')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400 font-medium">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <div>
-                            <flux:input type="number" step="0.01" min="0.01" name="amount" label="Amount"
-                                value="{{ old('amount', $extracted['amount']) }}" required />
-                            @error('amount')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
+                        <div class="bg-zinc-50 dark:bg-zinc-800/30 p-5 rounded-xl border border-zinc-100 dark:border-zinc-800 grid grid-cols-2 gap-5">
+                            <div class="col-span-2">
+                                <flux:input type="number" step="0.01" min="0.01" name="amount" label="Amount"
+                                    value="{{ old('amount', $extracted['amount']) }}" required class="text-lg font-semibold text-green-600" />
+                                @error('amount')
+                                    <p class="mt-2 text-sm text-red-600 dark:text-red-400 font-medium">{{ $message }}</p>
+                                @enderror
+                            </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
+                            <div class="col-span-2 sm:col-span-1">
                                 <flux:input type="date" name="paid_at" label="Date Paid"
                                     value="{{ old('paid_at', $extracted['paid_at']) }}" />
                             </div>
-                            <div>
+                            <div class="col-span-2 sm:col-span-1">
                                 <flux:input type="text" name="payment_method" label="Method"
                                     value="{{ old('payment_method', $extracted['payment_method']) }}" />
                             </div>
-                        </div>
 
-                        <div>
-                            <flux:input type="text" name="reference" label="Reference"
-                                value="{{ old('reference', $extracted['reference']) }}" />
+                            <div class="col-span-2">
+                                <flux:input type="text" name="reference" label="Reference / Transaction ID"
+                                    value="{{ old('reference', $extracted['reference']) }}" />
+                            </div>
                         </div>
 
                         @if ($extracted['student_name'])
-                            <p class="text-xs text-gray-500">Receipt payer/student name: {{ $extracted['student_name'] }}</p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                                <flux:icon icon="information-circle" class="size-4" /> 
+                                OCR Extracted Name: <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ $extracted['student_name'] }}</span>
+                            </p>
                         @endif
                     </div>
 
-                    <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
-                        <flux:button href="{{ route('feemanagement.index') }}" wire:navigate>Cancel</flux:button>
-                        <flux:button type="submit" variant="primary">Save Payment</flux:button>
+                    <div class="border-t border-zinc-200 dark:border-zinc-800 px-6 sm:px-8 py-4 bg-zinc-50 dark:bg-zinc-800/50 flex justify-end gap-3 rounded-b-2xl">
+                        <flux:button href="{{ route('feemanagement.index') }}" variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Cancel</flux:button>
+                        <flux:button type="submit" icon="check-circle" variant="primary" class="px-6">
+                            Save Payment
+                        </flux:button>
                     </div>
                 </form>
             </div>
@@ -108,30 +138,36 @@
     </div>
 
     <script>
-        document.getElementById('student_id')?.addEventListener('change', function () {
+        document.addEventListener('DOMContentLoaded', function() {
+            const studentSelect = document.getElementById('student_id');
             const feeSelect = document.getElementById('fee_id');
-            feeSelect.innerHTML = '';
-
-            if (! this.value) {
-                feeSelect.innerHTML = '<option value="">No fee records for this student yet</option>';
-                return;
-            }
-
-            fetch(@json(route('feemanagement.receipts.student-fees')) + '?student_id=' + encodeURIComponent(this.value))
-                .then(response => response.json())
-                .then(fees => {
-                    if (fees.length === 0) {
+            
+            if (studentSelect && feeSelect) {
+                studentSelect.addEventListener('change', function () {
+                    feeSelect.innerHTML = '';
+                    
+                    if (! this.value) {
                         feeSelect.innerHTML = '<option value="">No fee records for this student yet</option>';
                         return;
                     }
-
-                    fees.forEach(fee => {
-                        const option = document.createElement('option');
-                        option.value = fee.id;
-                        option.textContent = fee.label;
-                        feeSelect.appendChild(option);
-                    });
+                    
+                    fetch(@json(route('feemanagement.receipts.student-fees')) + '?student_id=' + encodeURIComponent(this.value))
+                        .then(response => response.json())
+                        .then(fees => {
+                            if (fees.length === 0) {
+                                feeSelect.innerHTML = '<option value="">No fee records for this student yet</option>';
+                                return;
+                            }
+                            
+                            fees.forEach(fee => {
+                                const option = document.createElement('option');
+                                option.value = fee.id;
+                                option.textContent = fee.label;
+                                feeSelect.appendChild(option);
+                            });
+                        });
                 });
+            }
         });
     </script>
 </x-layouts::app>

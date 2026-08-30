@@ -111,7 +111,6 @@ class ParentController extends Controller
             StudentDetails::where('parent_id', $parent->id)->update(['parent_id' => null]);
 
             ParentDetails::where('parent_id', $parent->id)->delete();
-            $parent = User::findOrFail($parent->id)->first();
             $parent->delete();
         });
 

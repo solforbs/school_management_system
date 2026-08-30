@@ -36,24 +36,24 @@ function makeLivewireDirector(): array
     return [$director->refresh(), $institution];
 }
 
-test('the livewire student form enrols a student with a login and a photo', function () {
+test('the student form enrols a student with a login and a photo', function () {
     Storage::fake('public');
 
     [$director, $institution] = makeLivewireDirector();
 
-    Livewire::actingAs($director)
-        ->test('student::form')
-        ->set('name', 'Amina Yusuf')
-        ->set('email', 'amina@example.com')
-        ->set('password', 'password123')
-        ->set('profile_image', UploadedFile::fake()->image('amina.jpg'))
-        ->set('admission_number', 'ADM-100')
-        ->set('gender', 'female')
-        ->set('parent_name', 'Yusuf Ali')
-        ->set('parent_phone', '0700000001')
-        ->call('save')
-        ->assertHasNoErrors()
-        ->assertRedirect();
+    $this->actingAs($director)
+        ->post(route('student.store'), [
+            'name' => 'Amina Yusuf',
+            'email' => 'amina@example.com',
+            'password' => 'password123',
+            'profile_image' => UploadedFile::fake()->image('amina.jpg'),
+            'admission_number' => 'ADM-100',
+            'gender' => 'female',
+            'parent_name' => 'Yusuf Ali',
+            'parent_phone' => '0700000001',
+        ])
+        ->assertRedirect(route('student.index'))
+        ->assertSessionHasNoErrors();
 
     $student = User::where('email', 'amina@example.com')->firstOrFail();
     $details = StudentDetails::where('student_id', $student->id)->firstOrFail();
@@ -67,15 +67,15 @@ test('the livewire student form enrols a student with a login and a photo', func
         ->and(User::find($details->parent_id)->hasRole('Parent'))->toBeTrue();
 });
 
-test('the livewire student form refuses an incomplete enrolment', function () {
+test('the student form refuses an incomplete enrolment', function () {
     [$director] = makeLivewireDirector();
 
-    Livewire::actingAs($director)
-        ->test('student::form')
-        ->set('name', '')
-        ->set('email', 'not-an-email')
-        ->call('save')
-        ->assertHasErrors(['name', 'email', 'password', 'profile_image']);
+    $this->actingAs($director)
+        ->post(route('student.store'), [
+            'name' => '',
+            'email' => 'not-an-email',
+        ])
+        ->assertSessionHasErrors(['name', 'email', 'password', 'profile_image']);
 
     expect(StudentDetails::count())->toBe(0);
 });

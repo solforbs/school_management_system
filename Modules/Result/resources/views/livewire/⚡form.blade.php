@@ -4,29 +4,15 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Modules\Examinations\Models\Examination;
+use Modules\Institution\Models\Institution;
 use Modules\Result\Actions\SaveResult;
 use Modules\Result\Models\Result;
 use Modules\Result\Services\ResultAccessService;
 
-new #[Title('Add Result')] class extends Component
+new #[Title('Result')] class extends Component
 {
     public ?Result $result = null;
 
-    public string $class_id = '';
-
-    public string $student_id = '';
-
-    public string $examination_id = '';
-
-    public string $marks_obtained = '';
-
-    public string $remarks = '';
-
-    /**
-     * One component behind both /create and /edit - the only difference is
-     * whether a result was handed in to start from.
-     */
     public function mount(?int $resultId = null): void
     {
         if ($resultId === null) {
@@ -38,64 +24,6 @@ new #[Title('Add Result')] class extends Component
         abort_unless(auth()->user()->can('edit result'), 403);
 
         $this->result = $this->scoped()->findOrFail($resultId);
-
-        $this->fill([
-            'class_id' => (string) $this->result->class_id,
-            'student_id' => (string) $this->result->student_id,
-            'examination_id' => (string) $this->result->examination_id,
-            'marks_obtained' => (string) $this->result->marks_obtained,
-            'remarks' => (string) $this->result->remarks,
-        ]);
-    }
-
-    /**
-     * Picking a different class changes who and what can be graded, so the
-     * choices below it are cleared rather than left pointing elsewhere.
-     */
-    public function updatedClassId(): void
-    {
-        $this->student_id = '';
-        $this->examination_id = '';
-    }
-
-    public function save(): void
-    {
-        abort_unless(
-            auth()->user()->can($this->result ? 'edit result' : 'create result'),
-            403
-        );
-
-        $validated = $this->validate(SaveResult::rules());
-
-        // Re-verified server-side rather than trusted from the narrowed
-        // dropdowns: a crafted request could otherwise grade a subject this
-        // teacher doesn't teach.
-        $this->assertCanGrade((int) $validated['class_id'], (int) $validated['examination_id']);
-
-        if (SaveResult::duplicateExists((int) $validated['examination_id'], (int) $validated['student_id'], $this->result?->id)) {
-            $this->addError('student_id', 'A result for this student in this examination already exists.');
-
-            return;
-        }
-
-        $ceiling = Examination::find($validated['examination_id'])?->total_marks;
-
-        if ($ceiling !== null && $validated['marks_obtained'] > $ceiling) {
-            $this->addError('marks_obtained', "Marks can't exceed the examination's total of {$ceiling}.");
-
-            return;
-        }
-
-        $saved = SaveResult::handle(
-            $validated,
-            $this->institutionId(),
-            $this->result,
-            recordedBy: auth()->id(),
-        );
-
-        session()->flash('success', $this->result ? 'Result updated!' : 'Result recorded successfully!');
-
-        $this->redirectRoute('result.show', $saved->id, navigate: true);
     }
 
     #[Computed]
@@ -109,7 +37,7 @@ new #[Title('Add Result')] class extends Component
     {
         return ResultAccessService::selectableExaminations(
             auth()->user(),
-            $this->class_id !== '' ? (int) $this->class_id : null,
+            $this->result?->class_id ?? null,
         );
     }
 
@@ -118,30 +46,8 @@ new #[Title('Add Result')] class extends Component
     {
         return ResultAccessService::selectableStudents(
             auth()->user(),
-            $this->class_id !== '' ? (int) $this->class_id : null,
+            $this->result?->class_id ?? null,
         );
-    }
-
-    private function assertCanGrade(int $classId, int $examinationId): void
-    {
-        if (! auth()->user()->hasRole('Teacher')) {
-            return;
-        }
-
-        $subjectId = Examination::find($examinationId)?->subject_id;
-
-        abort_unless(ResultAccessService::canGrade(auth()->user(), $classId, $subjectId), 403);
-    }
-
-    private function institutionId(): int
-    {
-        $institutionId = $this->result?->institution_id
-            ?? currentInstitution()?->id
-            ?? auth()->user()->teacherUserDetails?->institution_id;
-
-        abort_unless($institutionId, 422, 'No institution selected.');
-
-        return $institutionId;
     }
 
     private function scoped()
@@ -152,79 +58,337 @@ new #[Title('Add Result')] class extends Component
 
         return $query;
     }
+
+    #[Computed]
+    public function institutions(): Collection
+    {
+        if (isAdmin()) {
+            return Institution::orderBy('name')->get();
+        }
+
+        return Institution::where('id', currentInstitution()?->id ?? 0)->get();
+    }
 }; ?>
-
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $result ? 'Edit Result' : 'Add Result' }}
-            </h4>
-        </div>
-
-        <form wire:submit="save">
-            <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
-                <flux:select label="Class" wire:model.live="class_id">
-                    <flux:select.option value="">Select Class</flux:select.option>
-                    @foreach ($this->classes as $schoolClass)
-                        <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:select label="Student" wire:model="student_id">
-                    <flux:select.option value="">
-                        {{ $class_id === '' ? 'Select a class first' : 'Select Student' }}
-                    </flux:select.option>
-                    @foreach ($this->students as $studentDetail)
-                        <flux:select.option value="{{ $studentDetail->student_id }}">
-                            {{ $studentDetail->student?->name }}
-                            @if ($studentDetail->admission_number)
-                                ({{ $studentDetail->admission_number }})
-                            @endif
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:select label="Examination" wire:model="examination_id">
-                    <flux:select.option value="">
-                        {{ $class_id === '' ? 'Select a class first' : 'Select Examination' }}
-                    </flux:select.option>
-                    @foreach ($this->examinations as $examination)
-                        <flux:select.option value="{{ $examination->id }}">
-                            {{ $examination->title }}
-                            ({{ $examination->subject?->name ?? $examination->subject_name }})
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:input type="number" step="0.01" min="0" label="Marks Obtained"
-                    wire:model="marks_obtained" />
-
-                <div class="md:col-span-3 -mt-2">
-                    <flux:text class="text-xs text-zinc-500">
-                        Grade is computed automatically from your school's grading scale for this class's
-                        curriculum.
-                        @can('edit reportcard')
-                            <a href="{{ route('reportcard.settings') }}" class="underline" wire:navigate>Manage grading
-                                scale</a>.
-                        @endcan
-                    </flux:text>
-                </div>
-
-                <div class="md:col-span-3">
-                    <flux:textarea label="Remarks" rows="2" wire:model="remarks" />
-                </div>
+<div>
+    @if($result)
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Result</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Update the examination result for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $result->student?->name }}</span>.
+                </flux:text>
             </div>
-
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('result.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">{{ $result ? 'Update Result' : 'Save Result' }}</span>
-                    <span wire:loading wire:target="save">Saving…</span>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('result.show', $result->id) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Details
                 </flux:button>
             </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('result.update', $result->id) }}" method="POST">
+            @csrf
+            @method('PUT')
+
+            <x-stepper.layout defaultActive="academic-details">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="academic-details" title="Academic Details" description="Verify student and examination." isLast="false" />
+                    <x-stepper.step id="scoring-details" title="Scoring & Remarks" description="Update the marks and remarks." isLast="true" />
+                </x-slot:sidebar>
+
+                {{-- Step 1: Academic Details --}}
+                <x-stepper.section id="academic-details" title="Academic Details" description="You can optionally move this result to a different examination or assign it to a different student.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:select id="institution_id" name="institution_id" label="Institution">
+                            @foreach ($this->institutions as $institution)
+                                <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $result->institution_id) == $institution->id">
+                                    {{ $institution->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select id="class_id" name="class_id" label="Class">
+                            <flux:select.option value="">Select Class</flux:select.option>
+                            @foreach ($this->classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" data-institution-id="{{ $schoolClass->institution_id }}" :selected="old('class_id', $result->class_id) == $schoolClass->id">
+                                    {{ $schoolClass->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select id="student_id" name="student_id" label="Student">
+                            <flux:select.option value="">Select Student</flux:select.option>
+                            @foreach ($this->students as $studentDetail)
+                                <flux:select.option value="{{ $studentDetail->student_id }}" data-class-id="{{ $studentDetail->class_id }}" :selected="old('student_id', $result->student_id) == $studentDetail->student_id">
+                                    {{ $studentDetail->student?->name }}
+                                    @if ($studentDetail->admission_number)
+                                        ({{ $studentDetail->admission_number }})
+                                    @endif
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select id="examination_id" name="examination_id" label="Examination">
+                            <flux:select.option value="">Select Examination</flux:select.option>
+                            @foreach ($this->examinations as $examination)
+                                <flux:select.option value="{{ $examination->id }}" data-class-id="{{ $examination->class_id }}" :selected="old('examination_id', $result->examination_id) == $examination->id">
+                                    {{ $examination->title }} ({{ $examination->subject?->name ?? $examination->subject_name }})
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 2: Scoring & Remarks --}}
+                <x-stepper.section id="scoring-details" title="Scoring & Remarks" description="Update the marks obtained by the student.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-1">
+                            <flux:input type="number" step="0.01" name="marks_obtained" label="Marks Obtained" value="{{ old('marks_obtained', $result->marks_obtained) }}" min="0" required />
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <div class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-xl p-4 flex items-start gap-3">
+                                <flux:icon icon="information-circle" class="size-5 text-blue-500 mt-0.5 shrink-0" />
+                                <div class="text-sm text-blue-800 dark:text-blue-300">
+                                    Current grade: <strong class="font-bold">{{ $result->grade ?? 'not computed yet' }}</strong>. 
+                                    This will be recalculated automatically from the institution's grading scale when you save.
+                                    @can('edit reportcard')
+                                        <br><a href="{{ route('reportcard.settings') }}" wire:navigate.hover class="underline font-semibold hover:text-blue-600 transition-colors mt-1 inline-block">Manage grading scale</a>.
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <flux:textarea name="remarks" rows="4" label="Remarks" placeholder="Optional comments on the student's performance...">{{ old('remarks', $result->remarks) }}</flux:textarea>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('result.show', $result->id) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Changes
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
         </form>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const institutionSelect = document.getElementById('institution_id');
+            const classSelect = document.getElementById('class_id');
+            const studentSelect = document.getElementById('student_id');
+            const examinationSelect = document.getElementById('examination_id');
+
+            function filterOptions(select, parentValue, datasetKey, lockedText, readyText) {
+                const currentValue = select.value;
+                const placeholder = select.querySelector('option[value=""]');
+                if (placeholder) {
+                    placeholder.textContent = parentValue ? readyText : lockedText;
+                }
+
+                Array.from(select.options).forEach(function(option) {
+                    if (!option.value || option.value === currentValue) {
+                        option.hidden = false;
+                        return;
+                    }
+
+                    option.hidden = !parentValue || option.dataset[datasetKey] !== String(parentValue);
+                });
+            }
+
+            function autoSelectIfOnlyChoice(select) {
+                if (select.value) {
+                    return false;
+                }
+
+                const visible = Array.from(select.options).filter(o => o.value && !o.hidden);
+                if (visible.length === 1) {
+                    select.value = visible[0].value;
+                    return true;
+                }
+
+                return false;
+            }
+
+            function applyClassFilters() {
+                filterOptions(studentSelect, classSelect.value, 'classId', 'Select a class first', 'Select Student');
+                filterOptions(examinationSelect, classSelect.value, 'classId', 'Select a class first', 'Select Examination');
+                autoSelectIfOnlyChoice(studentSelect);
+                autoSelectIfOnlyChoice(examinationSelect);
+            }
+
+            function applyInstitutionFilter() {
+                filterOptions(classSelect, institutionSelect.value, 'institutionId', 'Select an institution first', 'Select Class');
+                autoSelectIfOnlyChoice(classSelect);
+            }
+
+            institutionSelect.addEventListener('change', function() {
+                classSelect.value = '';
+                studentSelect.value = '';
+                examinationSelect.value = '';
+                applyInstitutionFilter();
+                applyClassFilters();
+            });
+
+            classSelect.addEventListener('change', function() {
+                studentSelect.value = '';
+                examinationSelect.value = '';
+                applyClassFilters();
+            });
+
+            autoSelectIfOnlyChoice(institutionSelect);
+            applyInstitutionFilter();
+            applyClassFilters();
+        });
+    </script>
+
+    @else
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+                <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Add Result</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-1">
+                    Record a new examination result for a student.
+                </flux:text>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('result.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                    Back to Results
+                </flux:button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('result.store') }}" method="POST">
+            @csrf
+
+            <x-stepper.layout defaultActive="academic-details">
+                
+                <x-slot:sidebar>
+                    <x-stepper.step id="academic-details" title="Academic Details" description="Select the student and examination." isLast="false" />
+                    <x-stepper.step id="scoring-details" title="Scoring & Remarks" description="Enter the marks and optional remarks." isLast="true" />
+                </x-slot:sidebar>
+
+                {{-- Step 1: Academic Details --}}
+                <x-stepper.section id="academic-details" title="Academic Details" description="Select the institution, class, student, and the specific examination this result belongs to.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <flux:select id="institution_id" name="institution_id" label="Institution">
+                            <flux:select.option value="">Select Institution</flux:select.option>
+                            @foreach ($this->institutions as $institution)
+                                <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
+                                    {{ $institution->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select id="class_id" name="class_id" label="Class">
+                            <flux:select.option value="">Select Class</flux:select.option>
+                            @foreach ($this->classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" data-institution-id="{{ $schoolClass->institution_id }}" :selected="old('class_id') == $schoolClass->id">
+                                    {{ $schoolClass->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select id="student_id" name="student_id" label="Student">
+                            <flux:select.option value="">Select Student</flux:select.option>
+                            @foreach ($this->students as $studentDetail)
+                                <flux:select.option value="{{ $studentDetail->student_id }}" data-class-id="{{ $studentDetail->class_id }}" :selected="old('student_id') == $studentDetail->student_id">
+                                    {{ $studentDetail->student?->name }}
+                                    @if ($studentDetail->admission_number)
+                                        ({{ $studentDetail->admission_number }})
+                                    @endif
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select id="examination_id" name="examination_id" label="Examination">
+                            <flux:select.option value="">Select Examination</flux:select.option>
+                            @foreach ($this->examinations as $examination)
+                                <flux:select.option value="{{ $examination->id }}" data-class-id="{{ $examination->class_id }}" :selected="old('examination_id') == $examination->id">
+                                    {{ $examination->title }} ({{ $examination->subject?->name ?? $examination->subject_name }})
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 2: Scoring & Remarks --}}
+                <x-stepper.section id="scoring-details" title="Scoring & Remarks" description="Enter the marks obtained by the student. The grade will be calculated automatically based on the grading scale.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-1">
+                            <flux:input type="number" step="0.01" name="marks_obtained" label="Marks Obtained" value="{{ old('marks_obtained') }}" min="0" required />
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <div class="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-xl p-4 flex items-start gap-3">
+                                <flux:icon icon="information-circle" class="size-5 text-blue-500 mt-0.5 shrink-0" />
+                                <div class="text-sm text-blue-800 dark:text-blue-300">
+                                    Grade is computed automatically from the institution's grading scale once saved. 
+                                    @can('edit reportcard')
+                                        <a href="{{ route('reportcard.settings') }}" wire:navigate.hover class="underline font-semibold hover:text-blue-600 transition-colors">Manage grading scale</a>.
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <flux:textarea name="remarks" rows="4" label="Remarks" placeholder="Optional comments on the student's performance...">{{ old('remarks') }}</flux:textarea>
+                        </div>
+                    </div>
+                </x-stepper.section>
+
+                <x-slot:actions>
+                    <flux:button href="{{ route('result.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
+                        Cancel
+                    </flux:button>
+                    <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
+                        Save Result
+                    </flux:button>
+                </x-slot:actions>
+
+            </x-stepper.layout>
+        </form>
+    </div>
+
+    <x-create-result-scripts :classes="$this->classes" :students="$this->students" :examinations="$this->examinations" />
+    @endif
 </div>

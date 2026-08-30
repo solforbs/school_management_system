@@ -77,6 +77,7 @@ class SaveStudent
             'gender' => 'nullable|in:male,female,other',
             'admission_number' => 'nullable|string|max:100',
             'student_number' => 'nullable|string|max:100',
+            'class_id' => ['nullable', 'exists:classes,id'],
             'enrollment_status' => 'nullable|in:active,expelled,graduated,suspended,transferred,withdrawn,dropped',
 
             // Address

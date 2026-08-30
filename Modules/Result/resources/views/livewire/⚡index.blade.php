@@ -1,319 +1,429 @@
 <?php
 
-use Flux\Flux;
-use Illuminate\Support\Collection;
+use Modules\Institution\Models\Institution;
+use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\Classes\Models\SchoolClass;
-use Modules\ReportCard\Services\ReportCardGenerationService;
-use Modules\ReportCard\Support\TermResolver;
+use Modules\Examinations\Models\Examination;
 use Modules\Result\Models\Result;
-use Modules\Result\Services\ResultAccessService;
+use Modules\Subject\Models\Subject;
 
-new #[Title('Results')] class extends Component
+new #[Title('Academic Performance')] class extends Component
 {
     use WithPagination;
-
-    /** @var string[] */
-    public const SORTABLE = ['marks_obtained', 'grade'];
 
     #[Url]
     public string $search = '';
 
-    #[Url(as: 'class_id')]
-    public string $classId = '';
-
-    #[Url(as: 'examination_id')]
+    #[Url(as: 'exam_id')]
     public string $examinationId = '';
 
-    #[Url]
-    public string $sort = 'grade';
+    #[Url(as: 'subject_id')]
+    public string $subjectId = '';
 
-    #[Url]
-    public string $direction = 'asc';
+    #[Url(as: 'class_id')]
+    public string $classId = '';
 
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view result'), 403);
     }
 
-    public function updating(string $property): void
-    {
-        if (in_array($property, ['search', 'classId', 'examinationId'], true)) {
-            $this->resetPage();
-        }
-
-        // A different class has a different set of papers - keeping the old
-        // one selected would silently show nothing.
-        if ($property === 'classId') {
-            $this->examinationId = '';
-        }
-    }
-
-    public function sortBy(string $column): void
-    {
-        if (! in_array($column, self::SORTABLE, true)) {
-            return;
-        }
-
-        if ($this->sort === $column) {
-            $this->direction = $this->direction === 'asc' ? 'desc' : 'asc';
-
-            return;
-        }
-
-        $this->sort = $column;
-        $this->direction = 'asc';
-    }
-
     public function delete(int $id): void
     {
         abort_unless(auth()->user()->can('delete result'), 403);
-
-        $this->scoped()->findOrFail($id)->delete();
-
-        Flux::toast(text: 'Result removed.', variant: 'success');
+        $result = Result::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->findOrFail($id);
+        $result->delete();
     }
 
-    /**
-     * Build the whole selected class's report cards for the current term,
-     * rendering each to PDF.
-     *
-     * The examination filter above has no say in this: an examination is a
-     * single subject's paper, and a report card covers every subject the
-     * class takes. The term comes from the class itself.
-     *
-     * Deliberately doesn't send anything: the scheduled send still waits a
-     * day so results can be corrected first. This only produces the
-     * documents, which is what a teacher printing for a parents' evening
-     * actually wants.
-     */
-    public function generateReportCards(ReportCardGenerationService $generator): void
-    {
-        abort_unless(auth()->user()->can('edit reportcard'), 403);
-
-        $schoolClass = $this->selectedClass;
-
-        if (! $schoolClass) {
-            Flux::toast(text: 'Pick a class first - report cards are generated a class at a time.', variant: 'danger');
-
-            return;
-        }
-
-        $term = $this->reportTerm;
-
-        if (! $term) {
-            Flux::toast(
-                text: 'This class has no examinations yet, so there is no term to report on.',
-                variant: 'danger',
-            );
-
-            return;
-        }
-
-        $outcome = $generator->forClass($schoolClass, $term['term'], $term['academic_year']);
-
-        if ($outcome['generated'] === 0) {
-            Flux::toast(text: 'No learner in this class has marks for '.$term['term'].' yet.', variant: 'danger');
-
-            return;
-        }
-
-        $message = $outcome['generated'].' report card'.($outcome['generated'] === 1 ? '' : 's')
-            .' generated for '.$term['term'].'.';
-
-        if ($outcome['skipped'] > 0) {
-            $message .= ' '.$outcome['skipped'].' learner'.($outcome['skipped'] === 1 ? '' : 's')
-                .' skipped for having no marks this term.';
-        }
-
-        Flux::toast(text: $message, variant: 'success');
-    }
-
-    /**
-     * The class the filters are narrowed to, re-checked against what this
-     * user is allowed to see rather than trusted from the URL.
-     */
     #[Computed]
-    public function selectedClass(): ?SchoolClass
+    public function currentTerm(): ?string
     {
         if ($this->classId === '') {
             return null;
         }
 
-        return $this->classes->firstWhere('id', (int) $this->classId);
+        $latestResult = Result::where('class_id', $this->classId)
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->whereHas('examination', fn ($q) => $q->whereNotNull('term'))
+            ->with('examination')
+            ->latest('id')
+            ->first();
+
+        return $latestResult?->examination?->term;
     }
 
-    /**
-     * The term a generated report card will cover: whichever one the class
-     * is currently in.
-     *
-     * @return array{term: string, academic_year: int, term_number: int|null}|null
-     */
-    #[Computed]
-    public function reportTerm(): ?array
+    public function generateReportCards(\Modules\ReportCard\Services\ReportCardGenerationService $service): void
     {
-        return $this->selectedClass
-            ? TermResolver::currentFor($this->selectedClass)
-            : null;
-    }
+        abort_unless(auth()->user()->can('edit reportcard') || auth()->user()->can('create reportcard'), 403);
 
-    #[Computed]
-    public function results()
-    {
-        $sort = in_array($this->sort, self::SORTABLE, true) ? $this->sort : 'grade';
-        $direction = $this->direction === 'desc' ? 'desc' : 'asc';
+        if ($this->classId === '') {
+            return;
+        }
 
-        return $this->scoped()
-            ->with(['schoolClass', 'student', 'examination'])
-            ->when($this->classId !== '', fn ($query) => $query->where('class_id', $this->classId))
-            ->when($this->examinationId !== '', fn ($query) => $query->where('examination_id', $this->examinationId))
-            ->when($this->search !== '', function ($query) {
-                $term = '%'.$this->search.'%';
+        $schoolClass = SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->find($this->classId);
 
-                $query->whereHas('student', fn ($q) => $q->where('name', 'like', $term));
-            })
-            ->orderBy($sort, $direction)
-            ->paginate(10);
-    }
+        if (! $schoolClass) {
+            return;
+        }
 
-    #[Computed]
-    public function classes(): Collection
-    {
-        return ResultAccessService::selectableClasses(auth()->user());
-    }
+        $term = $this->currentTerm;
+        if (! $term) {
+            return;
+        }
 
-    #[Computed]
-    public function examinations(): Collection
-    {
-        return ResultAccessService::selectableExaminations(
-            auth()->user(),
-            $this->classId !== '' ? (int) $this->classId : null,
+        $latestExam = Examination::where('class_id', $schoolClass->id)
+            ->where('term', $term)
+            ->latest('exam_date')
+            ->first();
+
+        $year = $latestExam?->academic_year ?? (int) date('Y');
+
+        $result = $service->forClass($schoolClass, $term, $year);
+
+        \Flux\Flux::toast(
+            text: "Generated {$result['generated']} report cards for {$schoolClass->name}.",
+            variant: 'success',
         );
     }
 
-    private function scoped()
+    #[Computed]
+    public function results(): LengthAwarePaginator
     {
-        $query = Result::query();
+        return Result::with(['student.studentUserDetails', 'examination.subject', 'schoolClass', 'institution'])
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($this->search !== '', function ($q) {
+                $term = '%'.$this->search.'%';
 
-        ResultAccessService::scopeVisibleResults($query, auth()->user());
+                $q->where(function ($sub) use ($term) {
+                    $sub->whereHas('student', fn ($sq) => $sq->where('name', 'like', $term)->orWhere('email', 'like', $term))
+                        ->orWhereHas('examination', fn ($eq) => $eq->where('title', 'like', $term))
+                        ->orWhereHas('examination.subject', fn ($subjQ) => $subjQ->where('name', 'like', $term)->orWhere('code', 'like', $term));
+                });
+            })
+            ->when($this->examinationId !== '', fn ($q) => $q->where('examination_id', $this->examinationId))
+            ->when($this->subjectId !== '', fn ($q) => $q->whereHas('examination', fn ($eq) => $eq->where('subject_id', $this->subjectId)))
+            ->when($this->classId !== '', fn ($q) => $q->where('class_id', $this->classId))
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+    }
 
-        return $query;
+    #[Computed]
+    public function examinations(): array
+    {
+        return Examination::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('exam_date', 'desc')
+            ->get()
+            ->all();
+    }
+
+    #[Computed]
+    public function subjects(): array
+    {
+        return Subject::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('name')
+            ->get()
+            ->all();
+    }
+
+    #[Computed]
+    public function classes(): array
+    {
+        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('name')
+            ->get()
+            ->all();
+    }
+
+    #[Computed]
+    public function institution(): ?Institution
+    {
+        return currentInstitution();
     }
 }; ?>
 
-<div class="p-4">
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div class="flex flex-wrap items-end gap-2">
-            <flux:input type="search" icon="magnifying-glass" placeholder="Search student"
-                wire:model.live.debounce.400ms="search" class="w-56" />
+@php
+    $results = $this->results;
+    $examinations = $this->examinations;
+    $subjects = $this->subjects;
+    $classes = $this->classes;
+    $institution = $this->institution;
 
-            <flux:select wire:model.live="classId" label="Class">
-                <flux:select.option value="">All Classes</flux:select.option>
-                @foreach ($this->classes as $schoolClass)
-                    <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
-                @endforeach
-            </flux:select>
+    $currentSearch = $this->search;
+    $currentExam = $this->examinationId;
+    $currentSubject = $this->subjectId;
+    $currentClass = $this->classId;
 
-            <flux:select wire:model.live="examinationId" label="Examination">
-                <flux:select.option value="">
-                    {{ $classId !== '' && $this->examinations->isEmpty() ? 'No examinations for this class' : 'All Examinations' }}
-                </flux:select.option>
-                @foreach ($this->examinations as $examination)
-                    <flux:select.option value="{{ $examination->id }}">{{ $examination->title }}</flux:select.option>
-                @endforeach
-            </flux:select>
+    $totalCount = method_exists($results, 'total') ? $results->total() : count($results);
+    $hasActiveFilters = !empty($currentSearch) || !empty($currentExam) || !empty($currentSubject) || !empty($currentClass);
+
+    $avgScore = $results->avg('marks_obtained') ?: 0;
+    $passCount = $results->where('marks_obtained', '>=', 50)->count();
+    $passRate = count($results) > 0 ? round(($passCount / count($results)) * 100, 1) : 0;
+@endphp
+
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        {{-- Top Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-200/60">
+                        Academic Performance
+                    </span>
+                    <span class="text-zinc-300">&bull;</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? 'Campus Records' }}</span>
+                </div>
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Exam Results &amp; Marks Ledger</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-0.5">
+                    Track recorded student marks, assessment grades, class rankings, and academic score breakdowns.
+                </flux:text>
+            </div>
+
+            <div class="flex items-center gap-3">
+                @if ($this->currentTerm)
+                    <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{{ $this->currentTerm }}</span>
+                @endif
+                @can('edit reportcard')
+                    <flux:button wire:click="generateReportCards" icon="sparkles" variant="subtle" class="font-semibold shadow-sm">
+                        Generate Report Cards
+                    </flux:button>
+                @endcan
+                @can('create result')
+                    <flux:button href="{{ route('result.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
+                        Record Exam Score
+                    </flux:button>
+                @endcan
+            </div>
         </div>
 
-        <div class="flex flex-wrap gap-2">
-            @can('edit reportcard')
-                <flux:button type="button" icon="document-arrow-down" variant="primary" color="emerald"
-                    wire:click="generateReportCards" wire:loading.attr="disabled"
-                    wire:target="generateReportCards"
-                    wire:confirm="Generate report cards for every learner in this class?">
-                    <span wire:loading.remove wire:target="generateReportCards">Generate Report Cards</span>
-                    <span wire:loading wire:target="generateReportCards">Generating…</span>
-                </flux:button>
-            @endcan
+        {{-- Flash Messages --}}
+        @if (session('success'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 flex items-center justify-between shadow-sm">
+                <div class="flex items-center gap-3">
+                    <flux:icon icon="check-circle" class="size-5 text-emerald-600 shrink-0" />
+                    <span class="text-sm font-semibold text-emerald-900">{{ session('success') }}</span>
+                </div>
+            </div>
+        @endif
 
-            @can('create result')
-                <flux:button href="{{ route('result.entry.create') }}" icon="table-cells" variant="primary"
-                    wire:navigate>
-                    Enter Marks
-                </flux:button>
-                <flux:button href="{{ route('result.create') }}" wire:navigate>Add Result</flux:button>
-            @endcan
+        {{-- Top Executive Metrics Strip --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <x-kpi-card 
+                title="Total Recorded Marks" 
+                icon="academic-cap" 
+                color="sky" 
+                :count="$totalCount" 
+                subtext="Individual subject scores" 
+            />
+            
+            <x-kpi-card 
+                title="Cohort Average Score" 
+                icon="chart-bar" 
+                color="indigo" 
+                :count="number_format($avgScore, 1) . '%'" 
+                subtext="Overall mean achievement" 
+            />
+            
+            <x-kpi-card 
+                title="Pass Proficiency" 
+                icon="check-badge" 
+                color="emerald" 
+                :count="$passRate . '%'" 
+                subtext="Scoring 50% and above" 
+            />
         </div>
-    </div>
 
-    @can('edit reportcard')
-        <flux:text class="mb-4 block text-xs text-zinc-500">
-            @if (! $this->selectedClass)
-                Pick a class to generate its report cards.
-            @elseif ($this->reportTerm)
-                Report cards will cover every subject in <strong>{{ $this->reportTerm['term'] }}</strong>
-                ({{ $this->reportTerm['academic_year'] }}) for {{ $this->selectedClass->name }}, compared against the
-                previous term.
+        {{-- Reusable Single-Row Filter Toolbar --}}
+        <x-filter-toolbar 
+            action="{{ route('result.index') }}"
+            placeholder="Search student name, ADM, or assessment..."
+            :search="$currentSearch"
+            :hasActiveFilters="$hasActiveFilters"
+            resetRoute="{{ route('result.index') }}"
+        >
+            <div style="flex: 0 1 180px;">
+                <select name="exam_id" onchange="this.form.submit()"
+                    class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                    <option value="">All Examinations</option>
+                    @foreach ($examinations as $e)
+                        <option value="{{ $e->id }}" {{ $currentExam == $e->id ? 'selected' : '' }}>
+                            {{ $e->title }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="flex: 0 1 160px;">
+                <select name="subject_id" onchange="this.form.submit()"
+                    class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                    <option value="">All Subjects</option>
+                    @foreach ($this->subjects as $s)
+                        <option value="{{ $s->id }}" {{ $currentSubject == $s->id ? 'selected' : '' }}>
+                            {{ $s->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="flex: 0 1 150px;">
+                <select name="class_id" onchange="this.form.submit()"
+                    class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                    <option value="">All Classes</option>
+                    @foreach ($this->classes as $c)
+                        <option value="{{ $c->id }}" {{ $currentClass == $c->id ? 'selected' : '' }}>
+                            {{ $c->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <x-slot:scopeTags>
+                @if ($currentExam)
+                    <a href="{{ route('result.index', ['search' => $currentSearch, 'subject_id' => $currentSubject, 'class_id' => $currentClass]) }}" 
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-semibold transition border border-zinc-200/60"
+                        title="Remove Exam Filter">
+                        <span>Exam Filter Active</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
+                    </a>
+                @endif
+
+                @if ($currentSubject)
+                    <a href="{{ route('result.index', ['search' => $currentSearch, 'exam_id' => $currentExam, 'class_id' => $currentClass]) }}" 
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-semibold transition border border-zinc-200/60"
+                        title="Remove Subject Filter">
+                        <span>Subject Filter Active</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
+                    </a>
+                @endif
+
+                @if ($currentClass)
+                    <a href="{{ route('result.index', ['search' => $currentSearch, 'exam_id' => $currentExam, 'subject_id' => $currentSubject]) }}" 
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-semibold transition border border-zinc-200/60"
+                        title="Remove Class Filter">
+                        <span>Class Filter Active</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
+                    </a>
+                @endif
+
+                @if ($currentSearch)
+                    <a href="{{ route('result.index', ['exam_id' => $currentExam, 'subject_id' => $currentSubject, 'class_id' => $currentClass]) }}" 
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold transition border border-blue-200/60"
+                        title="Remove Search Keyword">
+                        <span>Search: <strong>"{{ $currentSearch }}"</strong></span>
+                        <span class="text-blue-500 hover:text-blue-800 font-bold">✕</span>
+                    </a>
+                @endif
+            </x-slot:scopeTags>
+        </x-filter-toolbar>
+
+        {{-- Clean High-Density 4-Column Table --}}
+        <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
+            @if($results->isNotEmpty())
+                <div class="w-full">
+                    <table class="w-full text-left text-sm table-fixed">
+                        <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
+                            <tr>
+                                <th class="py-3.5 px-5 w-4/12">Student Profile &amp; ADM</th>
+                                <th class="py-3.5 px-5 w-3/12">Assessment &amp; Subject</th>
+                                <th class="py-3.5 px-5 w-3/12">Marks &amp; Grade</th>
+                                <th class="py-3.5 px-5 w-2/12 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            @foreach ($results as $result)
+                                @php
+                                    $student = $result->student;
+                                    $studentName = $student?->name ?? 'Unknown Student';
+                                    $initials = strtoupper(substr($studentName, 0, 2));
+                                    $admNo = $student?->studentUserDetails?->admission_number ?? 'ADM-' . str_pad($result->student_id, 3, '0', STR_PAD_LEFT);
+                                    $grade = $result->grade ?? 'N/A';
+                                @endphp
+                                <tr class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
+                                    <td class="py-4 px-5">
+                                        <div class="flex items-center gap-3">
+                                            <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
+                                                {{ $initials }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <a href="{{ route('student.show', $result->student_id) }}" wire:navigate.hover class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition truncate block text-sm">
+                                                    {{ $studentName }}
+                                                </a>
+                                                <div class="text-xs text-zinc-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                                                    <span class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200 dark:border-zinc-700 text-[11px]">{{ $admNo }}</span>
+                                                    <span class="text-zinc-300">&bull;</span>
+                                                    <span class="font-sans text-[11px] text-zinc-500">{{ $result->schoolClass?->name ?? 'Class Room' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="py-4 px-5">
+                                        <div class="font-bold text-xs text-zinc-900 dark:text-white truncate">{{ $result->examination?->title ?? 'Exam Term' }}</div>
+                                        <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 font-medium flex items-center gap-1.5">
+                                            <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium border border-zinc-200/60 dark:border-zinc-700">
+                                                {{ $result->examination?->subject?->name ?? 'Discipline' }}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    <td class="py-4 px-5">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-mono font-bold text-zinc-900 dark:text-white text-sm">{{ $result->marks_obtained }}</span>
+                                            <span class="text-zinc-400 text-xs font-medium">/ {{ $result->examination?->total_marks ?? 100 }}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-bold font-mono ml-auto
+                                                {{ in_array($grade, ['A', 'A-']) ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200' :
+                                                   (in_array($grade, ['B+', 'B', 'B-']) ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200' :
+                                                   (in_array($grade, ['C+', 'C', 'C-']) ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200')) }}">
+                                                {{ $grade }}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    <td class="py-4 px-5 text-right">
+                                        <div class="flex items-center justify-end gap-1.5">
+                                            <flux:button href="{{ route('result.show', $result->id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" tooltip="View Details" />
+                                            @can('edit result')
+                                                <flux:button href="{{ route('result.edit', $result->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" tooltip="Edit Score" />
+                                            @endcan
+                                            @can('delete result')
+                                                <form action="{{ route('result.destroy', $result->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove this exam score?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <flux:button type="submit" size="sm" icon="trash" variant="subtle" class="text-rose-500 hover:text-rose-600 hover:bg-rose-50" tooltip="Delete" />
+                                                </form>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                @if($results->hasPages())
+                    <div class="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                        {{ $results->links() }}
+                    </div>
+                @endif
             @else
-                {{ $this->selectedClass->name }} has no examinations yet, so there is no term to report on.
+                <div class="py-16 text-center">
+                    <flux:icon icon="academic-cap" class="size-12 mx-auto text-zinc-300 mb-3" />
+                    <h4 class="text-base font-bold text-zinc-900 dark:text-white">No Exam Results Found</h4>
+                    <p class="text-xs text-zinc-500 mt-1 mb-4">No marks match your active search or subject filters.</p>
+                    @can('create result')
+                        <flux:button href="{{ route('result.create') }}" variant="primary" size="sm">
+                            Record First Score
+                        </flux:button>
+                    @endcan
+                </div>
             @endif
-        </flux:text>
-    @endcan
-
-    <flux:card>
-        <flux:table wire:loading.class="opacity-60">
-            <flux:table.columns>
-                <flux:table.column>Student</flux:table.column>
-                <flux:table.column>Class</flux:table.column>
-                <flux:table.column class="truncate">Examination</flux:table.column>
-                <flux:table.column>Term</flux:table.column>
-                <flux:table.column sortable :sorted="$sort === 'marks_obtained'" :direction="$direction"
-                    wire:click="sortBy('marks_obtained')">Marks</flux:table.column>
-                <flux:table.column sortable :sorted="$sort === 'grade'" :direction="$direction"
-                    wire:click="sortBy('grade')">Grade</flux:table.column>
-                <flux:table.column>Actions</flux:table.column>
-            </flux:table.columns>
-
-            <flux:table.rows>
-                @forelse ($this->results as $result)
-                    <flux:table.row :key="$result->id">
-                        <flux:table.cell>{{ $result->student?->name }}</flux:table.cell>
-                        <flux:table.cell>{{ $result->schoolClass?->name }}</flux:table.cell>
-                        <flux:table.cell>{{ $result->examination?->title }}</flux:table.cell>
-                        <flux:table.cell>{{ $result->examination?->term ?? '—' }}</flux:table.cell>
-                        <flux:table.cell>
-                            {{ $result->marks_obtained }} / {{ $result->examination?->total_marks }}
-                        </flux:table.cell>
-                        <flux:table.cell>{{ $result->grade ?? '—' }}</flux:table.cell>
-                        <flux:table.cell>
-                            <flux:button href="{{ route('result.show', $result->id) }}" icon="eye" variant="primary"
-                                color="emerald" wire:navigate>view</flux:button>
-                            @can('edit result')
-                                <flux:button href="{{ route('result.edit', $result->id) }}" icon="pencil"
-                                    variant="primary" color="yellow" wire:navigate>edit</flux:button>
-                            @endcan
-                            @can('delete result')
-                                <flux:button type="button" icon="trash" variant="primary" color="red"
-                                    wire:click="delete({{ $result->id }})"
-                                    wire:confirm="Remove this result?">delete</flux:button>
-                            @endcan
-                        </flux:table.cell>
-                    </flux:table.row>
-                @empty
-                    <flux:table.row>
-                        <flux:table.cell colspan="7" class="text-center text-gray-500">
-                            No results found.
-                        </flux:table.cell>
-                    </flux:table.row>
-                @endforelse
-            </flux:table.rows>
-        </flux:table>
-    </flux:card>
-
-    <div class="mt-4">
-        {{ $this->results->links() }}
+        </div>
     </div>
-</div>

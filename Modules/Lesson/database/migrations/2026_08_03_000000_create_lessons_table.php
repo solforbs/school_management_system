@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('class_id')->constrained('classes')->cascadeOnDelete();
             $table->foreignId('timetable_entry_id')->constrained('timetable_entries')->cascadeOnDelete();
             $table->date('lesson_date');
-            $table->enum('status', ['attended', 'not_attended'])->default('not_attended');
+            $table->enum('status', ['attended', 'not_attended', 'recovered'])->default('not_attended');
             $table->text('remarks')->nullable();
             $table->foreignId('marked_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

@@ -1,19 +1,16 @@
 <?php
 
+use Illuminate\Support\Collection;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Curriculum\Actions\SaveCurriculum;
 use Modules\Curriculum\Models\Curriculum;
+use Modules\Institution\Models\Institution;
 
 new #[Title('Curriculum')] class extends Component
 {
     public ?Curriculum $curriculum = null;
-
-    public string $name = '';
-
-    public string $system = '844';
-
-    public string $status = 'active';
 
     public function mount(?int $curriculumId = null): void
     {
@@ -26,37 +23,12 @@ new #[Title('Curriculum')] class extends Component
         abort_unless(auth()->user()->can('edit curriculum'), 403);
 
         $this->curriculum = $this->scoped()->findOrFail($curriculumId);
-
-        $this->fill([
-            'name' => (string) $this->curriculum->name,
-            'system' => (string) $this->curriculum->system,
-            'status' => (string) $this->curriculum->status,
-        ]);
     }
 
-    public function save(): void
+    #[Computed]
+    public function institutions(): Collection
     {
-        abort_unless(
-            auth()->user()->can($this->curriculum ? 'edit curriculum' : 'create curriculum'),
-            403
-        );
-
-        $validated = $this->validate(SaveCurriculum::rules());
-
-        SaveCurriculum::handle($validated, $this->institutionId(), $this->curriculum);
-
-        session()->flash('success', $this->curriculum ? 'Curriculum updated!' : 'Curriculum created successfully!');
-
-        $this->redirectRoute('curriculum.index', navigate: true);
-    }
-
-    private function institutionId(): int
-    {
-        $institutionId = $this->curriculum?->institution_id ?? currentInstitution()?->id;
-
-        abort_unless($institutionId, 422, 'No institution selected.');
-
-        return $institutionId;
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
     }
 
     private function scoped()
@@ -70,42 +42,110 @@ new #[Title('Curriculum')] class extends Component
         return $query;
     }
 }; ?>
+<div>
+    @if($curriculum)
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $curriculum ? 'Edit Curriculum' : 'Create Curriculum' }}
-            </h4>
-        </div>
-
-        <form wire:submit="save">
-            <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-                <flux:input label="Name" wire:model="name" placeholder="e.g CBC/8.4.4" />
-
-                <flux:select label="Curriculum System" wire:model="system"
-                    description="8-4-4 grades A to E. CBC grades against expectations, in four bands and the eight KJSEA levels beneath them.">
-                    @foreach (\Modules\Curriculum\Models\Curriculum::SYSTEMS as $value => $label)
-                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-
-                <flux:select label="Status" wire:model="status">
-                    <flux:select.option value="active">Active</flux:select.option>
-                    <flux:select.option value="dismissed">Dismissed</flux:select.option>
-                </flux:select>
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1">
+                    <a href="{{ route('dashboard') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Dashboard</a>
+                    <span>/</span>
+                    <a href="{{ route('curriculum.index') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Curricula</a>
+                    <span>/</span>
+                    <span class="text-zinc-800 dark:text-zinc-200 font-medium">Edit {{ $curriculum->name }}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20 flex items-center justify-center font-bold text-xs shrink-0">
+                        <flux:icon icon="pencil-square" class="size-5" />
+                    </div>
+                    <div>
+                        <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Curriculum</flux:heading>
+                        <flux:text class="text-zinc-500 text-sm mt-0.5">
+                            Update details and operational status for <span class="font-semibold">{{ $curriculum->name }}</span>.
+                        </flux:text>
+                    </div>
+                </div>
             </div>
-
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('curriculum.index') }}" variant="ghost" wire:navigate>Cancel</flux:button>
-                <flux:button variant="primary" type="submit" icon="plus">
-                    <span wire:loading.remove wire:target="save">{{ $curriculum ? 'Update' : 'Create' }}</span>
-                    <span wire:loading wire:target="save">Saving…</span>
+            
+            <div>
+                <flux:button href="{{ route('curriculum.index') }}" icon="arrow-left" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    Back to Curricula
                 </flux:button>
             </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <ul class="list-disc list-inside space-y-0.5 text-xs">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('curriculum.update', $curriculum->id) }}" method="POST">
+            @csrf
+            @method('PUT')
+            @include('curriculum::partials._form', ['institutions' => $this->institutions])
         </form>
     </div>
+
+    @else
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1">
+                    <a href="{{ route('dashboard') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Dashboard</a>
+                    <span>/</span>
+                    <a href="{{ route('curriculum.index') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Curricula</a>
+                    <span>/</span>
+                    <span class="text-zinc-800 dark:text-zinc-200 font-medium">Create</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20 flex items-center justify-center font-bold text-xs shrink-0">
+                        <flux:icon icon="book-open" class="size-5" />
+                    </div>
+                    <div>
+                        <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Create Curriculum</flux:heading>
+                        <flux:text class="text-zinc-500 text-sm mt-0.5">
+                            Add a new educational framework to your institution.
+                        </flux:text>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <flux:button href="{{ route('curriculum.index') }}" icon="arrow-left" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    Back to Curricula
+                </flux:button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <ul class="list-disc list-inside space-y-0.5 text-xs">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('curriculum.store') }}" method="POST">
+            @csrf
+            @include('curriculum::partials._form', ['institutions' => $this->institutions])
+        </form>
+    </div>
+    @endif
 </div>

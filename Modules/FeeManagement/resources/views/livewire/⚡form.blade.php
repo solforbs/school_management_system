@@ -12,20 +12,6 @@ new #[Title('Fee')] class extends Component
 {
     public ?Fee $fee = null;
 
-    public string $student_id = '';
-
-    public string $title = '';
-
-    public string $fee_type = 'tuition';
-
-    public string $amount = '';
-
-    public string $amount_paid = '0';
-
-    public string $due_date = '';
-
-    public string $notes = '';
-
     public function mount(?int $feeId = null): void
     {
         if ($feeId === null) {
@@ -37,57 +23,8 @@ new #[Title('Fee')] class extends Component
         abort_unless(auth()->user()->can('edit feemanagement'), 403);
 
         $this->fee = $this->scoped()->findOrFail($feeId);
-
-        $this->fill([
-            'student_id' => (string) $this->fee->student_id,
-            'title' => (string) $this->fee->title,
-            'fee_type' => (string) $this->fee->fee_type,
-            'amount' => (string) $this->fee->amount,
-            'amount_paid' => (string) $this->fee->amount_paid,
-            'due_date' => $this->fee->due_date?->format('Y-m-d') ?? '',
-            'notes' => (string) $this->fee->notes,
-        ]);
     }
 
-    public function save(): void
-    {
-        abort_unless(
-            auth()->user()->can($this->fee ? 'edit feemanagement' : 'create feemanagement'),
-            403
-        );
-
-        $validated = $this->validate(SaveFee::rules(withStudent: $this->fee === null));
-
-        // A fee can only be raised against a student the viewer can actually
-        // see - 'exists' alone would reach another school's roll.
-        if (! $this->fee) {
-            abort_unless(
-                $this->students->contains(fn ($details) => (string) $details->student_id === $this->student_id),
-                403
-            );
-        }
-
-        $saved = SaveFee::handle($validated, $this->fee);
-
-        session()->flash('success', $this->fee ? 'Fee updated successfully!' : 'Fee created successfully!');
-
-        $this->redirectRoute('feemanagement.show', $saved->id, navigate: true);
-    }
-
-    protected function prepareForValidation($attributes)
-    {
-        foreach (['due_date', 'notes'] as $field) {
-            if (($attributes[$field] ?? '') === '') {
-                $attributes[$field] = null;
-            }
-        }
-
-        return $attributes;
-    }
-
-    /**
-     * @return Collection<int, StudentDetails>
-     */
     #[Computed]
     public function students(): Collection
     {
@@ -111,69 +48,89 @@ new #[Title('Fee')] class extends Component
         return $query;
     }
 }; ?>
+<div>
+    @if($fee)
+@php
+    $feeItem = $fee ?? $feeManagement;
+@endphp
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $fee ? 'Edit Fee' : 'Add Fee' }}
-            </h4>
-        </div>
-
-        <form wire:submit="save">
-            <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
-                @if ($fee)
-                    <div class="md:col-span-3">
-                        <flux:text class="text-zinc-500">
-                            Billed to <span class="font-medium">{{ $fee->student?->name }}</span>. A fee stays with
-                            the student it was raised against.
-                        </flux:text>
-                    </div>
-                @else
-                    <div class="md:col-span-3">
-                        <flux:select label="Student" wire:model="student_id">
-                            <flux:select.option value="">Select Student</flux:select.option>
-                            @foreach ($this->students as $details)
-                                <flux:select.option value="{{ $details->student_id }}">
-                                    {{ $details->student?->name }}
-                                    @if ($details->admission_number)
-                                        ({{ $details->admission_number }})
-                                    @endif
-                                </flux:select.option>
-                            @endforeach
-                        </flux:select>
-                    </div>
-                @endif
-
-                <flux:input label="Title" wire:model="title" placeholder="e.g. Term 2 Tuition" />
-
-                <flux:select label="Fee Type" wire:model="fee_type">
-                    @foreach (['tuition', 'boarding', 'transport', 'lunch', 'activity', 'exam', 'uniform', 'other'] as $type)
-                        <flux:select.option value="{{ $type }}">{{ ucfirst($type) }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:input type="date" label="Due Date" wire:model="due_date" />
-
-                <flux:input type="number" step="0.01" min="0" label="Amount" wire:model="amount" />
-                <flux:input type="number" step="0.01" min="0" label="Amount Paid" wire:model="amount_paid"
-                    description="Balance and status are worked out from these two." />
-
-                <div class="md:col-span-3">
-                    <flux:textarea label="Notes" rows="2" wire:model="notes" />
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6 mb-2">
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10 ring-1 ring-blue-500/20">
+                    <flux:icon icon="pencil-square" class="size-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                    <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Fee</flux:heading>
+                    <flux:text class="text-zinc-500 text-sm mt-1">
+                        Update details for <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $feeItem?->title }}</span>
+                    </flux:text>
                 </div>
             </div>
-
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('feemanagement.index') }}" variant="ghost" wire:navigate>Cancel
-                </flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">{{ $fee ? 'Update Fee' : 'Save Fee' }}</span>
-                    <span wire:loading wire:target="save">Saving…</span>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('feemanagement.index') }}" variant="subtle" icon="arrow-left" class="hidden sm:flex">
+                    Back to Fees
                 </flux:button>
             </div>
+        </div>
+
+        @if (isset($errors) && $errors->any())
+            <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <ul class="list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form action="{{ route('feemanagement.update', $feeItem->id) }}" method="POST">
+            @csrf
+            @method('PUT')
+            @include('feemanagement::partials._form', ['feeManagement' => $feeItem, 'fee' => $feeItem, 'students' => $this->students])
         </form>
     </div>
+
+    @else
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6 mb-2">
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10 ring-1 ring-blue-500/20">
+                    <flux:icon icon="plus-circle" class="size-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                    <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Create Fee</flux:heading>
+                    <flux:text class="text-zinc-500 text-sm mt-1">
+                        Charge a fee to a student. Institution and parent are linked automatically.
+                    </flux:text>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <flux:button href="{{ route('feemanagement.index') }}" variant="subtle" icon="arrow-left" class="hidden sm:flex">
+                    Back to Fees
+                </flux:button>
+            </div>
+        </div>
+
+        @if (isset($errors) && $errors->any())
+            <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <ul class="list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form action="{{ route('feemanagement.store') }}" method="POST">
+            @csrf
+            @include('feemanagement::partials._form', ['students' => $this->students])
+        </form>
+    </div>
+    @endif
 </div>

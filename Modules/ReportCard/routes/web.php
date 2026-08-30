@@ -26,4 +26,5 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::delete('report-card/{reportCard}/delete', [ReportCardController::class, 'destroy'])->name('reportcard.destroy');
     Route::livewire('report-cards', 'reportcard::index')->name('reportcard.index');
     Route::get('report-cards/{reportcard}', [ReportCardController::class, 'show'])->name('reportcard.show');
+    Route::get('report-cards/{reportcard}/pdf', [ReportCardController::class, 'pdf'])->name('reportcard.pdf');
 });

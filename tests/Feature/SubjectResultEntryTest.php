@@ -779,7 +779,7 @@ test('the livewire result list filters and deletes in place', function () {
     expect(Result::count())->toBe(0);
 });
 
-test('the livewire result form records a single mark', function () {
+test('the result form records a single mark', function () {
     [$director, $institution] = makeGradedSchool();
 
     $class = makeGradedClass($institution);
@@ -789,15 +789,15 @@ test('the livewire result form records a single mark', function () {
 
     loadScale($institution, null, '844');
 
-    Livewire::actingAs($director)
-        ->test('result::form')
-        ->set('class_id', (string) $class->id)
-        ->set('student_id', (string) $students[0]->id)
-        ->set('examination_id', (string) $examination->id)
-        ->set('marks_obtained', '77')
-        ->call('save')
-        ->assertHasNoErrors()
-        ->assertRedirect();
+    $this->actingAs($director)
+        ->post(route('result.store'), [
+            'class_id' => $class->id,
+            'student_id' => $students[0]->id,
+            'examination_id' => $examination->id,
+            'marks_obtained' => 77,
+        ])
+        ->assertRedirect(route('result.index'))
+        ->assertSessionHasNoErrors();
 
     expect(Result::first()->grade)->toBe('A-');
 });

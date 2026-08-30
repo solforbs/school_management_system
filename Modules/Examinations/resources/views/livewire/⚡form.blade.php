@@ -7,33 +7,12 @@ use Livewire\Component;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Actions\SaveExamination;
 use Modules\Examinations\Models\Examination;
+use Modules\Institution\Models\Institution;
 use Modules\Subject\Models\Subject;
 
 new #[Title('Examination')] class extends Component
 {
     public ?Examination $examination = null;
-
-    public string $class_id = '';
-
-    public string $subject_id = '';
-
-    public string $title = '';
-
-    public string $term = '';
-
-    public string $exam_type = '';
-
-    public string $exam_date = '';
-
-    public string $start_time = '';
-
-    public string $end_time = '';
-
-    public string $total_marks = '100';
-
-    public string $passing_marks = '';
-
-    public string $notes = '';
 
     public function mount(?int $examinationId = null): void
     {
@@ -46,51 +25,6 @@ new #[Title('Examination')] class extends Component
         abort_unless(auth()->user()->can('edit examination'), 403);
 
         $this->examination = $this->scoped()->findOrFail($examinationId);
-
-        $this->fill([
-            'class_id' => (string) $this->examination->class_id,
-            'subject_id' => (string) $this->examination->subject_id,
-            'title' => (string) $this->examination->title,
-            'term' => (string) $this->examination->term,
-            'exam_type' => (string) $this->examination->exam_type,
-            'exam_date' => $this->examination->exam_date?->format('Y-m-d') ?? '',
-            'start_time' => $this->examination->start_time?->format('H:i') ?? '',
-            'end_time' => $this->examination->end_time?->format('H:i') ?? '',
-            'total_marks' => (string) $this->examination->total_marks,
-            'passing_marks' => (string) ($this->examination->passing_marks ?? ''),
-            'notes' => (string) $this->examination->notes,
-        ]);
-    }
-
-    public function save(): void
-    {
-        abort_unless(
-            auth()->user()->can($this->examination ? 'edit examination' : 'create examination'),
-            403
-        );
-
-        $validated = $this->validate(SaveExamination::rules());
-
-        $saved = SaveExamination::handle($validated, $this->institutionId(), $this->examination);
-
-        session()->flash('success', $this->examination ? 'Examination updated!' : 'Examination scheduled successfully!');
-
-        $this->redirectRoute('examinations.show', $saved->id, navigate: true);
-    }
-
-    /**
-     * Optional time and mark fields post an empty string when untouched;
-     * the rules behind them expect null.
-     */
-    protected function prepareForValidation($attributes)
-    {
-        foreach (['term', 'exam_type', 'start_time', 'end_time', 'passing_marks', 'notes'] as $field) {
-            if (($attributes[$field] ?? '') === '') {
-                $attributes[$field] = null;
-            }
-        }
-
-        return $attributes;
     }
 
     #[Computed]
@@ -102,7 +36,7 @@ new #[Title('Examination')] class extends Component
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
-        return $query->orderBy('name')->get();
+        return $query->get();
     }
 
     #[Computed]
@@ -114,16 +48,13 @@ new #[Title('Examination')] class extends Component
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
-        return $query->orderBy('name')->get();
+        return $query->get();
     }
 
-    private function institutionId(): int
+    #[Computed]
+    public function institutions(): Collection
     {
-        $institutionId = $this->examination?->institution_id ?? currentInstitution()?->id;
-
-        abort_unless($institutionId, 422, 'No institution selected.');
-
-        return $institutionId;
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
     }
 
     private function scoped()
@@ -137,69 +68,110 @@ new #[Title('Examination')] class extends Component
         return $query;
     }
 }; ?>
+<div>
+    @if($examination)
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
-<div class="p-4">
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-        <div
-            class="rounded-t-lg border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-            <h4 class="mb-0 text-lg font-semibold text-gray-900 dark:text-white">
-                {{ $examination ? 'Edit Examination' : 'Add Examination' }}
-            </h4>
-        </div>
-
-        <form wire:submit="save">
-            <div class="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
-                <flux:input label="Title" wire:model="title" placeholder="e.g. End of Term 2 Exam" />
-
-                <flux:select label="Class" wire:model="class_id">
-                    <flux:select.option value="">Select Class</flux:select.option>
-                    @foreach ($this->classes as $schoolClass)
-                        <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:select label="Subject" wire:model="subject_id">
-                    <flux:select.option value="">Select Subject</flux:select.option>
-                    @foreach ($this->subjects as $subject)
-                        <flux:select.option value="{{ $subject->id }}">{{ $subject->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:input label="Term" wire:model="term" placeholder="e.g. Second Term"
-                    description="The academic year is taken from the exam date." />
-
-                <flux:select label="Sitting" wire:model="exam_type"
-                    description="Which round of papers this belongs to - it's what the exam timetable groups by.">
-                    <flux:select.option value="">Not specified</flux:select.option>
-                    @foreach (\Modules\Examinations\Models\Examination::EXAM_TYPES as $value => $label)
-                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
-                <flux:input type="date" label="Exam Date" wire:model="exam_date" />
-
-                <flux:input type="number" min="1" label="Total Marks" wire:model="total_marks" />
-
-                <flux:input type="time" label="Start Time" wire:model="start_time" />
-                <flux:input type="time" label="End Time" wire:model="end_time" />
-                <flux:input type="number" min="0" label="Passing Marks" wire:model="passing_marks" />
-
-                <div class="md:col-span-3">
-                    <flux:textarea label="Notes" rows="2" wire:model="notes" />
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1">
+                    <a href="{{ route('dashboard') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Dashboard</a>
+                    <span>/</span>
+                    <a href="{{ route('examinations.index') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Examinations</a>
+                    <span>/</span>
+                    <span class="text-zinc-800 dark:text-zinc-200 font-medium">Edit {{ $examination->title }}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20 flex items-center justify-center font-bold text-xs shrink-0">
+                        <flux:icon icon="pencil-square" class="size-5" />
+                    </div>
+                    <div>
+                        <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Examination</flux:heading>
+                        <flux:text class="text-zinc-500 text-sm mt-0.5">
+                            Update details, timetable schedule, and scoring for <span class="font-semibold">{{ $examination->title }}</span>.
+                        </flux:text>
+                    </div>
                 </div>
             </div>
-
-            <div
-                class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-zinc-700 dark:bg-zinc-800">
-                <flux:button href="{{ route('examinations.index') }}" variant="ghost" wire:navigate>Cancel
-                </flux:button>
-                <flux:button variant="primary" type="submit">
-                    <span wire:loading.remove wire:target="save">
-                        {{ $examination ? 'Update Examination' : 'Save Examination' }}
-                    </span>
-                    <span wire:loading wire:target="save">Saving…</span>
+            
+            <div>
+                <flux:button href="{{ route('examinations.index') }}" icon="arrow-left" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    Back to Exams
                 </flux:button>
             </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <ul class="list-disc list-inside space-y-0.5 text-xs">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('examinations.update', $examination->id) }}" method="POST">
+            @csrf
+            @method('PUT')
+            @include('examinations::partials._form', ['institutions' => $this->institutions, 'subjects' => $this->subjects, 'classes' => $this->classes, 'examTypes' => \Modules\Examinations\Models\Examination::EXAM_TYPES])
         </form>
     </div>
+
+    @else
+    <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        {{-- Header Section --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1">
+                    <a href="{{ route('dashboard') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Dashboard</a>
+                    <span>/</span>
+                    <a href="{{ route('examinations.index') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Examinations</a>
+                    <span>/</span>
+                    <span class="text-zinc-800 dark:text-zinc-200 font-medium">Create</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20 flex items-center justify-center font-bold text-xs shrink-0">
+                        <flux:icon icon="academic-cap" class="size-5" />
+                    </div>
+                    <div>
+                        <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Create Examination</flux:heading>
+                        <flux:text class="text-zinc-500 text-sm mt-0.5">
+                            Configure a new academic assessment, schedule, and scoring rules.
+                        </flux:text>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <flux:button href="{{ route('examinations.index') }}" icon="arrow-left" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    Back to Exams
+                </flux:button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div class="text-sm text-red-800 dark:text-red-400">
+                    <ul class="list-disc list-inside space-y-0.5 text-xs">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
+
+        <form action="{{ route('examinations.store') }}" method="POST">
+            @csrf
+            @include('examinations::partials._form', ['institutions' => $this->institutions, 'subjects' => $this->subjects, 'classes' => $this->classes, 'examTypes' => \Modules\Examinations\Models\Examination::EXAM_TYPES])
+        </form>
+    </div>
+    @endif
 </div>
