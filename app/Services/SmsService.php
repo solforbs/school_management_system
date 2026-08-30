@@ -4,14 +4,19 @@ namespace App\Services;
 
 class SmsService
 {
-    protected $config;
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $config;
 
     public function __construct()
     {
         $this->config = config('sms');
     }
-
-    public function send(int $mobile, string $message, $provider = null)
+    /**
+     * @return array<string, mixed>
+     */
+    public function send(int $mobile, string $message, ?string $provider = null): array
     {
         if (! featureEnabled('sms')) {
             return ['success' => false, 'error' => 'SMS is currently disabled in site settings'];
@@ -33,15 +38,15 @@ class SmsService
 
         // Build POST data using config values with fallbacks
         $postData = http_build_query([
-            'userid' => env('PINNACLE_USER_ID'),
-            'password' => env('PINNACLE_API_PASSWORD'),
+            'userid' => $providerConfig['userid'],
+            'password' => $providerConfig['password'],
             'mobile' => $mobile,
             'msg' => $message,
-            'senderid' => env('PINNACLE_SENDER_ID'),
-            'msgType' => env('PINNACLE_MESSAGE_TYPE'),
-            'duplicatecheck' => true,
-            'output' => env('PINNACLE_RESPONSE'),
-            'sendMethod' => env('PINNACLE_SEND_METHOD'),
+            'senderid' => $providerConfig['senderid'],
+            'msgType' => $providerConfig['default_msg_type'],
+            'duplicatecheck' => $providerConfig['default_duplicate_check'],
+            'output' => $providerConfig['default_output'],
+            'sendMethod' => $providerConfig['default_send_method'],
         ]);
 
         $curl = curl_init();
@@ -54,7 +59,7 @@ class SmsService
             CURLOPT_TIMEOUT => $this->config['options']['timeout'] ?? 30,
             CURLOPT_MAXREDIRS => $this->config['options']['max_redirects'] ?? 10,
             CURLOPT_HTTPHEADER => [
-                'apikey: '.($providerConfig['apikey'] ?? ''),
+                'apikey: ' . ($providerConfig['apikey'] ?? ''),
                 'Content-Type: application/x-www-form-urlencoded',
             ],
         ]);
@@ -71,7 +76,19 @@ class SmsService
         $decodedResponse = json_decode($response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decodedResponse)) {
-            return ['success' => false, 'error' => 'Invalid JSON response', 'raw_response' => $response];
+            \Illuminate\Support\Facades\Log::error('HostPinnacle invalid response', [
+                'http_code' => $httpCode,
+                'curl_error' => $error,
+                'raw_response' => $response,
+                'json_error' => json_last_error_msg(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Invalid JSON response',
+                'raw_response' => $response,
+                'http_code' => $httpCode,
+            ];
         }
 
         return $this->normaliseResponse($decodedResponse);
@@ -97,7 +114,7 @@ class SmsService
         $mobile = preg_replace('/[^0-9]/', '', $mobile);
 
         if (strlen($mobile) == 10 && substr($mobile, 0, 1) == '0') {
-            return '254'.substr($mobile, 1);
+            return '254' . substr($mobile, 1);
         }
 
         return $mobile;
