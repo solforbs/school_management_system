@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Modules\Institution\Models\Institution;
 
 if (! function_exists('institutionOwner')) {
-    function institutionOwner(int $institution)
+    function institutionOwner(int $institution): bool
     {
         return $institution === Auth::user()->id;
     }
@@ -17,7 +17,7 @@ if (! function_exists('progress')) {
     {
         $institutionColumns = $institution->toArray();
         $columns = count($institutionColumns);
-        $filled = Arr::where($institutionColumns, fn ($value) => filled($value));
+        $filled = Arr::where($institutionColumns, fn($value) => filled($value));
 
         return round((count($filled) / $columns) * 100, 0);
     }
@@ -63,13 +63,13 @@ if (! function_exists('syncClientMode')) {
     }
 }
 if (! function_exists('isAdmin')) {
-    function isAdmin()
+    function isAdmin(): bool
     {
         return Auth::user()->hasRole('Admin');
     }
 }
 if (! function_exists('isDirector')) {
-    function isDirector()
+    function isDirector(): bool
     {
         return Auth::user()->hasRole('Director');
     }
@@ -252,6 +252,6 @@ if (! function_exists('institutionCanUpgrade')) {
 
         $currentPrice = $institution->hasActiveSubscription() ? (float) $institution->plan->price : -1;
 
-        return Plan::where('is_active', true)->where('price', '>', $currentPrice)->exists();
+        return Plan::whereIsActive(true)->where('price', '>', $currentPrice)->exists();
     }
 }

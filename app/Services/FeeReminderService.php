@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Modules\FeeManagement\Models\Fee;
 use App\Notifications\FeePaymentReminder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
@@ -17,9 +18,14 @@ class FeeReminderService
     public function __construct(private readonly SmsService $smsService) {}
 
     /**
-     * @param  Builder  $query  A Fee query already scoped to whatever the
-     *                          caller is allowed to send reminders for.
-     * @return array{parents_notified: int, emails_sent: int, sms_sent: int, skipped_no_contact: int}
+     * @param Builder<Fee> $query A Fee query already scoped to whatever the
+     *                            caller is allowed to send reminders for.
+     * @return array{
+     *     parents_notified: int,
+     *     emails_sent: int,
+     *     sms_sent: int,
+     *     skipped_no_contact: int
+     * }
      */
     public function sendForDefaulters(Builder $query): array
     {

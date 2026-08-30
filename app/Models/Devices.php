@@ -6,8 +6,18 @@ use Athwari\LaravelZktecoAdms\Models\ZktecoDevice;
 use Database\Factories\DevicesFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Institution\Models\Institution;
-
+/**
+ * @property int $id
+ * @property string $serial_number
+ * @property int|null $institution_id
+ * @property int|null $zkteco_device_id
+ * @property bool $is_active
+ *
+ * @property-read Institution|null $institution
+ * @property-read ZktecoDevice|null $zktecoDevice
+ */
 class Devices extends Model
 {
     /** @use HasFactory<DevicesFactory> */
@@ -20,12 +30,13 @@ class Devices extends Model
         'is_active',
     ];
 
-    public function institution()
+    public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
+    
 
-    public function zktecoDevice()
+    public function zktecoDevice(): BelongsTo
     {
         return $this->belongsTo(ZktecoDevice::class, 'serial_number', 'serial_number');
     }

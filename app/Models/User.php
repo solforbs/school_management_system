@@ -22,6 +22,10 @@ use Modules\Staff\Models\StaffDetails;
 use Modules\Student\Models\StudentDetails;
 use Modules\Teacher\Models\TeacherDetails;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 /**
  * @property int $id
@@ -77,16 +81,16 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         $initials = Str::initials($this->name, true);
 
         return Str::length($initials) > 1
-            ? Str::substr($initials, 0, 1).Str::substr($initials, -1)
+            ? Str::substr($initials, 0, 1) . Str::substr($initials, -1)
             : $initials;
     }
 
-    public function children()
+    public function children(): HasMany
     {
         return $this->hasMany(StudentDetails::class, 'parent_id');
     }
 
-    public function institution()
+    public function institution(): HasMany
     {
         return $this->hasMany(Institution::class);
     }
@@ -96,7 +100,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      * one of possibly several they own. See HasInstitution for how/when
      * this gets set.
      */
-    public function activeInstitution()
+    public function activeInstitution(): BelongsTo
     {
         return $this->belongsTo(Institution::class, 'active_institution_id');
     }
@@ -107,12 +111,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      * every screen eager-loading it - the fee list, a student's profile,
      * attendance - failed on an unknown column.
      */
-    public function studentUserDetails()
+    public function studentUserDetails(): HasOne
     {
         return $this->hasOne(StudentDetails::class, 'student_id');
     }
 
-    public function parentUserDetails()
+    public function parentUserDetails(): HasOneThrough
     {
         return $this->hasOneThrough(
             ParentDetails::class,        // Final model
@@ -124,7 +128,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         );
     }
 
-    public function parentInstitution()
+    public function parentInstitution(): HasOneThrough
     {
         return $this->hasOneThrough(
             Institution::class,
@@ -136,7 +140,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         );
     }
 
-    public function studentParent()
+    public function studentParent(): HasOneThrough
     {
         return $this->hasOneThrough(
             User::class,           // Final model (Parent User)
@@ -147,8 +151,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'parent_id'            // Local key on intermediate model (StudentDetails.parent_id)
         );
     }
-
-    public function studentInstitution()
+    /**
+     * @return HasOneThrough<Institution, StudentDetails, $this>
+     */
+    public function studentInstitution(): HasOneThrough
     {
         return $this->hasOneThrough(
             Institution::class,        // Final model
@@ -160,22 +166,22 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         );
     }
 
-    public function parent()
+    public function parent(): HasOne
     {
         return $this->hasOne(ParentDetails::class, 'parent_id');
     }
 
-    public function fees()
+    public function fees(): HasMany
     {
         return $this->hasMany(Fee::class, 'student_id');
     }
 
-    public function childFees()
+    public function childFees(): HasMany
     {
         return $this->hasMany(Fee::class, 'parent_id');
     }
 
-    public function teacherUserDetails()
+    public function teacherUserDetails(): HasOne
     {
         return $this->hasOne(TeacherDetails::class, 'teacher_id');
     }
@@ -184,7 +190,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      * The staff record this login belongs to - how an Accountant is tied to
      * the school they work for, since they never own one.
      */
-    public function staffUserDetails()
+    public function staffUserDetails(): HasOne
     {
         return $this->hasOne(StaffDetails::class, 'user_id');
     }

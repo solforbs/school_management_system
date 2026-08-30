@@ -6,12 +6,26 @@ use App\Concerns\TetherSyncable;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 
 // use Modules\Student\Database\Factories\StudentDetailsFactory;
-
+/**
+ * @property int $id
+ * @property int $student_id
+ * @property int $institution_id
+ * @property string|null $profile_photo
+ * @property string|null $student_number
+ * @property string|null $admission_number
+ * @property bool $is_active
+ * @property string $guardian_email
+ * @property int $parent_id
+ * @property-read User|null $student
+ * @property-read Institution|null $institution
+ * @property-read SchoolClass|null $schoolClass
+ */
 class StudentDetails extends Model
 {
     use HasFactory, SoftDeletes, TetherSyncable;
@@ -56,17 +70,17 @@ class StudentDetails extends Model
     //     // return StudentDetailsFactory::new();
     // }
 
-    public function student()
+    public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_id');
     }
 
-    public function schoolClass()
+    public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 
-    public function institution()
+    public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }

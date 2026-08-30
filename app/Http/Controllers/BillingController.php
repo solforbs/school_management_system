@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Services\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 
 class BillingController extends Controller
@@ -19,14 +20,14 @@ class BillingController extends Controller
      * the current plan, and for any plan already fully covered by what's
      * been paid this window).
      */
-    public function show(Request $request)
+    public function show(Request $request): View
     {
         abort_unless(Auth::user()->can('view billing'), 403);
 
         $institution = currentInstitution();
         abort_unless($institution, 404);
 
-        $plans = Plan::where('is_active', true)->orderBy('price')->get();
+        $plans = Plan::whereIsActive(true)->orderBy('price', 'asc')->get();
 
         return view('billing.show', [
             'institution' => $institution,
@@ -60,7 +61,7 @@ class BillingController extends Controller
             return back()->with('error', 'Nothing left to pay for this plan.');
         }
 
-        $reference = 'sms_'.Str::uuid();
+        $reference = 'sms_' . Str::uuid();
 
         $payment = Payment::create([
             'institution_id' => $institution->id,
@@ -106,7 +107,7 @@ class BillingController extends Controller
             return redirect()->route('billing.show')->with('error', 'Missing payment reference.');
         }
 
-        $payment = Payment::where('reference', $reference)->first();
+        $payment = Payment::whereReference($reference)->first();
 
         if (! $payment) {
             return redirect()->route('billing.show')->with('error', 'Payment not found.');
@@ -134,7 +135,7 @@ class BillingController extends Controller
         }
 
         if ($request->input('event') === 'charge.success') {
-            $payment = Payment::where('reference', $request->input('data.reference'))->first();
+            $payment = Payment::whereReference($request->input('data.reference'))->first();
 
             if ($payment) {
                 // A setup fee is settled by the onboarding flow: it has no
@@ -179,14 +180,14 @@ class BillingController extends Controller
         }
 
         $now = now();
-
-        $payment->update([
+        $paymentData = [
             'status' => 'successful',
             'gateway_reference' => (string) ($data['id'] ?? ''),
             'channel' => $data['channel'] ?? null,
             'paid_at' => $now,
             'gateway_response' => $result,
-        ]);
+        ];
+        $payment->update($paymentData);
 
         $institution = $payment->institution;
         $plan = $payment->plan;

@@ -46,9 +46,9 @@ class PairSyncDevice extends Command
         try {
             $response = Http::asJson()
                 ->withToken($token)
-                ->get($server.'/tether/device/profile');
+                ->get($server . '/tether/device/profile');
         } catch (Throwable $e) {
-            $this->error('Could not reach the server: '.$e->getMessage());
+            $this->error('Could not reach the server: ' . $e->getMessage());
 
             return self::FAILURE;
         }
@@ -60,7 +60,7 @@ class PairSyncDevice extends Command
         }
 
         if (! $response->successful()) {
-            $this->error('Pairing failed: HTTP '.$response->status());
+            $this->error('Pairing failed: HTTP ' . $response->status());
 
             return self::FAILURE;
         }
@@ -86,8 +86,8 @@ class PairSyncDevice extends Command
         // Config was resolved at boot, before any of the above existed, so
         // the sync below would otherwise post to an empty URL.
         config([
-            'tether-client.server_routes.push' => $server.'/tether/push',
-            'tether-client.server_routes.pull' => $server.'/tether/pull',
+            'tether-client.server_routes.push' => $server . '/tether/push',
+            'tether-client.server_routes.pull' => $server . '/tether/pull',
             'sync.device_token' => $token,
         ]);
 
@@ -104,8 +104,8 @@ class PairSyncDevice extends Command
 
         $this->attachToInstitution($profile);
 
-        $this->info('Paired with '.($profile['institution']['name'] ?? 'the server').'.');
-        $this->line('Sign in offline as '.$profile['user']['email'].' using the passcode you just set.');
+        $this->info('Paired with ' . ($profile['institution']['name'] ?? 'the server') . '.');
+        $this->line('Sign in offline as ' . $profile['user']['email'] . ' using the passcode you just set.');
 
         return self::SUCCESS;
     }
@@ -123,7 +123,11 @@ class PairSyncDevice extends Command
     {
         $this->callSilent('db:seed', ['--class' => PermissionSeeder::class, '--force' => true]);
 
-        $user = User::find($profile['user']['id']) ?? new User;
+        $user = User::query()->find($profile['user']['id']);
+
+        if (! $user instanceof User) {
+            $user = new User;
+        }
 
         // forceFill, because the id is not fillable - and it has to be the
         // server's id, or institution scoping and record ownership would

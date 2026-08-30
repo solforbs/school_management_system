@@ -4,14 +4,19 @@ namespace App\Services;
 
 class SmsService
 {
-    protected $config;
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $config;
 
     public function __construct()
     {
         $this->config = config('sms');
     }
-
-    public function send(int $mobile, string $message, $provider = null)
+    /**
+     * @return array<string, mixed>
+     */
+    public function send(int $mobile, string $message, ?string $provider = null): array
     {
         if (! featureEnabled('sms')) {
             return ['success' => false, 'error' => 'SMS is currently disabled in site settings'];
@@ -54,7 +59,7 @@ class SmsService
             CURLOPT_TIMEOUT => $this->config['options']['timeout'] ?? 30,
             CURLOPT_MAXREDIRS => $this->config['options']['max_redirects'] ?? 10,
             CURLOPT_HTTPHEADER => [
-                'apikey: '.($providerConfig['apikey'] ?? ''),
+                'apikey: ' . ($providerConfig['apikey'] ?? ''),
                 'Content-Type: application/x-www-form-urlencoded',
             ],
         ]);
@@ -97,7 +102,7 @@ class SmsService
         $mobile = preg_replace('/[^0-9]/', '', $mobile);
 
         if (strlen($mobile) == 10 && substr($mobile, 0, 1) == '0') {
-            return '254'.substr($mobile, 1);
+            return '254' . substr($mobile, 1);
         }
 
         return $mobile;

@@ -9,6 +9,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Institution\Models\Institution;
 
+/**
+ * @property int $id
+ * @property int $institution_id
+ * @property int $student_id
+ * @property int|null $parent_id
+ * @property string $title
+ * @property string $fee_type
+ * @property float|string $amount
+ * @property float|string|null $amount_paid
+ * @property \Illuminate\Support\Carbon|null $due_date
+ * @property string|null $notes
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ */
 class Fee extends Model
 {
     use HasFactory, SoftDeletes, TetherSyncable;

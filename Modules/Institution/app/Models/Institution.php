@@ -22,7 +22,10 @@ use Modules\Teacher\Models\TeacherDetails;
 use Modules\Timetable\Models\TimetableEntry;
 
 // use Modules\Institution\Database\Factories\InstitutionFactory;
-
+/**
+ * @property int $id
+ * @property string|null $logo
+ */
 class Institution extends Model
 {
     use HasFactory, TetherSyncable;

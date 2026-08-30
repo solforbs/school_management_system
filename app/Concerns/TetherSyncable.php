@@ -43,13 +43,19 @@ trait TetherSyncable
         // config switch possible.
         static::created(function ($model): void {
             if (syncClientMode()) {
-                app(MutationLogger::class)->recordCreate($model, $model->tetherLoggableFields());
+                app(MutationLogger::class)->recordCreate(
+                    $model,
+                    $model->tetherLoggableFields()
+                );
             }
         });
 
         static::updated(function ($model): void {
             if (syncClientMode()) {
-                app(MutationLogger::class)->recordUpdate($model, $model->tetherLoggableFields());
+                app(MutationLogger::class)->recordUpdate(
+                    $model,
+                    $model->tetherLoggableFields()
+                );
             }
         });
 
@@ -61,9 +67,10 @@ trait TetherSyncable
     }
 
     /**
-     * The column holding this model's sync identity. MutationLogger checks
-     * for these two methods rather than for Tether's own trait, which is
-     * what lets this trait stand in for it.
+     * The column holding this model's sync identity.
+     *
+     * MutationLogger checks for these methods rather than for Tether's own
+     * trait, which is what lets this trait stand in for it.
      */
     public function getTetherKeyName(): string
     {
@@ -88,13 +95,17 @@ trait TetherSyncable
     }
 
     /**
-     * Fields an incoming mutation payload is filtered to before it's
-     * written. Null means "no filtering beyond $fillable".
+     * Fields an incoming mutation payload is filtered to before being
+     * written.
+     *
+     * Null means "no filtering beyond $fillable".
      *
      * @return string[]|null
      */
     public function getSyncableFields(): ?array
     {
-        return property_exists($this, 'tetherSyncable') ? $this->tetherSyncable : null;
+        return isset($this->tetherSyncable)
+            ? $this->tetherSyncable
+            : null;
     }
 }

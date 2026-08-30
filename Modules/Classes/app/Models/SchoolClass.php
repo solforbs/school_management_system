@@ -13,7 +13,10 @@ use Modules\Result\Models\Result;
 use Modules\Student\Models\StudentDetails;
 use Modules\Subject\Models\SubjectTeacher;
 use Modules\Timetable\Models\TimetableEntry;
-
+/** 
+ * 
+ * 
+ * */ 
 class SchoolClass extends Model
 {
     use HasFactory;

@@ -8,7 +8,9 @@ use Athwari\LaravelZktecoAdms\Services\CommandManager;
 use Athwari\LaravelZktecoAdms\Services\DeviceManager;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-
+/**
+ * @param array<string, string> $userData
+ */
 class ZKTecoUserSyncService
 {
     private DeviceManager $deviceManager;

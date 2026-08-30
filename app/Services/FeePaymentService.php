@@ -13,6 +13,23 @@ use Modules\FeeManagement\Models\FeePayment;
  * attributes) in sync, whether the payment was entered manually or via
  * the AI receipt-scanning flow.
  */
+
+/**
+ * @property int $student_id
+ * @property int $institution_id
+ * @property int $fee_id
+ * @property float $amount
+ * @property string|null $reference
+ * @property string|null $payment_method
+ * @property string|null $receipt_path
+ * @property string|null $source
+ * @property string|null $extraction_raw_response
+ * @property string|null $recorded_by
+ * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property array $data
+ */
 class FeePaymentService
 {
     public function record(Fee $fee, array $data): FeePayment
