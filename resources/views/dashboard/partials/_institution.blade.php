@@ -10,7 +10,7 @@
                     You don't have an institution yet. Create one to start managing students, parents, fees and attendance.
                 </flux:text>
             </div>
-            <flux:button href="{{ route('institution.create') }}" variant="primary" icon="plus">
+            <flux:button href="{{ route('institution.create') }}" wire:navigate.hover variant="primary" icon="plus">
                 Add an Institution
             </flux:button>
         </flux:card>
@@ -102,7 +102,7 @@
                     Automatic campus entrance and staff attendance synchronization.
                 </div>
                 <div class="pt-1">
-                    <a href="{{ route('devices.index') }}" class="inline-flex items-center justify-between w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition border border-zinc-200/60">
+                    <a href="{{ route('devices.index') }}" wire:navigate.hover class="inline-flex items-center justify-between w-full px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition border border-zinc-200/60">
                         <span>Manage Device Gateways</span>
                         <flux:icon icon="chevron-right" class="size-3.5 text-zinc-400" />
                     </a>
@@ -119,7 +119,7 @@
                 <p class="text-xs text-zinc-400 mt-0.5">Latest transactions and student payment allocations.</p>
             </div>
             @can('view feemanagement')
-                <flux:button href="{{ route('feemanagement.index') }}" variant="ghost" size="sm" icon-trailing="chevron-right" class="text-xs font-semibold">
+                <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm" icon-trailing="chevron-right" class="text-xs font-semibold">
                     View Ledger
                 </flux:button>
             @endcan

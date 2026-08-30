@@ -179,7 +179,7 @@ new #[Title('My Subjects')] class extends Component
                     <div class="flex justify-end">
                         <flux:button type="submit" variant="primary">
                             <span wire:loading.remove wire:target="save">Save My Subjects</span>
-                            <span wire:loading wire:target="save">Saving…</span>
+                            <span wire:loading wire:target="save">Saving...</span>
                         </flux:button>
                     </div>
                 </form>

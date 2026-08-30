@@ -43,8 +43,22 @@
                 @endforeach
             </flux:select>
 
-            <div class="sm:col-span-2">
-                <flux:input type="text" name="term" label="Term" value="{{ old('term', $examination->term ?? null) }}" placeholder="e.g. Term 1 2026" />
+            <div>
+                <flux:input type="text" name="term" label="Academic Term" value="{{ old('term', $examination->term ?? null) }}" placeholder="e.g. Term 1" />
+            </div>
+
+            <div>
+                <input type="hidden" name="exam_type" value="">
+                <flux:select name="exam_type" label="Exam Sitting / Type" placeholder="Select Exam Type">
+                    <flux:select.option value="">Standard / General Assessment</flux:select.option>
+                    @if(isset($examTypes))
+                        @foreach ($examTypes as $typeKey => $typeLabel)
+                            <flux:select.option value="{{ $typeKey }}" :selected="old('exam_type', $examination->exam_type ?? null) == $typeKey">
+                                {{ $typeLabel }}
+                            </flux:select.option>
+                        @endforeach
+                    @endif
+                </flux:select>
             </div>
         </div>
     </x-stepper.section>
@@ -69,7 +83,7 @@
 
     {{-- Sticky Action Footer --}}
     <x-slot:actions>
-        <flux:button href="{{ isset($examination) ? route('examinations.show', $examination->id) : route('examinations.index') }}" variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+        <flux:button href="{{ isset($examination) ? route('examinations.show', $examination->id) : route('examinations.index') }}" wire:navigate.hover variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             Cancel
         </flux:button>
         <flux:button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:opacity-90 hover:shadow-md transition-all border-none font-semibold px-6">

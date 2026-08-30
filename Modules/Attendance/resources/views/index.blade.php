@@ -49,7 +49,7 @@
 
                 @can('view sync device')
                     @if (Route::has('sync-devices.index'))
-                        <flux:button href="{{ route('sync-devices.index') }}" icon="arrow-path" variant="primary" class="shadow-sm hover:shadow-md transition-all">
+                        <flux:button href="{{ route('sync-devices.index') }}" wire:navigate.hover icon="arrow-path" variant="primary" class="shadow-sm hover:shadow-md transition-all">
                             Sync Devices
                         </flux:button>
                     @endif
@@ -83,23 +83,23 @@
                         <flux:icon icon="calendar" class="size-3.5" />
                         Preset:
                     </span>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search')])) }}" 
+                    <a href="{{ route('attendance.index', array_filter(['search' => request('search')])) }}" wire:navigate.hover
                        class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isAllTime ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                         All Time
                     </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $todayStr, 'to' => $todayStr])) }}" 
+                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $todayStr, 'to' => $todayStr])) }}" wire:navigate.hover
                        class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isToday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                         ⚡ Today
                     </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $yesterdayStr, 'to' => $yesterdayStr])) }}" 
+                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $yesterdayStr, 'to' => $yesterdayStr])) }}" wire:navigate.hover
                        class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isYesterday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                         Yesterday
                     </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $startOfWeekStr, 'to' => $endOfWeekStr])) }}" 
+                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $startOfWeekStr, 'to' => $endOfWeekStr])) }}" wire:navigate.hover
                        class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isThisWeek ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                         This Week
                     </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $startOfMonthStr, 'to' => $endOfMonthStr])) }}" 
+                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $startOfMonthStr, 'to' => $endOfMonthStr])) }}" wire:navigate.hover
                        class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isThisMonth ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                         This Month
                     </a>
@@ -133,7 +133,7 @@
                             </flux:button>
                             
                             @if ($isFiltered)
-                                <flux:button href="{{ route('attendance.index') }}" variant="ghost" icon="x-mark">
+                                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover variant="ghost" icon="x-mark">
                                     Clear
                                 </flux:button>
                             @endif
@@ -271,7 +271,7 @@
                                     <flux:table.cell colspan="5">
                                         <x-empty-state icon="clock" color="violet" title="No Attendance Logs Found" description="There are no check-in records matching your active filters. Try adjusting your date range or keyword search.">
                                             @if ($isFiltered)
-                                                <flux:button href="{{ route('attendance.index') }}" variant="primary" icon="arrow-path">
+                                                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover variant="primary" icon="arrow-path">
                                                     Reset All Filters
                                                 </flux:button>
                                             @endif

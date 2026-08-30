@@ -4,7 +4,7 @@
         {{-- Top Navigation & Actions --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <a href="{{ route('reportcard.index') }}" class="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition">
+                <a href="{{ route('reportcard.index') }}" wire:navigate.hover class="p-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition">
                     <flux:icon icon="arrow-left" class="size-5" />
                 </a>
                 <div>
@@ -19,7 +19,7 @@
                 <flux:button href="{{ route('reportcard.pdf', $reportCard->id) }}" target="_blank" variant="primary" icon="printer" class="font-semibold shadow-sm px-4">
                     Print / View PDF
                 </flux:button>
-                <a href="{{ route('reportcard.index') }}" class="px-4 py-2 bg-white border border-zinc-300 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition">
+                <a href="{{ route('reportcard.index') }}" wire:navigate.hover class="px-4 py-2 bg-white border border-zinc-300 rounded-lg text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition">
                     Back to List
                 </a>
             </div>

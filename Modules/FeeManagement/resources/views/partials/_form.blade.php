@@ -60,7 +60,7 @@
 
     {{-- Sticky Action Footer --}}
     <x-slot:actions>
-        <flux:button href="{{ $currentFee ? route('feemanagement.show', $currentFee->id) : route('feemanagement.index') }}" variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+        <flux:button href="{{ $currentFee ? route('feemanagement.show', $currentFee->id) : route('feemanagement.index') }}" wire:navigate.hover variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             Cancel
         </flux:button>
         <flux:button type="submit" variant="primary" class="px-6 font-semibold">

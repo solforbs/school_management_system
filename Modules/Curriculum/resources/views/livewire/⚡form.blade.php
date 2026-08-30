@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -44,7 +44,6 @@ new #[Title('Curriculum')] class extends Component
 }; ?>
 <div>
     @if($curriculum)
-<x-layouts::app :title="__('Edit Curriculum')">
     <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Header Section --}}
@@ -96,10 +95,8 @@ new #[Title('Curriculum')] class extends Component
             @include('curriculum::partials._form', ['institutions' => $this->institutions])
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Create Curriculum')">
     <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Header Section --}}
@@ -150,7 +147,5 @@ new #[Title('Curriculum')] class extends Component
             @include('curriculum::partials._form', ['institutions' => $this->institutions])
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

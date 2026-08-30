@@ -44,14 +44,14 @@ function makeSavingDirector(): array
 test('the livewire teacher form hires a teacher with a login', function () {
     [$director, $institution] = makeSavingDirector();
 
-    Livewire::actingAs($director)
-        ->test('teacher::form')
-        ->set('name', 'Peter Otieno')
-        ->set('email', 'peter@example.com')
-        ->set('password', 'password123')
-        ->set('department', 'Sciences')
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($director)
+        ->post(route('teacher.store'), [
+            'name' => 'Peter Otieno',
+            'email' => 'peter@example.com',
+            'password' => 'password123',
+            'department' => 'Sciences',
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $teacher = User::where('email', 'peter@example.com')->firstOrFail();
@@ -73,15 +73,15 @@ test('the livewire parent form creates a parent and links a child', function () 
         'enrollment_status' => 'active',
     ]);
 
-    Livewire::actingAs($director)
-        ->test('parent::form')
-        ->set('name', 'Mary Wambui')
-        ->set('email', 'mary@example.com')
-        ->set('password', 'password123')
-        ->set('parent_phone', '0700000002')
-        ->set('children', [(string) $student->id])
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($director)
+        ->post(route('parent.store'), [
+            'name' => 'Mary Wambui',
+            'email' => 'mary@example.com',
+            'password' => 'password123',
+            'parent_phone' => '0700000002',
+            'children' => [(string) $student->id],
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $parent = User::where('email', 'mary@example.com')->firstOrFail();
@@ -93,16 +93,16 @@ test('the livewire parent form creates a parent and links a child', function () 
 test('the livewire staff form can attach a login', function () {
     [$director, $institution] = makeSavingDirector();
 
-    Livewire::actingAs($director)
-        ->test('staff::form')
-        ->set('name', 'Grace Accounts')
-        ->set('email', 'grace@example.com')
-        ->set('job_title', 'Accountant')
-        ->set('create_account', true)
-        ->set('password', 'password123')
-        ->set('system_role', 'Accountant')
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($director)
+        ->post(route('staff.store'), [
+            'name' => 'Grace Accounts',
+            'email' => 'grace@example.com',
+            'job_title' => 'Accountant',
+            'create_account' => '1',
+            'password' => 'password123',
+            'system_role' => 'Accountant',
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $staff = StaffDetails::where('name', 'Grace Accounts')->firstOrFail();
@@ -124,16 +124,17 @@ test('the livewire payroll form works the net out and blocks a repeat month', fu
         'is_active' => true,
     ]);
 
-    Livewire::actingAs($director)
-        ->test('staff::payments.form')
-        ->set('staff_details_id', (string) $staff->id)
-        ->set('period', '2026-08')
-        ->set('gross_amount', '50000')
-        ->set('allowances', '5000')
-        ->set('deductions', '2000')
-        ->set('status', 'paid')
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($director)
+        ->post(route('staff.payments.store'), [
+            'staff_details_id' => (string) $staff->id,
+            'period' => '2026-08',
+            'gross_amount' => '50000',
+            'allowances' => '5000',
+            'deductions' => '2000',
+            'payment_method' => 'cash',
+            'status' => 'paid',
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $payment = StaffPayment::firstOrFail();
@@ -142,14 +143,15 @@ test('the livewire payroll form works the net out and blocks a repeat month', fu
         ->and($payment->paid_at)->not->toBeNull();
 
     // The same staff member and month again is refused.
-    Livewire::actingAs($director)
-        ->test('staff::payments.form')
-        ->set('staff_details_id', (string) $staff->id)
-        ->set('period', '2026-08')
-        ->set('gross_amount', '40000')
-        ->set('status', 'pending')
-        ->call('save')
-        ->assertHasErrors('period');
+    $this->actingAs($director)
+        ->post(route('staff.payments.store'), [
+            'staff_details_id' => (string) $staff->id,
+            'period' => '2026-08',
+            'gross_amount' => '40000',
+            'payment_method' => 'cash',
+            'status' => 'pending',
+        ])
+        ->assertSessionHas('error');
 
     expect(StaffPayment::count())->toBe(1);
 });
@@ -170,15 +172,15 @@ test('the livewire fee form derives the school and parent from the student', fun
         'enrollment_status' => 'active',
     ]);
 
-    Livewire::actingAs($director)
-        ->test('feemanagement::form')
-        ->set('student_id', (string) $student->id)
-        ->set('title', 'Term 2 Tuition')
-        ->set('fee_type', 'tuition')
-        ->set('amount', '20000')
-        ->set('amount_paid', '5000')
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($director)
+        ->post(route('feemanagement.store'), [
+            'student_id' => (string) $student->id,
+            'title' => 'Term 2 Tuition',
+            'fee_type' => 'tuition',
+            'amount' => '20000',
+            'amount_paid' => '5000',
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $fee = Fee::firstOrFail();
@@ -203,29 +205,31 @@ test('the livewire timetable form refuses to double-book a teacher', function ()
     $classOne = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 1 A']);
     $classTwo = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 1 B']);
 
-    Livewire::actingAs($director)
-        ->test('timetable::form')
-        ->set('class_id', (string) $classOne->id)
-        ->set('subject', 'Mathematics')
-        ->set('teacher_id', (string) $teacher->id)
-        ->set('day_of_week', 'Monday')
-        ->set('start_time', '08:00')
-        ->set('end_time', '09:00')
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($director)
+        ->post(route('timetable.store'), [
+            'institution_id' => $institution->id,
+            'class_id' => (string) $classOne->id,
+            'subject' => 'Mathematics',
+            'teacher_id' => (string) $teacher->id,
+            'day_of_week' => 'Monday',
+            'start_time' => '08:00',
+            'end_time' => '09:00',
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     // Same teacher, overlapping slot, different class.
-    Livewire::actingAs($director)
-        ->test('timetable::form')
-        ->set('class_id', (string) $classTwo->id)
-        ->set('subject', 'Physics')
-        ->set('teacher_id', (string) $teacher->id)
-        ->set('day_of_week', 'Monday')
-        ->set('start_time', '08:30')
-        ->set('end_time', '09:30')
-        ->call('save')
-        ->assertHasErrors('teacher_id');
+    $this->actingAs($director)
+        ->post(route('timetable.store'), [
+            'institution_id' => $institution->id,
+            'class_id' => (string) $classTwo->id,
+            'subject' => 'Physics',
+            'teacher_id' => (string) $teacher->id,
+            'day_of_week' => 'Monday',
+            'start_time' => '08:30',
+            'end_time' => '09:30',
+        ])
+        ->assertSessionHas('error');
 
     expect(TimetableEntry::count())->toBe(1);
 });
@@ -267,19 +271,19 @@ test('the livewire lesson grid marks a day in place', function () {
 test('the livewire institution form registers a school as unapproved', function () {
     $user = User::factory()->create();
 
-    Livewire::actingAs($user)
-        ->test('institution::form')
-        ->set('name', 'Sunrise Academy')
-        ->set('code', 'SUN-'.uniqid())
-        ->set('type', 'School')
-        ->set('email', 'info@sunrise.example')
-        ->set('phone', '0700000003')
-        ->set('county', 'Nairobi')
-        ->set('city', 'Nairobi')
-        ->set('postal_address', 'P.O. Box 1')
-        ->set('physical_address', 'Ngong Road')
-        ->call('save')
-        ->assertHasNoErrors()
+    $this->actingAs($user)
+        ->post(route('institution.store'), [
+            'name' => 'Sunrise Academy',
+            'code' => 'SUN-'.uniqid(),
+            'type' => 'School',
+            'email' => 'info@sunrise.example',
+            'phone' => '0700000003',
+            'county' => 'Nairobi',
+            'city' => 'Nairobi',
+            'postal_address' => 'P.O. Box 1',
+            'physical_address' => 'Ngong Road',
+        ])
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $institution = Institution::where('name', 'Sunrise Academy')->firstOrFail();

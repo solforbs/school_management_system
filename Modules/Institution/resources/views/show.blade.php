@@ -42,11 +42,11 @@
 
             {{-- Action Buttons --}}
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('institution.index') }}" icon="arrow-left" variant="outline">
+                <flux:button href="{{ route('institution.index') }}" wire:navigate.hover icon="arrow-left" variant="outline">
                     Back
                 </flux:button>
                 @if (institutionOwner($institution->owner->id))
-                    <flux:button href="{{ route('institution.edit', $institution->id) }}" icon="pencil-square" variant="primary">
+                    <flux:button href="{{ route('institution.edit', $institution->id) }}" wire:navigate.hover icon="pencil-square" variant="primary">
                         Edit Details
                     </flux:button>
                 @endif

@@ -1,5 +1,5 @@
 @php
-    $initials = $parent->initials();
+    $initials = method_exists($parent, 'initials') ? $parent->initials() : strtoupper(substr($parent->name, 0, 2));
     $phone = $parent->parent?->parent_phone ?? '';
     $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
     $linkedCount = $parent->children->count();
@@ -12,7 +12,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1.5">
-                    <a href="{{ route('parent.index') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
+                    <a href="{{ route('parent.index') }}" wire:navigate.hover class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Parents Directory</span>
                     </a>
@@ -27,7 +27,7 @@
 
             <div class="flex items-center gap-2">
                 @can('edit parent')
-                    <flux:button href="{{ route('parent.edit', $parent->id) }}" icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('parent.edit', $parent->id) }}" wire:navigate.hover icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
                         Edit Profile
                     </flux:button>
                 @endcan

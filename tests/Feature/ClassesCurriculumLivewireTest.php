@@ -32,22 +32,19 @@ function makeClassesDirector(): array
     return [$director->refresh(), $institution];
 }
 
-test('the livewire class form saves without a curriculum', function () {
+test('the class form saves without a curriculum', function () {
     [$director, $institution] = makeClassesDirector();
 
-    Livewire::actingAs($director)
-        ->test('classes::form')
-        ->set('name', 'Form 2 East')
-        ->set('level', 'Form 2')
-        // Left as the blank "School default" option, which posts an empty
-        // string - it has to land as null, not '' (that was a hard database
-        // error against an integer column).
-        ->set('curriculum_id', '')
-        ->set('class_teacher_id', '')
-        ->set('capacity', '')
-        ->call('save')
-        ->assertHasNoErrors()
-        ->assertRedirect();
+    $this->actingAs($director)
+        ->post(route('classes.store'), [
+            'name' => 'Form 2 East',
+            'level' => 'Form 2',
+            'curriculum_id' => '',
+            'class_teacher_id' => '',
+            'capacity' => '',
+        ])
+        ->assertRedirect(route('classes.index'))
+        ->assertSessionHasNoErrors();
 
     $schoolClass = SchoolClass::firstOrFail();
 
@@ -74,12 +71,15 @@ test('editing a class and clearing its curriculum stores null', function () {
         'curriculum_id' => $curriculum->id,
     ]);
 
-    Livewire::actingAs($director)
-        ->test('classes::form', ['classId' => $schoolClass->id])
-        ->assertSet('curriculum_id', (string) $curriculum->id)
-        ->set('curriculum_id', '')
-        ->call('save')
-        ->assertHasNoErrors();
+    $this->actingAs($director)
+        ->put(route('classes.update', $schoolClass->id), [
+            'name' => 'Grade 7 North',
+            'curriculum_id' => '',
+            'class_teacher_id' => '',
+            'capacity' => '',
+        ])
+        ->assertRedirect(route('classes.show', $schoolClass->id))
+        ->assertSessionHasNoErrors();
 
     expect($schoolClass->refresh()->curriculum_id)->toBeNull();
 });
@@ -136,17 +136,17 @@ test('the livewire class list searches and deletes in place', function () {
     expect(SchoolClass::pluck('id')->all())->toBe([$keep->id]);
 });
 
-test('the livewire curriculum form records which system it grades on', function () {
+test('the curriculum form records which system it grades on', function () {
     [$director, $institution] = makeClassesDirector();
 
-    Livewire::actingAs($director)
-        ->test('curriculum::form')
-        ->set('name', 'Competency Based Curriculum')
-        ->set('system', 'cbc')
-        ->set('status', 'active')
-        ->call('save')
-        ->assertHasNoErrors()
-        ->assertRedirect();
+    $this->actingAs($director)
+        ->post(route('curriculum.store'), [
+            'name' => 'Competency Based Curriculum',
+            'system' => 'cbc',
+            'status' => 'active',
+        ])
+        ->assertRedirect(route('curriculum.index'))
+        ->assertSessionHasNoErrors();
 
     $curriculum = Curriculum::firstOrFail();
 

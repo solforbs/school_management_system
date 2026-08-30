@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -54,7 +54,7 @@ new #[Title('Class')] class extends Component
     #[Computed]
     public function institutions(): Collection
     {
-        return Institution::all();
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
     }
 
     private function scoped()
@@ -70,7 +70,6 @@ new #[Title('Class')] class extends Component
 }; ?>
 <div>
     @if($schoolClass)
-<x-layouts::app :title="__('Edit Class')">
     <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Header Section --}}
@@ -119,13 +118,11 @@ new #[Title('Class')] class extends Component
         <form action="{{ route('classes.update', $schoolClass->id) }}" method="POST">
             @csrf
             @method('PUT')
-            @include('classes::partials._form', ['institutions' => $this->institutions, 'teachers' => $this->teachers])
+            @include('classes::partials._form', ['institutions' => $this->institutions, 'teachers' => $this->teachers, 'curricula' => $this->curricula, 'schoolClass' => $this->schoolClass])
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Create Class')">
     <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Header Section --}}
@@ -173,10 +170,8 @@ new #[Title('Class')] class extends Component
 
         <form action="{{ route('classes.store') }}" method="POST">
             @csrf
-            @include('classes::partials._form', ['institutions' => $this->institutions, 'teachers' => $this->teachers])
+            @include('classes::partials._form', ['institutions' => $this->institutions, 'teachers' => $this->teachers, 'curricula' => $this->curricula, 'schoolClass' => $this->schoolClass])
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

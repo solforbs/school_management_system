@@ -1,15 +1,16 @@
-﻿<?php
+<?php
 
 use App\Models\User;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Institution\Models\Institution;
 use Modules\Parent\Models\ParentDetails;
 use Modules\Student\Models\StudentDetails;
 use Modules\Classes\Models\SchoolClass;
 
-new class extends Component
+new #[Title('Student Form')] class extends Component
 {
     public ?User $student = null;
 
@@ -38,24 +39,33 @@ new class extends Component
     #[Computed]
     public function parents()
     {
-        return User::role('Parent')->with('parentDetails')->get();
+        return User::role('Parent')
+            ->when(! isAdmin(), function ($q) {
+                $q->where(function ($sq) {
+                    $sq->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()))
+                        ->orDoesntHave('children');
+                });
+            })
+            ->with(['parent', 'children.student.studentUserDetails'])
+            ->get();
     }
     
     #[Computed]
     public function classes()
     {
-        return SchoolClass::all();
+        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('name')
+            ->get();
     }
     
     #[Computed]
     public function institutions()
     {
-        return Institution::all();
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
     }
 }; ?>
 <div>
 @if($student)
-<x-layouts::app :title="__('Edit Student')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -68,7 +78,7 @@ new class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('student.show', $student->id) }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('student.show', $student->id) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Profile
                 </flux:button>
             </div>
@@ -98,59 +108,59 @@ new class extends Component
                     <x-stepper.step id="academic" title="Academic Info" description="Account & school details." isLast="false" />
                     <x-stepper.step id="personal" title="Personal Info" description="Demographics & photo." isLast="false" />
                     <x-stepper.step id="guardian" title="Guardianship" description="Parent & emergency contacts." isLast="false" />
-                    <x-stepper.step id="medical" title="Medical Profile" description="Allergies & special needs." isLast="true" />
+                    <x-stepper.step id="medical" title="Health & Medical" description="Allergies & extra notes." isLast="true" />
                 </x-slot:sidebar>
 
                 {{-- Step 1: Academic --}}
-                <x-stepper.section id="academic" title="Account & Academic Info" description="Core details required for system access and tracking.">
+                <x-stepper.section id="academic" title="Academic & Account Setup" description="Core student credentials and classroom allocation.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2">
-                            <div class="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-800 rounded-xl p-4 flex items-start gap-4">
-                                <flux:icon icon="information-circle" class="size-5 text-zinc-500 mt-0.5 shrink-0" />
-                                <div class="text-sm text-zinc-700 dark:text-zinc-300">
-                                    <span class="font-medium">System Account Details:</span> The name ({{ $student->name }}) and email ({{ $student->email }}) are managed globally via the User Management module.
-                                </div>
-                            </div>
-                        </div>
+                        <flux:input type="text" name="name" label="Full Legal Name" value="{{ old('name', $student->name) }}" placeholder="e.g. Jane Doe" required />
+                        
+                        <flux:input type="email" name="email" label="School Email Address" value="{{ old('email', $student->email) }}" placeholder="jane.doe@school.edu" autocomplete="new-password" required />
+                        
+                        <flux:input type="password" name="password" label="New Password (optional)" placeholder="Leave blank to keep existing password" autocomplete="new-password" />
 
-                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number', $student->studentUserDetails?->admission_number) }}" placeholder="e.g. ADM-2023-001" />
-                        <flux:input type="text" name="student_number" label="Student Number / ID" value="{{ old('student_number', $student->studentUserDetails?->student_number) }}" placeholder="e.g. STU-8492" />
+                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number', $student->studentUserDetails?->admission_number) }}" placeholder="e.g. ADM-2024-001" />
 
-                        <div class="md:col-span-2">
-                            <flux:select name="enrollment_status" label="Enrollment Status">
-                                @php $status = old('enrollment_status', $student->studentInstitution?->enrollment_status); @endphp
-                                <flux:select.option value="active" :selected="$status == 'active'">Active</flux:select.option>
-                                <flux:select.option value="inactive" :selected="$status == 'inactive'">Inactive</flux:select.option>
-                                <flux:select.option value="graduated" :selected="$status == 'graduated'">Graduated</flux:select.option>
-                                <flux:select.option value="suspended" :selected="$status == 'suspended'">Suspended</flux:select.option>
-                                <flux:select.option value="expelled" :selected="$status == 'expelled'">Expelled</flux:select.option>
-                                <flux:select.option value="transferred" :selected="$status == 'transferred'">Transferred</flux:select.option>
-                                <flux:select.option value="withdrawn" :selected="$status == 'withdrawn'">Withdrawn</flux:select.option>
-                                <flux:select.option value="dropped" :selected="$status == 'dropped'">Dropped</flux:select.option>
-                            </flux:select>
-                        </div>
+                        <flux:input type="text" name="student_number" label="Student Number" value="{{ old('student_number', $student->studentUserDetails?->student_number) }}" placeholder="e.g. STU-10492" />
+
+                        <input type="hidden" name="class_id" value="">
+                        <flux:select name="class_id" label="Class / Grade" placeholder="Choose a classroom...">
+                            @foreach ($this->classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id', $student->studentUserDetails?->class_id) == $schoolClass->id">
+                                    {{ $schoolClass->name }} ({{ $schoolClass->level }})
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select name="enrollment_status" label="Enrollment Status">
+                            @php $status = old('enrollment_status', $student->studentUserDetails?->enrollment_status); @endphp
+                            <flux:select.option value="active" :selected="$status == 'active'">Active</flux:select.option>
+                            <flux:select.option value="inactive" :selected="$status == 'inactive'">Inactive</flux:select.option>
+                            <flux:select.option value="graduated" :selected="$status == 'graduated'">Graduated</flux:select.option>
+                            <flux:select.option value="suspended" :selected="$status == 'suspended'">Suspended</flux:select.option>
+                            <flux:select.option value="transferred" :selected="$status == 'transferred'">Transferred</flux:select.option>
+                            <flux:select.option value="expelled" :selected="$status == 'expelled'">Expelled</flux:select.option>
+                            <flux:select.option value="withdrawn" :selected="$status == 'withdrawn'">Withdrawn</flux:select.option>
+                            <flux:select.option value="dropped" :selected="$status == 'dropped'">Dropped</flux:select.option>
+                        </flux:select>
                     </div>
                 </x-stepper.section>
 
                 {{-- Step 2: Personal --}}
-                <x-stepper.section id="personal" title="Personal Information" description="Contact and demographic details.">
+                <x-stepper.section id="personal" title="Personal Details" description="Demographics, background information, and profile media.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:input type="text" name="phone" label="Phone Number (Optional)" value="{{ old('phone', $student->studentUserDetails?->phone) }}" placeholder="+1 (555) 000-0000" />
-                        
-                        @php 
-                            $dob = old('date_of_birth', isset($student->studentUserDetails?->date_of_birth) ? \Carbon\Carbon::parse($student->studentUserDetails->date_of_birth)->format('Y-m-d') : '');
-                        @endphp
-                        <flux:input type="date" name="date_of_birth" label="Date of Birth" value="{{ $dob }}" />
-                        
-                        <div class="md:col-span-2">
-                            <flux:select name="gender" label="Gender">
-                                @php $gender = old('gender', $student->studentUserDetails?->gender); @endphp
-                                <flux:select.option value="">Select Gender...</flux:select.option>
-                                <flux:select.option value="male" :selected="$gender == 'male'">Male</flux:select.option>
-                                <flux:select.option value="female" :selected="$gender == 'female'">Female</flux:select.option>
-                                <flux:select.option value="other" :selected="$gender == 'other'">Other</flux:select.option>
-                            </flux:select>
-                        </div>
+
+                        <flux:input type="date" name="date_of_birth" label="Date of Birth" value="{{ old('date_of_birth', $student->studentUserDetails?->date_of_birth ? \Carbon\Carbon::parse($student->studentUserDetails->date_of_birth)->format('Y-m-d') : '') }}" />
+
+                        <flux:select name="gender" label="Gender">
+                            @php $gender = old('gender', $student->studentUserDetails?->gender); @endphp
+                            <flux:select.option value="">Select Gender...</flux:select.option>
+                            <flux:select.option value="male" :selected="$gender == 'male'">Male</flux:select.option>
+                            <flux:select.option value="female" :selected="$gender == 'female'">Female</flux:select.option>
+                            <flux:select.option value="other" :selected="$gender == 'other'">Other</flux:select.option>
+                        </flux:select>
 
                         <div class="md:col-span-2 space-y-2" x-data="{ photoName: null, photoPreview: null }">
                             <flux:label>Profile Photo</flux:label>
@@ -178,6 +188,7 @@ new class extends Component
                                             reader.readAsDataURL($refs.photo.files[0]);
                                         "
                                     />
+                                    <p class="text-xs text-zinc-400 mt-1">Supported formats: JPG, PNG, WEBP. Max size 2MB.</p>
                                 </div>
                             </div>
                         </div>
@@ -193,10 +204,10 @@ new class extends Component
                     <div class="bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/80 dark:border-zinc-800 rounded-xl p-6 mb-6">
                         <h4 class="text-sm font-semibold text-zinc-900 dark:text-white mb-4">Primary Parent</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <flux:input type="text" name="parent_name" label="Parent Name" value="{{ old('parent_name', $student->studentParent?->name) }}" placeholder="e.g. Richard Doe" />
-                            <flux:input type="text" name="parent_phone" label="Parent Phone" value="{{ old('parent_phone', $student->studentParent?->parentUserDetails?->parent_phone) }}" />
-                            <flux:input type="email" name="parent_email" label="Parent Email" value="{{ old('parent_email', $student->studentParent?->email) }}" autocomplete="new-password" />
-                            <flux:input type="text" name="parent_occupation" label="Parent Occupation" value="{{ old('parent_occupation', $student->studentParent?->parentUserDetails?->parent_occupation) }}" />
+                            <flux:input type="text" name="parent_name" label="Parent Name" value="{{ old('parent_name', $student->parentUserDetails?->parent_name ?? $student->studentUserDetails?->parent_name) }}" placeholder="e.g. Richard Doe" />
+                            <flux:input type="text" name="parent_phone" label="Parent Phone" value="{{ old('parent_phone', $student->parentUserDetails?->parent_phone ?? $student->studentUserDetails?->parent_phone) }}" />
+                            <flux:input type="email" name="parent_email" label="Parent Email" value="{{ old('parent_email', $student->parentUserDetails?->email ?? $student->studentUserDetails?->parent_email) }}" autocomplete="new-password" />
+                            <flux:input type="text" name="parent_occupation" label="Parent Occupation" value="{{ old('parent_occupation', $student->parentUserDetails?->parent_occupation ?? $student->studentUserDetails?->parent_occupation) }}" />
                         </div>
                     </div>
 
@@ -230,13 +241,13 @@ new class extends Component
                         </div>
                         
                         <div class="md:col-span-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                            <flux:checkbox name="is_active" value="1" label="Account is Active" :checked="old('is_active', $student->is_active)" />
+                            <flux:checkbox name="is_active" value="1" label="Account is Active" :checked="old('is_active', $student->studentUserDetails?->is_active ?? true)" />
                         </div>
                     </div>
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('student.show', $student->id) }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('student.show', $student->id) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -247,10 +258,9 @@ new class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
 
 @else
-<x-layouts::app :title="__('Create Student')">
+
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -263,7 +273,7 @@ new class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('student.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Directory
                 </flux:button>
             </div>
@@ -302,38 +312,36 @@ new class extends Component
                             <flux:input type="text" name="name" label="Full Name" value="{{ old('name') }}" placeholder="e.g. John Doe" required />
                         </div>
                         
-                        <flux:input type="email" name="email" label="Student Email" value="{{ old('email') }}" autocomplete="new-password" required />
-                        <flux:input type="password" name="password" label="Temporary Password" autocomplete="new-password" required />
+                        <flux:input type="email" name="email" label="Student Email" value="{{ old('email') }}" placeholder="john.doe@school.edu" autocomplete="new-password" required />
+                        <flux:input type="password" name="password" label="Temporary Password" placeholder="Minimum 8 characters..." autocomplete="new-password" required />
                         
-                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number') }}" placeholder="e.g. ADM-2023-001" />
+                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number') }}" placeholder="e.g. ADM-2026-001" />
                         <flux:input type="text" name="student_number" label="Student Number / ID" value="{{ old('student_number') }}" placeholder="e.g. STU-8492" />
                         
-                        <div class="md:col-span-2">
-                            <flux:select name="institution_id" id="institution_id" label="Institution" required>
-                                <flux:select.option value="">Select Institution...</flux:select.option>
-                                @foreach ($this->institutions as $institution)
-                                    <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
-                                        {{ $institution->name }}
-                                    </flux:select.option>
-                                @endforeach
-                            </flux:select>
-                        </div>
+                        <input type="hidden" name="class_id" value="">
+                        <flux:select name="class_id" label="Class / Grade" placeholder="Select classroom...">
+                            <flux:select.option value="">Unassigned Class</flux:select.option>
+                            @foreach ($this->classes as $schoolClass)
+                                <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id') == $schoolClass->id">
+                                    {{ $schoolClass->name }} ({{ $schoolClass->level }})
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
 
-                        <div class="md:col-span-2">
-                            <flux:select name="enrollment_status" label="Enrollment Status">
-                                <flux:select.option value="active" :selected="old('enrollment_status') == 'active'">Active</flux:select.option>
-                                <flux:select.option value="inactive" :selected="old('enrollment_status') == 'inactive'">Inactive</flux:select.option>
-                                <flux:select.option value="graduated" :selected="old('enrollment_status') == 'graduated'">Graduated</flux:select.option>
-                                <flux:select.option value="suspended" :selected="old('enrollment_status') == 'suspended'">Suspended</flux:select.option>
-                            </flux:select>
-                        </div>
+                        <flux:select name="enrollment_status" label="Enrollment Status">
+                            <flux:select.option value="active" :selected="old('enrollment_status', 'active') == 'active'">Active</flux:select.option>
+                            <flux:select.option value="inactive" :selected="old('enrollment_status', 'inactive') == 'inactive'">Inactive</flux:select.option>
+                            <flux:select.option value="graduated" :selected="old('enrollment_status', 'graduated') == 'graduated'">Graduated</flux:select.option>
+                            <flux:select.option value="suspended" :selected="old('enrollment_status', 'suspended') == 'suspended'">Suspended</flux:select.option>
+                            <flux:select.option value="transferred" :selected="old('enrollment_status', 'transferred') == 'transferred'">Transferred</flux:select.option>
+                        </flux:select>
                     </div>
                 </x-stepper.section>
 
                 {{-- Step 2: Personal --}}
                 <x-stepper.section id="personal" title="Personal Information" description="Contact and demographic details.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <flux:input type="text" name="phone" label="Phone Number (Optional)" value="{{ old('phone') }}" placeholder="+1 (555) 000-0000" />
+                        <flux:input type="text" name="phone" label="Phone Number (Optional)" value="{{ old('phone') }}" placeholder="+254 700 000 000" />
                         <flux:input type="date" name="date_of_birth" label="Date of Birth" value="{{ old('date_of_birth') }}" />
                         
                         <flux:select name="gender" label="Gender">
@@ -344,9 +352,9 @@ new class extends Component
                         </flux:select>
 
                         <div class="md:col-span-2 space-y-2">
-                            <flux:label>Profile Photo</flux:label>
-                            <input type="file" name="profile_photo" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none cursor-pointer bg-white dark:bg-zinc-800 transition-colors" />
-                            <p class="text-xs text-zinc-500">Supported formats: JPG, PNG, GIF. Max size 2MB.</p>
+                            <flux:label>Profile Photo <span class="text-rose-500">*</span></flux:label>
+                            <input type="file" name="profile_image" required accept="image/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none cursor-pointer bg-white dark:bg-zinc-800 transition-colors" />
+                            <p class="text-xs text-zinc-500">Required for biometric sync. Supported formats: JPG, PNG, WEBP. Max size 2MB.</p>
                         </div>
 
                         <div class="md:col-span-2">
@@ -376,25 +384,20 @@ new class extends Component
                         <div id="existing-parent-fields" class="hidden">
                             <flux:select name="parent_id" label="Select Existing Parent" class="w-full">
                                 <flux:select.option value="">Choose a parent...</flux:select.option>
-                                @isset($this->parents)
-                                    @foreach ($this->parents as $parent)
-                                        @php
-                                            $institution_ids = $parent->parent?->students->pluck('institution_id')->unique()->implode(' ');
-                                        @endphp
-                                        <option value="{{ $parent->id }}" data-institution-ids="{{ $institution_ids }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
-                                            {{ $parent->name }} ({{ $parent->email }})
-                                        </option>
-                                    @endforeach
-                                @endisset
+                                @foreach ($this->parents as $parent)
+                                    <flux:select.option value="{{ $parent->id }}" :selected="old('parent_id') == $parent->id">
+                                        {{ $parent->name }} ({{ $parent->email }})
+                                    </flux:select.option>
+                                @endforeach
                             </flux:select>
-                            <p class="text-xs text-zinc-500 mt-2">Only parents registered at the selected institution will be shown.</p>
+                            <p class="text-xs text-zinc-500 mt-2">Only parents registered at your institution will be shown.</p>
                         </div>
 
                         <div id="new-parent-fields" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <flux:input type="text" name="parent_name" label="Parent Name" value="{{ old('parent_name') }}" placeholder="e.g. Richard Doe" />
-                            <flux:input type="text" name="parent_phone" label="Parent Phone" value="{{ old('parent_phone') }}" />
-                            <flux:input type="email" name="parent_email" label="Parent Email" value="{{ old('parent_email') }}" autocomplete="new-password" />
-                            <flux:input type="text" name="parent_occupation" label="Parent Occupation" value="{{ old('parent_occupation') }}" />
+                            <flux:input type="text" name="parent_phone" label="Parent Phone" value="{{ old('parent_phone') }}" placeholder="e.g. 0700000000" />
+                            <flux:input type="email" name="parent_email" label="Parent Email" value="{{ old('parent_email') }}" autocomplete="new-password" placeholder="e.g. parent@example.com" />
+                            <flux:input type="text" name="parent_occupation" label="Parent Occupation" value="{{ old('parent_occupation') }}" placeholder="e.g. Engineer" />
                         </div>
                     </div>
 
@@ -434,7 +437,7 @@ new class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('student.index') }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('student.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -446,49 +449,25 @@ new class extends Component
         </form>
     </div>
 
-    {{-- Keep the exact same JavaScript logic for the parent switching --}}
+    {{-- Interactive Parent Mode Toggle Script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const newFields = document.getElementById('new-parent-fields');
             const existingFields = document.getElementById('existing-parent-fields');
             const modeRadios = document.querySelectorAll('input[name="parent_mode"]');
-            const institutionSelect = document.getElementById('institution_id') || document.querySelector('select[name="institution_id"]');
-            const parentSelect = document.querySelector('select[name="parent_id"]');
 
             function applyMode() {
                 const checked = document.querySelector('input[name="parent_mode"]:checked');
                 const mode = checked ? checked.value : 'new';
-                newFields.classList.toggle('hidden', mode !== 'new');
-                existingFields.classList.toggle('hidden', mode !== 'existing');
-            }
-
-            function filterParentsByInstitution() {
-                if (! institutionSelect || ! parentSelect) {
-                    return;
+                if (newFields && existingFields) {
+                    newFields.classList.toggle('hidden', mode !== 'new');
+                    existingFields.classList.toggle('hidden', mode !== 'existing');
                 }
-
-                const institutionId = institutionSelect.value;
-                const currentValue = parentSelect.value;
-
-                Array.from(parentSelect.options).forEach(function(option) {
-                    if (!option.value || option.value === currentValue) {
-                        option.hidden = false;
-                        return;
-                    }
-
-                    const ids = (option.dataset.institutionIds || '').split(' ').filter(Boolean);
-                    option.hidden = institutionId !== '' && ids.length > 0 && !ids.includes(institutionId);
-                });
             }
 
             modeRadios.forEach(radio => radio.addEventListener('change', applyMode));
-            institutionSelect?.addEventListener('change', filterParentsByInstitution);
-
             applyMode();
-            filterParentsByInstitution();
         });
     </script>
-</x-layouts::app>
-
 @endif
 </div>

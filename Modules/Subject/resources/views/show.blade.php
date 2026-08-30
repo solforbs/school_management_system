@@ -11,7 +11,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <a href="{{ route('subject.index') }}" class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
+                    <a href="{{ route('subject.index') }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Subjects</span>
                     </a>
@@ -26,7 +26,7 @@
 
             <div class="flex items-center gap-2">
                 @can('edit subject')
-                    <a href="{{ route('subject.edit', $subject->id) }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shadow-xs">
+                    <a href="{{ route('subject.edit', $subject->id) }}" wire:navigate.hover class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shadow-xs">
                         <flux:icon icon="pencil-square" class="size-3.5 text-white" />
                         <span>Edit Subject</span>
                     </a>

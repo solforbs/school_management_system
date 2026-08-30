@@ -1,417 +1,332 @@
-﻿<?php
+<?php
 
+use App\Models\Devices;
+use App\Models\User;
+use Athwari\LaravelZktecoAdms\Enums\AttendanceStatus;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
+use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Modules\Attendance\Services\AttendanceLogQuery;
-use Modules\Institution\Models\Institution;
+use Modules\Classes\Models\SchoolClass;
 
-new #[Title('Attendance')] class extends Component
+new #[Title('Live Gate Attendance')] class extends Component
 {
     use WithPagination;
-
-    /** @var string[] */
-    public const SORTABLE = ['occurred_at', 'status'];
 
     #[Url]
     public string $search = '';
 
     #[Url]
-    public string $from = '';
+    public string $status = '';
 
     #[Url]
-    public string $to = '';
-
-    #[Url]
-    public string $sort = 'occurred_at';
-
-    #[Url]
-    public string $direction = 'desc';
+    public string $class_id = '';
 
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view attendance'), 403);
     }
 
-    public function updating(string $property): void
+    #[Computed]
+    public function logs(): LengthAwarePaginator
     {
-        if (in_array($property, ['search', 'from', 'to'], true)) {
-            $this->resetPage();
-        }
-    }
+        $institutionId = currentInstitutionId();
 
-    public function sortBy(string $column): void
-    {
-        if (! in_array($column, self::SORTABLE, true)) {
-            return;
-        }
+        $deviceIds = $institutionId
+            ? Devices::where('institution_id', $institutionId)->whereNotNull('zkteco_device_id')->pluck('zkteco_device_id')
+            : collect();
 
-        if ($this->sort === $column) {
-            $this->direction = $this->direction === 'asc' ? 'desc' : 'asc';
+        $query = ZktecoAttendanceLog::with(['device', 'zktecoUser.appUser.studentUserDetails.schoolClass'])
+            ->when(! isAdmin() && $deviceIds->isNotEmpty(), fn ($q) => $q->whereIn('device_id', $deviceIds))
+            ->when($this->search !== '', function ($q) {
+                $term = '%'.$this->search.'%';
 
-            return;
-        }
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('pin', 'like', $term)
+                        ->orWhereHas('zktecoUser.appUser', fn ($uq) => $uq->where('name', 'like', $term))
+                        ->orWhereHas('zktecoUser.appUser.studentUserDetails', fn ($dq) => $dq->where('admission_number', 'like', $term));
+                });
+            })
+            ->when($this->status !== '', function ($q) {
+                $q->where(function ($sq) {
+                    $sq->where('status', $this->status)
+                        ->orWhere('status', AttendanceStatus::tryFrom($this->status));
+                });
+            })
+            ->when($this->class_id !== '', fn ($q) => $q->whereHas('zktecoUser.appUser.studentUserDetails', fn ($sq) => $sq->where('class_id', $this->class_id)))
+            ->orderBy('occurred_at', 'desc');
 
-        $this->sort = $column;
-        $this->direction = 'asc';
-    }
+        $rawLogs = $query->paginate(15);
 
-    public function clearFilters(): void
-    {
-        $this->reset(['search', 'from', 'to']);
-        $this->resetPage();
+        $mappedItems = collect($rawLogs->items())->map(function (ZktecoAttendanceLog $log) {
+            $student = $log->zktecoUser?->appUser;
+            $details = $student?->studentUserDetails;
+
+            $statusStr = $log->status instanceof AttendanceStatus ? $log->status->value : (string) ($log->status ?? 'present');
+
+            return [
+                'id' => $log->id,
+                'student_name' => $student?->name ?? 'Learner',
+                'admission_number' => $details?->admission_number ?? ('PIN-'.$log->pin),
+                'class_name' => $details?->schoolClass?->name ?? 'Unassigned',
+                'device_name' => $log->device?->name ?? $log->device?->serial_number ?? 'Terminal 1',
+                'status' => $statusStr,
+                'timestamp' => $log->occurred_at ? $log->occurred_at->toIso8601String() : null,
+            ];
+        });
+
+        return new LengthAwarePaginator(
+            $mappedItems,
+            $rawLogs->total(),
+            $rawLogs->perPage(),
+            $rawLogs->currentPage(),
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
     }
 
     #[Computed]
-    public function institution(): ?Institution
+    public function classes(): array
     {
-        return currentInstitution();
+        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('name')
+            ->get()
+            ->all();
     }
 
     #[Computed]
-    public function logs()
+    public function totalLogs(): int
     {
-        $institution = $this->institution;
+        $institutionId = currentInstitutionId();
+        $deviceIds = $institutionId
+            ? Devices::where('institution_id', $institutionId)->whereNotNull('zkteco_device_id')->pluck('zkteco_device_id')
+            : collect();
 
-        if (! $institution) {
-            return null;
-        }
-
-        $sort = in_array($this->sort, self::SORTABLE, true) ? $this->sort : 'occurred_at';
-        $direction = $this->direction === 'asc' ? 'asc' : 'desc';
-
-        return AttendanceLogQuery::build($institution->id, auth()->user(), [
-            'search' => $this->search,
-            'from' => $this->from,
-            'to' => $this->to,
-        ])
-            ->orderBy($sort, $direction)
-            ->paginate(25);
+        return ZktecoAttendanceLog::when(! isAdmin() && $deviceIds->isNotEmpty(), fn ($q) => $q->whereIn('device_id', $deviceIds))->count();
     }
 
     #[Computed]
-    public function devices()
+    public function todayLogs(): int
     {
-        $institution = $this->institution;
+        $institutionId = currentInstitutionId();
+        $deviceIds = $institutionId
+            ? Devices::where('institution_id', $institutionId)->whereNotNull('zkteco_device_id')->pluck('zkteco_device_id')
+            : collect();
 
-        return $institution ? $institution->devices()->with('zktecoDevice')->get() : collect();
+        return ZktecoAttendanceLog::when(! isAdmin() && $deviceIds->isNotEmpty(), fn ($q) => $q->whereIn('device_id', $deviceIds))
+            ->whereDate('occurred_at', today())
+            ->count();
     }
 
     #[Computed]
-    public function deviceCount(): int
+    public function presentToday(): int
     {
-        return $this->devices->count();
-    }
+        $institutionId = currentInstitutionId();
+        $deviceIds = $institutionId
+            ? Devices::where('institution_id', $institutionId)->whereNotNull('zkteco_device_id')->pluck('zkteco_device_id')
+            : collect();
 
-    #[Computed]
-    public function onlineDevices(): int
-    {
-        return $this->devices->filter(fn ($d) => $d->zktecoDevice?->isOnline())->count();
+        return ZktecoAttendanceLog::when(! isAdmin() && $deviceIds->isNotEmpty(), fn ($q) => $q->whereIn('device_id', $deviceIds))
+            ->whereDate('occurred_at', today())
+            ->where('status', AttendanceStatus::CheckIn)
+            ->count();
     }
 }; ?>
+
 @php
     $logs = $this->logs;
-    $institution = $this->institution;
-    $devices = $this->devices;
-    $deviceCount = $this->deviceCount;
-    $onlineDevices = $this->onlineDevices;
-    $totalLogs = $logs ? $logs->total() : 0;
-    
-    $todayStr = now()->toDateString();
-    $yesterdayStr = now()->subDay()->toDateString();
-    $startOfWeekStr = now()->startOfWeek()->toDateString();
-    $endOfWeekStr = now()->endOfWeek()->toDateString();
-    $startOfMonthStr = now()->startOfMonth()->toDateString();
-    $endOfMonthStr = now()->endOfMonth()->toDateString();
+    $classes = $this->classes;
+    $totalLogs = $this->totalLogs;
+    $todayLogs = $this->todayLogs;
+    $presentToday = $this->presentToday;
 
-    $isToday = $this->from === $todayStr && $this->to === $todayStr;
-    $isYesterday = $this->from === $yesterdayStr && $this->to === $yesterdayStr;
-    $isThisWeek = $this->from === $startOfWeekStr && $this->to === $endOfWeekStr;
-    $isThisMonth = $this->from === $startOfMonthStr && $this->to === $endOfMonthStr;
-    $isAllTime = empty($this->from) && empty($this->to);
-    $isFiltered = !empty($this->search) || !empty($this->from) || !empty($this->to);
+    $attendanceRate = $todayLogs > 0 ? round(($presentToday / $todayLogs) * 100) : 100;
+
+    $canTakeAttendance = Route::has('attendance.take') && auth()->user()->can('create attendance');
+    $canManageStudents = Route::has('student.index') && auth()->user()->can('view student');
 @endphp
 
-<x-layouts::app :title="__(config('attendance.name'))">
-    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" x-data x-on:keydown.window.slash.prevent="$refs.searchInput?.focus()">
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <div class="flex items-center gap-2.5">
-                    <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">
-                        Attendance Logs
-                    </flux:heading>
-                    <flux:badge size="sm" color="violet" class="font-semibold">
-                        {{ number_format($totalLogs) }} Entries
+                <div class="flex items-center gap-2">
+                    <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Attendance Stream</flux:heading>
+                    <flux:badge size="sm" color="emerald" class="font-semibold">
+                        <span class="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                        Live Feed
                     </flux:badge>
                 </div>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Track daily check-ins, biometric verify modes, and real-time student presence.
+                    Real-time biometric scans, gate check-in logs, and classroom presence tracking.
                 </flux:text>
             </div>
             
-            <div class="flex flex-wrap items-center gap-2.5">
+            <div class="flex items-center gap-3">
                 @can('view attendance')
-                    @if (Route::has('attendance.export'))
-                        <flux:button href="{{ route('attendance.export', request()->query()) }}" icon="arrow-down-tray" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                            Export Logs
-                        </flux:button>
-                    @endif
+                    <flux:button href="{{ route('attendance.export', ['search' => $this->search, 'class_id' => $this->class_id]) }}" icon="arrow-down-tray" variant="subtle" class="font-semibold shadow-sm">
+                        Export CSV
+                    </flux:button>
                 @endcan
-
-                @can('view sync device')
-                    @if (Route::has('sync-devices.index'))
-                        <flux:button href="{{ route('sync-devices.index') }}" icon="arrow-path" variant="primary" class="shadow-sm hover:shadow-md transition-all">
-                            Sync Devices
-                        </flux:button>
-                    @endif
-                @endcan
+                @if ($canTakeAttendance)
+                    <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover icon="clipboard-document-check" variant="primary" class="shadow-sm hover:shadow-md transition-all">
+                        Take Roll Call
+                    </flux:button>
+                @endif
             </div>
         </div>
 
-        @if (! $institution)
-            <div class="bg-amber-50 dark:bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-r-xl flex items-start shadow-sm">
-                <flux:icon icon="exclamation-triangle" class="size-5 text-amber-500 mr-3 mt-0.5 shrink-0" />
-                <div>
-                    <h3 class="text-sm font-bold text-amber-800 dark:text-amber-400">No active institution found</h3>
-                    <p class="text-xs text-amber-700 dark:text-amber-500 mt-1">
-                        Attendance records could not be loaded because no institution is currently assigned to your account.
-                    </p>
-                </div>
-            </div>
-        @else
-            {{-- Animated KPI Metrics --}}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <x-kpi-card title="Total Logs" icon="document-text" color="violet" :count="$totalLogs" subtext="recorded entries" />
-                <x-kpi-card title="Hardware Terminals" icon="device-phone-mobile" color="indigo" :count="$deviceCount" subtext="turnstiles & clocks" />
-                <x-kpi-card title="Live Online" icon="signal" color="emerald" :count="$onlineDevices" countSuffix="/{{ $deviceCount }}" subtext="actively reporting" />
-            </div>
+        {{-- Animated KPI Metrics Grid --}}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <x-kpi-card 
+                title="Today's Check-ins" 
+                icon="clock" 
+                color="violet" 
+                :count="$todayLogs" 
+                subtext="total daily logs" 
+                :href="route('attendance.index')" 
+            />
+            <x-kpi-card 
+                title="Present On Campus" 
+                icon="check-circle" 
+                color="emerald" 
+                :count="$presentToday" 
+                subtext="marked in attendance" 
+                :href="route('attendance.index', ['status' => 'present'])" 
+            />
+            <x-kpi-card 
+                title="Attendance Rate" 
+                icon="chart-bar" 
+                color="indigo" 
+                :count="$attendanceRate" 
+                countSuffix="%" 
+                subtext="daily turn-out percentage" 
+            />
+            <x-kpi-card 
+                title="Total Record Archive" 
+                icon="document-text" 
+                color="sky" 
+                :count="$totalLogs" 
+                subtext="lifetime attendance events" 
+                :href="route('attendance.index')" 
+            />
+        </div>
 
-            {{-- Filter Toolbar with Quick Presets --}}
-            <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-3.5">
-                {{-- Quick Date Preset Pills --}}
-                <div class="flex flex-wrap items-center gap-1.5 text-xs">
-                    <span class="text-zinc-400 font-medium mr-1 flex items-center gap-1">
-                        <flux:icon icon="calendar" class="size-3.5" />
-                        Preset:
-                    </span>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search')])) }}" 
-                       class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isAllTime ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
-                        All Time
-                    </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $todayStr, 'to' => $todayStr])) }}" 
-                       class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isToday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
-                        ΓÜí Today
-                    </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $yesterdayStr, 'to' => $yesterdayStr])) }}" 
-                       class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isYesterday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
-                        Yesterday
-                    </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $startOfWeekStr, 'to' => $endOfWeekStr])) }}" 
-                       class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isThisWeek ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
-                        This Week
-                    </a>
-                    <a href="{{ route('attendance.index', array_filter(['search' => request('search'), 'from' => $startOfMonthStr, 'to' => $endOfMonthStr])) }}" 
-                       class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isThisMonth ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
-                        This Month
-                    </a>
-                </div>
-
-                {{-- Search & Custom Date Inputs Form --}}
-                <form method="GET" class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-                    <div class="flex-1 relative">
-                        <flux:input 
-                            x-ref="searchInput"
-                            icon="magnifying-glass" 
-                            type="text" 
-                            name="search" 
-                            placeholder="Search by student name, PIN, or admission no... (Press '/' to focus)" 
-                            value="{{ request('search') }}" 
-                        />
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-2">
-                        <div class="w-full sm:w-40">
-                            <flux:input type="date" name="from" value="{{ request('from') }}" />
-                        </div>
-                        <span class="text-zinc-400 text-xs font-medium px-0.5">to</span>
-                        <div class="w-full sm:w-40">
-                            <flux:input type="date" name="to" value="{{ request('to') }}" />
-                        </div>
-
-                        <div class="flex items-center gap-2 w-full sm:w-auto">
-                            <flux:button type="submit" variant="primary" icon="funnel" class="shadow-sm">
-                                Filter
-                            </flux:button>
-                            
-                            @if ($isFiltered)
-                                <flux:button href="{{ route('attendance.index') }}" variant="ghost" icon="x-mark">
-                                    Clear
-                                </flux:button>
-                            @endif
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            {{-- Table Card --}}
-            <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
-                {{-- Live Header Feed Strip --}}
-                <div class="px-6 py-3.5 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-50/50 dark:bg-zinc-800/20">
-                    <div class="text-xs font-medium text-zinc-500">
-                        Showing <span class="text-zinc-900 dark:text-white font-bold">{{ $logs ? $logs->count() : 0 }}</span> of <span class="text-zinc-900 dark:text-white font-bold">{{ number_format($totalLogs) }}</span> records
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Live Feed
-                        </span>
-                        <a href="{{ request()->fullUrl() }}" class="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
-                            <flux:icon icon="arrow-path" class="size-3.5" />
-                            <span>Refresh</span>
-                        </a>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <flux:table>
-                        <flux:table.columns>
-                            <flux:table.column class="w-2/5">Student & Admission</flux:table.column>
-                            <flux:table.column>Terminal / Gate</flux:table.column>
-                            <x-sortable-column column="status">Status</x-sortable-column>
-                            <flux:table.column>Verify Mode</flux:table.column>
-                            <x-sortable-column column="occurred_at">Recorded At</x-sortable-column>
-                        </flux:table.columns>
-                        
-                        <flux:table.rows>
-                            @forelse ($logs as $log)
-                                @php
-    $logs = $this->logs;
-    $institution = $this->institution;
-    $devices = $this->devices;
-    $deviceCount = $this->deviceCount;
-    $onlineDevices = $this->onlineDevices;
-    $totalLogs = $logs ? $logs->total() : 0;
-    
-    $todayStr = now()->toDateString();
-    $yesterdayStr = now()->subDay()->toDateString();
-    $startOfWeekStr = now()->startOfWeek()->toDateString();
-    $endOfWeekStr = now()->endOfWeek()->toDateString();
-    $startOfMonthStr = now()->startOfMonth()->toDateString();
-    $endOfMonthStr = now()->endOfMonth()->toDateString();
-
-    $isToday = $this->from === $todayStr && $this->to === $todayStr;
-    $isYesterday = $this->from === $yesterdayStr && $this->to === $yesterdayStr;
-    $isThisWeek = $this->from === $startOfWeekStr && $this->to === $endOfWeekStr;
-    $isThisMonth = $this->from === $startOfMonthStr && $this->to === $endOfMonthStr;
-    $isAllTime = empty($this->from) && empty($this->to);
-    $isFiltered = !empty($this->search) || !empty($this->from) || !empty($this->to);
-@endphp
-                                <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 group">
-                                    {{-- Student & Admission Stack --}}
-                                    <flux:table.cell>
-                                        <div class="flex items-center gap-3">
-                                            <div class="size-8 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 ring-1 ring-inset ring-violet-500/20 flex items-center justify-center font-bold text-xs transition-transform group-hover:scale-105 shrink-0">
-                                                {{ $initials }}
-                                            </div>
-                                            <div class="flex flex-col">
-                                                <span class="font-semibold text-sm text-zinc-900 dark:text-white leading-snug">{{ $studentName }}</span>
-                                                <span class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">{{ $log['admission_number'] }}</span>
-                                            </div>
-                                        </div>
-                                    </flux:table.cell>
-
-                                    {{-- Device / Gate --}}
-                                    <flux:table.cell>
-                                        <div class="flex items-center gap-2 text-zinc-600 dark:text-zinc-300 text-xs">
-                                            <flux:icon icon="cpu-chip" class="size-4 text-zinc-400 shrink-0" />
-                                            <span class="truncate max-w-[220px]">{{ $log['device_name'] }}</span>
-                                        </div>
-                                    </flux:table.cell>
-
-                                    {{-- Status --}}
-                                    <flux:table.cell>
-                                        @if ($log['status_color'] === 'emerald')
-                                            <flux:badge color="emerald" size="sm" class="font-semibold">
-                                                <span class="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                                                {{ $log['status_label'] }}
-                                            </flux:badge>
-                                        @elseif ($log['status_color'] === 'red')
-                                            <flux:badge color="red" size="sm" class="font-semibold">
-                                                <span class="size-1.5 rounded-full bg-red-500 mr-1.5"></span>
-                                                {{ $log['status_label'] }}
-                                            </flux:badge>
-                                        @elseif ($log['status_color'] === 'amber')
-                                            <flux:badge color="amber" size="sm" class="font-semibold">
-                                                <span class="size-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-                                                {{ $log['status_label'] }}
-                                            </flux:badge>
-                                        @elseif ($log['status_color'] === 'sky')
-                                            <flux:badge color="sky" size="sm" class="font-semibold">
-                                                <span class="size-1.5 rounded-full bg-sky-500 mr-1.5"></span>
-                                                {{ $log['status_label'] }}
-                                            </flux:badge>
-                                        @else
-                                            <flux:badge color="zinc" size="sm" class="font-medium">
-                                                {{ $log['status_label'] }}
-                                            </flux:badge>
-                                        @endif
-                                    </flux:table.cell>
-
-                                    {{-- Verify Mode --}}
-                                    <flux:table.cell>
-                                        <div class="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-md border border-zinc-200/50 dark:border-zinc-700/50">
-                                            @if(stripos($log['verify_mode_label'], 'finger') !== false)
-                                                <flux:icon icon="finger-print" class="size-3.5 text-zinc-500 shrink-0" />
-                                            @elseif(stripos($log['verify_mode_label'], 'card') !== false || stripos($log['verify_mode_label'], 'rfid') !== false)
-                                                <flux:icon icon="identification" class="size-3.5 text-zinc-500 shrink-0" />
-                                            @elseif(stripos($log['verify_mode_label'], 'face') !== false)
-                                                <flux:icon icon="user" class="size-3.5 text-zinc-500 shrink-0" />
-                                            @else
-                                                <flux:icon icon="check-badge" class="size-3.5 text-zinc-500 shrink-0" />
-                                            @endif
-                                            <span>{{ $log['verify_mode_label'] }}</span>
-                                        </div>
-                                    </flux:table.cell>
-
-                                    {{-- Date & Time Stack --}}
-                                    <flux:table.cell>
-                                        <div class="flex flex-col">
-                                            <span class="font-medium text-xs text-zinc-900 dark:text-zinc-100 leading-snug">{{ $dateStr }}</span>
-                                            @if($timeStr)
-                                                <span class="text-[11px] text-zinc-400 dark:text-zinc-500 leading-normal">{{ $timeStr }}</span>
-                                            @endif
-                                        </div>
-                                    </flux:table.cell>
-                                </flux:table.row>
-                            @empty
-                                <flux:table.row>
-                                    <flux:table.cell colspan="5">
-                                        <x-empty-state icon="clock" color="violet" title="No Attendance Logs Found" description="There are no check-in records matching your active filters. Try adjusting your date range or keyword search.">
-                                            @if ($isFiltered)
-                                                <flux:button href="{{ route('attendance.index') }}" variant="primary" icon="arrow-path">
-                                                    Reset All Filters
-                                                </flux:button>
-                                            @endif
-                                        </x-empty-state>
-                                    </flux:table.cell>
-                                </flux:table.row>
-                            @endforelse
-                        </flux:table.rows>
-                    </flux:table>
-                </div>
+        {{-- Filter and Search Toolbar --}}
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <flux:input wire:model.live.debounce.300ms="search" placeholder="Search student name, ADM..." icon="magnifying-glass" class="w-full sm:w-64" />
                 
-                @if ($logs instanceof \Illuminate\Pagination\AbstractPaginator && $logs->hasPages())
-                    <div class="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
-                        {{ $logs->links() }}
-                    </div>
-                @endif
-            </div>
-        @endif
-    </div>
-</x-layouts::app>
+                <flux:select wire:model.live="status" placeholder="All Statuses" class="w-full sm:w-40">
+                    <flux:select.option value="">All Statuses</flux:select.option>
+                    <flux:select.option value="CheckIn">Check In</flux:select.option>
+                    <flux:select.option value="CheckOut">Check Out</flux:select.option>
+                </flux:select>
 
+                <flux:select wire:model.live="class_id" placeholder="All Classes" class="w-full sm:w-44">
+                    <flux:select.option value="">All Classes</flux:select.option>
+                    @foreach ($this->classes as $class)
+                        <flux:select.option value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+        </div>
+
+        {{-- Attendance Table Card --}}
+        <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
+            <div class="overflow-x-auto">
+                <flux:table>
+                    <flux:table.columns>
+                        <flux:table.column>Learner Profile</flux:table.column>
+                        <flux:table.column>Access Point / Device</flux:table.column>
+                        <flux:table.column>Verification Status</flux:table.column>
+                        <flux:table.column>Timestamp</flux:table.column>
+                    </flux:table.columns>
+
+                    <flux:table.rows>
+                        @forelse ($logs as $log)
+                            @php
+                                $studentName = $log['student_name'] ?? 'Learner';
+                                $initials = collect(explode(' ', $studentName))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
+                                $rawDate = $log['timestamp'] ?? null;
+                                $dateStr = '—';
+                                $timeStr = '';
+                                if ($rawDate && $rawDate !== '—') {
+                                    try {
+                                        $parsed = Carbon::parse($rawDate);
+                                        $dateStr = $parsed->format('M d, Y');
+                                        $timeStr = $parsed->format('h:i A');
+                                    } catch (\Throwable $e) {
+                                        $dateStr = $rawDate;
+                                    }
+                                }
+                            @endphp
+                            <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 group">
+                                <flux:table.cell>
+                                    <div class="flex items-center gap-3">
+                                        <div class="size-8 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 ring-1 ring-inset ring-violet-500/20 flex items-center justify-center font-bold text-xs transition-transform group-hover:scale-105 shrink-0">
+                                            {{ $initials }}
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="font-semibold text-sm text-zinc-900 dark:text-white leading-snug">{{ $studentName }}</span>
+                                            <span class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">{{ $log['admission_number'] }}</span>
+                                        </div>
+                                    </div>
+                                </flux:table.cell>
+
+                                <flux:table.cell>
+                                    <div class="flex items-center gap-2 text-zinc-600 dark:text-zinc-300 text-xs">
+                                        <flux:icon icon="cpu-chip" class="size-4 text-zinc-400 shrink-0" />
+                                        <span class="truncate max-w-[220px]">{{ $log['device_name'] }}</span>
+                                    </div>
+                                </flux:table.cell>
+
+                                <flux:table.cell>
+                                    @php
+                                        $st = strtolower($log['status']);
+                                        $color = match (true) {
+                                            str_contains($st, 'in') => 'emerald',
+                                            str_contains($st, 'out') => 'red',
+                                            default => 'zinc',
+                                        };
+                                    @endphp
+                                    <flux:badge :color="$color" size="sm" class="capitalize font-semibold text-[11px]">
+                                        {{ $log['status'] }}
+                                    </flux:badge>
+                                </flux:table.cell>
+
+                                <flux:table.cell>
+                                    <div class="flex flex-col text-xs">
+                                        <span class="font-mono font-medium text-zinc-900 dark:text-zinc-100">{{ $timeStr ?: '—' }}</span>
+                                        <span class="text-[11px] text-zinc-400">{{ $dateStr }}</span>
+                                    </div>
+                                </flux:table.cell>
+                            </flux:table.row>
+                        @empty
+                            <flux:table.row>
+                                <flux:table.cell colspan="4">
+                                    <x-empty-state icon="clock" color="violet" title="No Attendance Records" description="Real-time check-in logs and biometric scans will appear here automatically.">
+                                        @if ($canTakeAttendance)
+                                            <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover icon="clipboard-document-check" variant="primary">
+                                                Take Attendance
+                                            </flux:button>
+                                        @endif
+                                    </x-empty-state>
+                                </flux:table.cell>
+                            </flux:table.row>
+                        @endforelse
+                    </flux:table.rows>
+                </flux:table>
+            </div>
+
+            @if ($logs->hasPages())
+                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800">
+                    {{ $logs->links() }}
+                </div>
+            @endif
+        </div>
+    </div>

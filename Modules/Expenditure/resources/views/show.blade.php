@@ -69,12 +69,12 @@
 
             <div class="flex justify-end gap-3 rounded-b-lg border-t border-gray-200 bg-gray-50 px-6 py-4">
                 <a href="{{ route('expenditure.index') }}"
-                    class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" wire:navigate>
+                    class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" wire:navigate.hover>
                     Back to Expenditure
                 </a>
                 @can('edit expenditure')
                     <a href="{{ route('expenditure.edit', $expenditure->id) }}"
-                        class="rounded-md border border-transparent bg-yellow-500 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-600" wire:navigate>
+                        class="rounded-md border border-transparent bg-yellow-500 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-600" wire:navigate.hover>
                         Edit
                     </a>
                 @endcan

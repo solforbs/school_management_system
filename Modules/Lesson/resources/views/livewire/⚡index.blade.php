@@ -243,7 +243,7 @@ new #[Title('Lesson Attendance')] class extends Component
 
         @can('export lesson')
             <flux:button href="{{ route('lesson.reports.index') }}" icon="document-chart-bar" variant="ghost"
-                wire:navigate>Lesson Reports</flux:button>
+                wire:navigate.hover>Lesson Reports</flux:button>
         @endcan
     </div>
 
@@ -347,7 +347,7 @@ new #[Title('Lesson Attendance')] class extends Component
                                 <flux:table.cell>{{ $lesson->remarks ?? '—' }}</flux:table.cell>
                                 <flux:table.cell>
                                     <flux:button href="{{ route('lesson.show', $lesson->id) }}" icon="eye" size="sm"
-                                        variant="ghost" wire:navigate>view</flux:button>
+                                        variant="ghost" wire:navigate.hover>view</flux:button>
                                 </flux:table.cell>
                             </flux:table.row>
                         @endforeach

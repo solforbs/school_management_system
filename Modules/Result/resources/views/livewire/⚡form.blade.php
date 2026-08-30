@@ -1,9 +1,10 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Institution\Models\Institution;
 use Modules\Result\Actions\SaveResult;
 use Modules\Result\Models\Result;
 use Modules\Result\Services\ResultAccessService;
@@ -57,10 +58,19 @@ new #[Title('Result')] class extends Component
 
         return $query;
     }
+
+    #[Computed]
+    public function institutions(): Collection
+    {
+        if (isAdmin()) {
+            return Institution::orderBy('name')->get();
+        }
+
+        return Institution::where('id', currentInstitution()?->id ?? 0)->get();
+    }
 }; ?>
 <div>
     @if($result)
-<x-layouts::app :title="__('Edit Result')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -73,7 +83,7 @@ new #[Title('Result')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('result.show', $result->id) }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('result.show', $result->id) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Details
                 </flux:button>
             </div>
@@ -107,7 +117,7 @@ new #[Title('Result')] class extends Component
                 <x-stepper.section id="academic-details" title="Academic Details" description="You can optionally move this result to a different examination or assign it to a different student.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:select id="institution_id" name="institution_id" label="Institution">
-                            @foreach ($institutions as $institution)
+                            @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $result->institution_id) == $institution->id">
                                     {{ $institution->name }}
                                 </flux:select.option>
@@ -160,7 +170,7 @@ new #[Title('Result')] class extends Component
                                     Current grade: <strong class="font-bold">{{ $result->grade ?? 'not computed yet' }}</strong>. 
                                     This will be recalculated automatically from the institution's grading scale when you save.
                                     @can('edit reportcard')
-                                        <br><a href="{{ route('reportcard.settings') }}" class="underline font-semibold hover:text-blue-600 transition-colors mt-1 inline-block">Manage grading scale</a>.
+                                        <br><a href="{{ route('reportcard.settings') }}" wire:navigate.hover class="underline font-semibold hover:text-blue-600 transition-colors mt-1 inline-block">Manage grading scale</a>.
                                     @endcan
                                 </div>
                             </div>
@@ -173,7 +183,7 @@ new #[Title('Result')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('result.show', $result->id) }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('result.show', $result->id) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -254,10 +264,8 @@ new #[Title('Result')] class extends Component
             applyClassFilters();
         });
     </script>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Add Result')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -270,7 +278,7 @@ new #[Title('Result')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('result.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('result.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Results
                 </flux:button>
             </div>
@@ -304,7 +312,7 @@ new #[Title('Result')] class extends Component
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:select id="institution_id" name="institution_id" label="Institution">
                             <flux:select.option value="">Select Institution</flux:select.option>
-                            @foreach ($institutions as $institution)
+                            @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
                                     {{ $institution->name }}
                                 </flux:select.option>
@@ -356,7 +364,7 @@ new #[Title('Result')] class extends Component
                                 <div class="text-sm text-blue-800 dark:text-blue-300">
                                     Grade is computed automatically from the institution's grading scale once saved. 
                                     @can('edit reportcard')
-                                        <a href="{{ route('reportcard.settings') }}" class="underline font-semibold hover:text-blue-600 transition-colors">Manage grading scale</a>.
+                                        <a href="{{ route('reportcard.settings') }}" wire:navigate.hover class="underline font-semibold hover:text-blue-600 transition-colors">Manage grading scale</a>.
                                     @endcan
                                 </div>
                             </div>
@@ -369,7 +377,7 @@ new #[Title('Result')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('result.index') }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('result.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -382,7 +390,5 @@ new #[Title('Result')] class extends Component
     </div>
 
     <x-create-result-scripts :classes="$this->classes" :students="$this->students" :examinations="$this->examinations" />
-</x-layouts::app>
-
     @endif
 </div>

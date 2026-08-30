@@ -62,25 +62,25 @@
 
         <div class="flex flex-wrap items-center gap-2.5">
             @can('view attendance')
-                <flux:button href="{{ route('attendance.index') }}" icon="clock" variant="primary" class="font-semibold text-xs shadow-sm">
+                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover icon="clock" variant="primary" class="font-semibold text-xs shadow-sm">
                     Mark Daily Attendance
                 </flux:button>
             @endcan
 
             @can('view student')
-                <flux:button href="{{ route('student.index') }}" icon="users" variant="subtle" class="font-semibold text-xs">
+                <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="users" variant="subtle" class="font-semibold text-xs">
                     View Student Roster
                 </flux:button>
             @endcan
 
             @can('view examination')
-                <flux:button href="{{ route('examinations.index') }}" icon="pencil-square" variant="subtle" class="font-semibold text-xs">
+                <flux:button href="{{ route('examinations.index') }}" wire:navigate.hover icon="pencil-square" variant="subtle" class="font-semibold text-xs">
                     Examinations & Scoring
                 </flux:button>
             @endcan
 
             @can('view classes')
-                <flux:button href="{{ route('classes.index') }}" icon="rectangle-group" variant="ghost" class="font-semibold text-xs">
+                <flux:button href="{{ route('classes.index') }}" wire:navigate.hover icon="rectangle-group" variant="ghost" class="font-semibold text-xs">
                     Classes & Streams
                 </flux:button>
             @endcan

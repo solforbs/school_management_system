@@ -32,7 +32,7 @@
                         @php $entry = $grid[$day][$period] ?? null; @endphp
                         <td class="p-2.5 align-top text-center border-r border-zinc-200/60 dark:border-zinc-800/60 last:border-r-0">
                             @if ($entry)
-                                <a href="{{ route('timetable.show', $entry->id) }}" class="block p-2.5 rounded-xl bg-indigo-50/60 hover:bg-indigo-100/70 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-200/70 dark:border-indigo-800/60 transition-all hover:shadow-xs text-left group">
+                                <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block p-2.5 rounded-xl bg-indigo-50/60 hover:bg-indigo-100/70 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-200/70 dark:border-indigo-800/60 transition-all hover:shadow-xs text-left group">
                                     <span class="block font-bold text-xs text-indigo-900 dark:text-indigo-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 leading-snug">
                                         {{ $entry->subject }}
                                     </span>

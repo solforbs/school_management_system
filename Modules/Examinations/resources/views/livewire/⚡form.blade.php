@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -70,7 +70,6 @@ new #[Title('Examination')] class extends Component
 }; ?>
 <div>
     @if($examination)
-<x-layouts::app :title="__('Edit Examination')">
     <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Header Section --}}
@@ -122,10 +121,8 @@ new #[Title('Examination')] class extends Component
             @include('examinations::partials._form', ['institutions' => $this->institutions, 'subjects' => $this->subjects, 'classes' => $this->classes, 'examTypes' => \Modules\Examinations\Models\Examination::EXAM_TYPES])
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Create Examination')">
     <div class="flex flex-col gap-6 w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Header Section --}}
@@ -176,7 +173,5 @@ new #[Title('Examination')] class extends Component
             @include('examinations::partials._form', ['institutions' => $this->institutions, 'subjects' => $this->subjects, 'classes' => $this->classes, 'examTypes' => \Modules\Examinations\Models\Examination::EXAM_TYPES])
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

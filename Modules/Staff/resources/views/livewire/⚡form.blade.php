@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -51,7 +51,6 @@ new #[Title('Staff')] class extends Component
 }; ?>
 <div>
     @if($staff)
-<x-layouts::app :title="__('Edit Staff')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -64,7 +63,7 @@ new #[Title('Staff')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('staff.show', $staff) }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('staff.show', $staff) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Profile
                 </flux:button>
             </div>
@@ -199,7 +198,7 @@ new #[Title('Staff')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('staff.show', $staff) }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('staff.show', $staff) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -210,10 +209,8 @@ new #[Title('Staff')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Add Staff')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -226,7 +223,7 @@ new #[Title('Staff')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('staff.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('staff.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Staff
                 </flux:button>
             </div>
@@ -349,7 +346,7 @@ new #[Title('Staff')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('staff.index') }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('staff.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -360,7 +357,5 @@ new #[Title('Staff')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

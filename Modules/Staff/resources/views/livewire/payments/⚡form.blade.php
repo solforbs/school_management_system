@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -51,7 +51,6 @@ new #[Title('Staff Payment')] class extends Component
 }; ?>
 <div>
     @if($payment)
-<x-layouts::app :title="__('Edit Staff Payment')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -64,7 +63,7 @@ new #[Title('Staff Payment')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('staff.payments.show', $payment) }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('staff.payments.show', $payment) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Receipt
                 </flux:button>
             </div>
@@ -103,7 +102,7 @@ new #[Title('Staff Payment')] class extends Component
                             <flux:select name="staff_details_id" label="Staff Member" required>
                                 @foreach ($this->staffMembers as $member)
                                     <flux:select.option value="{{ $member->id }}" :selected="old('staff_details_id', $payment->staff_details_id) == $member->id">
-                                        {{ $member->name }}{{ $member->job_title ? ' ΓÇö '.$member->job_title : '' }}
+                                        {{ $member->name }}{{ $member->job_title ? ' — '.$member->job_title : '' }}
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
@@ -168,7 +167,7 @@ new #[Title('Staff Payment')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('staff.payments.show', $payment) }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('staff.payments.show', $payment) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -179,10 +178,8 @@ new #[Title('Staff Payment')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Record Staff Payment')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -195,7 +192,7 @@ new #[Title('Staff Payment')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('staff.payments.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('staff.payments.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Payroll
                 </flux:button>
             </div>
@@ -234,7 +231,7 @@ new #[Title('Staff Payment')] class extends Component
                                 <flux:select.option value="">Select Staff Member...</flux:select.option>
                                 @foreach ($this->staffMembers as $member)
                                     <flux:select.option value="{{ $member->id }}" :selected="old('staff_details_id') == $member->id">
-                                        {{ $member->name }}{{ $member->job_title ? ' ΓÇö '.$member->job_title : '' }}
+                                        {{ $member->name }}{{ $member->job_title ? ' — '.$member->job_title : '' }}
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
@@ -299,7 +296,7 @@ new #[Title('Staff Payment')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('staff.payments.index') }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('staff.payments.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -310,7 +307,5 @@ new #[Title('Staff Payment')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

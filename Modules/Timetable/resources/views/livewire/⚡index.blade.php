@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -86,7 +86,7 @@ new #[Title('Timetable')] class extends Component
     public function entries(): Collection
     {
         if ($this->isTeacher) {
-            return TimetableEntry::with(['schoolClass', 'subject'])
+            return TimetableEntry::with(['schoolClass', 'subjectRecord'])
                 ->where('teacher_id', auth()->id())
                 ->get();
         }
@@ -94,7 +94,7 @@ new #[Title('Timetable')] class extends Component
         $class = $this->selectedClass;
 
         return $class
-            ? TimetableEntry::with(['teacher', 'subject'])->where('class_id', $class->id)->get()
+            ? TimetableEntry::with(['teacher', 'subjectRecord'])->where('class_id', $class->id)->get()
             : collect();
     }
 
@@ -141,9 +141,15 @@ new #[Title('Timetable')] class extends Component
     $periods = $this->periods;
     $grid = $this->grid;
     $days = $this->days();
+
+    $currentDayName = now()->format('l');
+    $totalWeeklyPeriods = $entries->count();
+    $uniqueStreamsCount = $entries->pluck('class_id')->filter()->unique()->count();
+    $uniqueSubjectsCount = $entries->pluck('subject')->filter()->unique()->count();
+    $todayPeriodsCount = $entries->where('day_of_week', $currentDayName)->count();
 @endphp
-<x-layouts::app :title="__(config('timetable.name'))">
-    <div class="flex flex-col gap-6 w-full" x-data="{ viewMode: 'grid' }">
+
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" x-data="{ viewMode: 'grid' }">
         
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -180,10 +186,10 @@ new #[Title('Timetable')] class extends Component
                 </button>
 
                 @can('create timetable')
-                    <flux:button href="{{ route('timetable.import') }}" icon="arrow-up-tray" variant="subtle" class="font-semibold text-xs">
+                    <flux:button href="{{ route('timetable.import') }}" wire:navigate.hover icon="arrow-up-tray" variant="subtle" class="font-semibold text-xs">
                         Import CSV
                     </flux:button>
-                    <flux:button href="{{ route('timetable.create') }}" icon="plus" variant="primary" class="font-semibold text-xs shadow-sm">
+                    <flux:button href="{{ route('timetable.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold text-xs shadow-sm">
                         Add Entry
                     </flux:button>
                 @endcan
@@ -259,7 +265,7 @@ new #[Title('Timetable')] class extends Component
                     <label for="class_picker" class="text-xs font-semibold text-zinc-500 shrink-0">Class Roster:</label>
                     <select id="class_picker" name="class_id" onchange="this.form.submit()" class="text-xs font-medium bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-1.5 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden">
                         <option value="">Select a class...</option>
-                        @foreach ($classes as $schoolClass)
+                        @foreach ($this->classes as $schoolClass)
                             <option value="{{ $schoolClass->id }}" {{ $selectedClass?->id === $schoolClass->id ? 'selected' : '' }}>
                                 {{ $schoolClass->name }}
                             </option>
@@ -285,7 +291,7 @@ new #[Title('Timetable')] class extends Component
                         @include('timetable::partials._grid', ['grid' => $grid, 'days' => $days, 'periods' => $periods])
                     </div>
                     <div x-show="viewMode === 'agenda'">
-                        @include('timetable::partials._agenda', ['entries' => $entries, 'days' => $days, 'currentDayName' => $currentDayName])
+                        @include('timetable::partials._agenda', ['entries' => $entries, 'days' => $days, 'currentDayName' => $currentDayName, 'isTeacher' => $isTeacher])
                     </div>
                 @endif
                 
@@ -336,12 +342,10 @@ new #[Title('Timetable')] class extends Component
                         @include('timetable::partials._grid', ['grid' => $grid, 'days' => $days, 'periods' => $periods])
                     </div>
                     <div x-show="viewMode === 'agenda'">
-                        @include('timetable::partials._agenda', ['entries' => $entries, 'days' => $days, 'currentDayName' => $currentDayName])
+                        @include('timetable::partials._agenda', ['entries' => $entries, 'days' => $days, 'currentDayName' => $currentDayName, 'isTeacher' => $isTeacher])
                     </div>
                 @endif
             @endif
 
         </div>
     </div>
-</x-layouts::app>
-

@@ -91,6 +91,10 @@ class Institution extends Model
     protected function casts(): array
     {
         return [
+            'is_approved' => 'boolean',
+            'is_active' => 'boolean',
+            'min_electives' => 'integer',
+            'max_electives' => 'integer',
             'approved_at' => 'datetime',
             'subscription_started_at' => 'datetime',
             'subscription_expires_at' => 'datetime',

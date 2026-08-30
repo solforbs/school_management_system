@@ -197,14 +197,17 @@ select:focus[data-flux-control] {
 }
 
 /* --- Livewire Navigation Progress Bar --- */
-#nprogress .bar {
-    background: var(--color-accent) !important;
+#nprogress .bar,
+[data-navigate-progress-bar] {
+    background: linear-gradient(90deg, #00A3FF, #0047FF) !important;
     height: 3px !important;
+    box-shadow: 0 0 12px rgba(0, 163, 255, 0.6) !important;
+    z-index: 99999 !important;
 }
 #nprogress .peg {
-    box-shadow: 0 0 10px var(--color-accent), 0 0 5px var(--color-accent) !important;
+    box-shadow: 0 0 10px #00A3FF, 0 0 5px #0047FF !important;
 }
 #nprogress .spinner-icon {
-    border-top-color: var(--color-accent) !important;
-    border-left-color: var(--color-accent) !important;
+    border-top-color: #00A3FF !important;
+    border-left-color: #0047FF !important;
 }

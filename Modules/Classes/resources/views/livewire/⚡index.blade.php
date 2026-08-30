@@ -1,99 +1,46 @@
-﻿<?php
+<?php
 
-use Flux\Flux;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithPagination;
 use Modules\Classes\Models\SchoolClass;
-use Modules\Student\Models\StudentDetails;
 
-new #[Title('Classes')] class extends Component
+new #[Title('Class Management')] class extends Component
 {
-    /** @var string[] */
-    public const SORTABLE = ['name', 'level', 'capacity'];
+    use WithPagination;
 
     #[Url]
     public string $search = '';
-
-    #[Url]
-    public string $sort = 'name';
-
-    #[Url]
-    public string $direction = 'asc';
 
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view classes'), 403);
     }
 
-    public function sortBy(string $column): void
-    {
-        if (! in_array($column, self::SORTABLE, true)) {
-            return;
-        }
-
-        if ($this->sort === $column) {
-            $this->direction = $this->direction === 'asc' ? 'desc' : 'asc';
-
-            return;
-        }
-
-        $this->sort = $column;
-        $this->direction = 'asc';
-    }
-
     public function delete(int $id): void
     {
         abort_unless(auth()->user()->can('delete classes'), 403);
-
-        $this->scoped()->findOrFail($id)->delete();
-
-        Flux::toast(text: 'Class removed.', variant: 'success');
+        $schoolClass = SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->findOrFail($id);
+        $schoolClass->delete();
     }
 
     #[Computed]
-    public function classes()
+    public function classes(): Collection
     {
-        $sort = in_array($this->sort, self::SORTABLE, true) ? $this->sort : 'name';
-        $direction = $this->direction === 'desc' ? 'desc' : 'asc';
-
-        return $this->scoped()
-            ->with(['institution', 'classTeacher', 'curriculum'])
+        return SchoolClass::with(['classTeacher', 'institution'])
             ->withCount('students')
-            ->when($this->search !== '', function ($query) {
-                $term = '%'.$this->search.'%';
-
-                $query->where(fn ($q) => $q->where('name', 'like', $term)->orWhere('level', 'like', $term));
-            })
-            ->orderBy($sort, $direction)
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
+            ->orderBy('name')
             ->get();
     }
-
-    private function scoped()
-    {
-        $user = auth()->user();
-        $query = SchoolClass::query();
-
-        if (isAdmin()) {
-            return $query;
-        }
-
-        if ($user->hasRole('Teacher')) {
-            return $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0);
-        }
-
-        if ($user->hasAnyRole(['Parent', 'Student'])) {
-            $institutionIds = $user->hasRole('Parent')
-                ? StudentDetails::where('parent_id', $user->id)->pluck('institution_id')
-                : StudentDetails::where('student_id', $user->id)->pluck('institution_id');
-
-            return $query->whereIn('institution_id', $institutionIds);
-        }
-
-        return $query->where('institution_id', currentInstitution()?->id ?? 0);
-    }
 }; ?>
+
 @php
     $classes = $this->classes;
     $totalClasses = $classes->count();
@@ -106,16 +53,13 @@ new #[Title('Classes')] class extends Component
     $canViewStaff = Route::has('staff.index') && auth()->user()->can('view staff');
 @endphp
 
-<x-layouts::app :title="__(config('classes.name'))">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <div class="flex items-center gap-2.5">
-                    <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">
-                        Classes & Streams
-                    </flux:heading>
+                <div class="flex items-center gap-2">
+                    <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Classes &amp; Streams</flux:heading>
                     <flux:badge size="sm" color="indigo" class="font-semibold">
                         {{ $totalClasses }} Active Streams
                     </flux:badge>
@@ -127,7 +71,7 @@ new #[Title('Classes')] class extends Component
             
             <div class="flex items-center gap-3">
                 @can('create classes')
-                    <flux:button href="{{ route('classes.create') }}" icon="plus" variant="primary" class="shadow-sm hover:shadow-md transition-all">
+                    <flux:button href="{{ route('classes.create') }}" wire:navigate.hover icon="plus" variant="primary" class="shadow-sm hover:shadow-md transition-all">
                         Add Class
                     </flux:button>
                 @endcan
@@ -186,7 +130,7 @@ new #[Title('Classes')] class extends Component
             <div class="overflow-x-auto">
                 <flux:table>
                     <flux:table.columns>
-                        <x-sortable-column column="name">Class Name & Level</x-sortable-column>
+                        <x-sortable-column column="name">Class Name &amp; Level</x-sortable-column>
                         @if (isAdmin())
                             <flux:table.column>Institution</flux:table.column>
                         @endif
@@ -198,16 +142,13 @@ new #[Title('Classes')] class extends Component
                     <flux:table.rows>
                         @forelse ($classes as $schoolClass)
                             @php
-    $classes = $this->classes;
-    $totalClasses = $classes->count();
-    $totalStudents = $classes->sum('students_count');
-    $totalCapacity = $classes->sum(fn($c) => (int)($c->capacity ?? 0));
-    $capacityRate = $totalCapacity > 0 ? round(($totalStudents / $totalCapacity) * 100) : 0;
-    $assignedTeachersCount = $classes->filter(fn($c) => (bool)$c->class_teacher_id)->count();
-
-    $canViewStudents = Route::has('student.index') && auth()->user()->can('view student');
-    $canViewStaff = Route::has('staff.index') && auth()->user()->can('view staff');
-@endphp
+                                $studentCount = $schoolClass->students_count ?? $schoolClass->students()->count();
+                                $capacity = (int) ($schoolClass->capacity ?? 0);
+                                $isFull = $capacity > 0 && $studentCount >= $capacity;
+                                $isOverfilled = $capacity > 0 && $studentCount > $capacity;
+                                $teacherName = $schoolClass->classTeacher?->name ?? 'Assigned Teacher';
+                                $teacherInitials = collect(explode(' ', $teacherName))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
+                            @endphp
                             <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 group">
                                 {{-- Class Name & Level --}}
                                 <flux:table.cell>
@@ -233,7 +174,7 @@ new #[Title('Classes')] class extends Component
                                     <flux:table.cell>
                                         <div class="flex items-center gap-1.5 text-zinc-500 text-xs truncate max-w-[150px]">
                                             <flux:icon icon="building-library" class="size-3.5 text-zinc-400 shrink-0" />
-                                            <span>{{ $schoolClass->institution?->name ?? 'ΓÇö' }}</span>
+                                            <span>{{ $schoolClass->institution?->name ?? '—' }}</span>
                                         </div>
                                     </flux:table.cell>
                                 @endif
@@ -260,7 +201,7 @@ new #[Title('Classes')] class extends Component
                                 <flux:table.cell>
                                     <div class="flex items-center gap-2">
                                         <span class="font-mono text-xs font-semibold text-zinc-900 dark:text-white">
-                                            {{ $studentCount }}<span class="text-zinc-400 font-normal">/{{ $capacity ?: 'Γê₧' }}</span>
+                                            {{ $studentCount }}<span class="text-zinc-400 font-normal">/{{ $capacity ?: '∞' }}</span>
                                         </span>
                                         
                                         @if ($isOverfilled)
@@ -286,10 +227,10 @@ new #[Title('Classes')] class extends Component
                                 {{-- Actions --}}
                                 <flux:table.cell align="end">
                                     <div class="flex items-center justify-end gap-1">
-                                        <flux:button href="{{ route('classes.show', $schoolClass->id) }}" icon="eye" size="sm" variant="subtle" tooltip="View Class Details" />
+                                        <flux:button href="{{ route('classes.show', $schoolClass->id) }}" wire:navigate.hover icon="eye" size="sm" variant="subtle" tooltip="View Class Details" />
                                         
                                         @can('edit classes')
-                                            <flux:button href="{{ route('classes.edit', $schoolClass->id) }}" icon="pencil" size="sm" variant="subtle" tooltip="Edit Class" />
+                                            <flux:button href="{{ route('classes.edit', $schoolClass->id) }}" wire:navigate.hover icon="pencil" size="sm" variant="subtle" tooltip="Edit Class" />
                                         @endcan
                                         
                                         @can('delete classes')
@@ -307,7 +248,7 @@ new #[Title('Classes')] class extends Component
                                 <flux:table.cell colspan="{{ isAdmin() ? 5 : 4 }}">
                                     <x-empty-state icon="academic-cap" color="indigo" title="No Classes Configured" description="Create classroom streams and sections to begin assigning teachers and enrolling students.">
                                         @can('create classes')
-                                            <flux:button href="{{ route('classes.create') }}" icon="plus" variant="primary">
+                                            <flux:button href="{{ route('classes.create') }}" wire:navigate.hover icon="plus" variant="primary">
                                                 Add First Class
                                             </flux:button>
                                         @endcan
@@ -320,5 +261,3 @@ new #[Title('Classes')] class extends Component
             </div>
         </div>
     </div>
-</x-layouts::app>
-

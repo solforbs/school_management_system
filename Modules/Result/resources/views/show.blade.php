@@ -16,7 +16,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1.5">
-                    <a href="{{ route('result.index') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
+                    <a href="{{ route('result.index') }}" wire:navigate.hover class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Results Ledger</span>
                     </a>
@@ -31,7 +31,7 @@
 
             <div class="flex items-center gap-2">
                 @can('edit result')
-                    <flux:button href="{{ route('result.edit', $result->id) }}" icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('result.edit', $result->id) }}" wire:navigate.hover icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
                         Edit Score
                     </flux:button>
                 @endcan
@@ -58,7 +58,7 @@
                     <div>
                         <div class="flex flex-wrap items-center gap-2.5">
                             @if($student)
-                                <a href="{{ route('student.show', $student->id) }}" class="text-xl font-black text-zinc-900 hover:text-blue-600 transition">
+                                <a href="{{ route('student.show', $student->id) }}" wire:navigate.hover class="text-xl font-black text-zinc-900 hover:text-blue-600 transition">
                                     {{ $student->name }}
                                 </a>
                             @else

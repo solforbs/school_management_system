@@ -142,6 +142,12 @@ if (! function_exists('currentInstitution')) {
         return $user->activeInstitution;
     }
 }
+if (! function_exists('currentInstitutionId')) {
+    function currentInstitutionId(): ?int
+    {
+        return currentInstitution()?->id;
+    }
+}
 if (! function_exists('institutionHasModule')) {
     function institutionHasModule(string $module): bool
     {

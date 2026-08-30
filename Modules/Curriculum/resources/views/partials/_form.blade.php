@@ -20,7 +20,14 @@
             </div>
 
             <div class="sm:col-span-2">
-                <flux:input type="text" name="name" label="Curriculum Name" value="{{ old('name', $curriculum->name ?? null) }}" placeholder="e.g CBC/8.4.4" required />
+                <flux:input type="text" name="name" label="Curriculum Name" value="{{ old('name', $curriculum->name ?? null) }}" placeholder="e.g. Competency Based Curriculum (CBC) or 8-4-4" required />
+            </div>
+
+            <div class="sm:col-span-2">
+                <flux:select name="system" label="Grading & Evaluation System" required>
+                    <flux:select.option value="cbc" :selected="old('system', $curriculum->system ?? 'cbc') === 'cbc'">CBC (Competency-Based — EE, ME, AE, BE Bands)</flux:select.option>
+                    <flux:select.option value="844" :selected="old('system', $curriculum->system ?? null) === '844'">8-4-4 (Standard Letter Grades — A to E)</flux:select.option>
+                </flux:select>
             </div>
         </div>
     </x-stepper.section>
@@ -34,7 +41,7 @@
 
     {{-- Sticky Action Footer --}}
     <x-slot:actions>
-        <flux:button href="{{ isset($curriculum) ? route('curriculum.show', $curriculum->id) : route('curriculum.index') }}" variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+        <flux:button href="{{ isset($curriculum) ? route('curriculum.show', $curriculum->id) : route('curriculum.index') }}" wire:navigate.hover variant="subtle" class="hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
             Cancel
         </flux:button>
         <flux:button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:opacity-90 hover:shadow-md transition-all border-none font-semibold px-6">

@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 
-use Flux\Flux;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -8,168 +8,117 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\Staff\Models\StaffDetails;
 
-new #[Title('Staff')] class extends Component
+new #[Title('Staff Directory')] class extends Component
 {
     use WithPagination;
-
-    /** @var string[] */
-    public const SORTABLE = ['name', 'job_title', 'department', 'hire_date', 'status'];
 
     #[Url]
     public string $search = '';
 
     #[Url]
-    public string $status = '';
-
-    #[Url]
     public string $department = '';
 
     #[Url]
-    public string $sort = 'name';
-
-    #[Url]
-    public string $direction = 'asc';
+    public string $status = '';
 
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view staff'), 403);
     }
 
-    public function updating(string $property): void
-    {
-        if (in_array($property, ['search', 'status', 'department'], true)) {
-            $this->resetPage();
-        }
-    }
-
-    public function sortBy(string $column): void
-    {
-        if (! in_array($column, self::SORTABLE, true)) {
-            return;
-        }
-
-        if ($this->sort === $column) {
-            $this->direction = $this->direction === 'asc' ? 'desc' : 'asc';
-
-            return;
-        }
-
-        $this->sort = $column;
-        $this->direction = 'asc';
-    }
-
-    public function delete(int $id): void
-    {
-        abort_unless(auth()->user()->can('delete staff'), 403);
-
-        $this->scoped()->findOrFail($id)->delete();
-
-        Flux::toast(text: 'Staff member removed.', variant: 'success');
-    }
-
     #[Computed]
-    public function staff()
+    public function staff(): LengthAwarePaginator
     {
-        $sort = in_array($this->sort, self::SORTABLE, true) ? $this->sort : 'name';
-        $direction = $this->direction === 'desc' ? 'desc' : 'asc';
-
-        return $this->scoped()
-            ->with(['user', 'institution'])
-            ->when($this->status !== '', fn ($query) => $query->where('status', $this->status))
-            ->when($this->department !== '', fn ($query) => $query->where('department', $this->department))
-            ->when($this->search !== '', function ($query) {
+        return StaffDetails::with(['user', 'institution'])
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
 
-                $query->where(fn ($q) => $q->where('name', 'like', $term)
-                    ->orWhere('staff_number', 'like', $term)
-                    ->orWhere('job_title', 'like', $term)
-                    ->orWhere('department', 'like', $term));
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('name', 'like', $term)
+                        ->orWhere('staff_number', 'like', $term)
+                        ->orWhere('job_title', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhereHas('user', fn ($uq) => $uq->where('email', 'like', $term));
+                });
             })
-            ->orderBy($sort, $direction)
+            ->when($this->department !== '', fn ($q) => $q->where('department', $this->department))
+            ->when($this->status !== '', fn ($q) => $q->where('status', $this->status))
+            ->orderBy('name')
             ->paginate(15);
     }
 
     #[Computed]
-    public function totalStaffCount()
+    public function totalStaff(): int
     {
-        return $this->scoped()->count();
+        return StaffDetails::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))->count();
     }
 
     #[Computed]
-    public function departments()
+    public function activeStaff(): int
     {
-        return $this->scoped()->whereNotNull('department')->where('department', '!=', '')->distinct()->pluck('department')->sort()->values();
+        return StaffDetails::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->where('status', 'active')
+            ->count();
     }
 
     #[Computed]
-    public function deptCount()
+    public function totalDepartments(): int
     {
         return count($this->departments);
     }
 
     #[Computed]
-    public function totalPayroll()
+    public function departments(): array
     {
-        return (float) $this->scoped()->sum('salary');
-    }
-
-    #[Computed]
-    public function institution()
-    {
-        return currentInstitution();
-    }
-
-    private function scoped()
-    {
-        $query = StaffDetails::query();
-
-        if (! isAdmin()) {
-            $query->where('institution_id', currentInstitution()?->id ?? 0);
-        }
-
-        return $query;
+        return StaffDetails::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->whereNotNull('department')
+            ->where('department', '!=', '')
+            ->distinct()
+            ->pluck('department')
+            ->sort()
+            ->values()
+            ->all();
     }
 }; ?>
+
 @php
     $staff = $this->staff;
-    $totalCount = method_exists($staff, 'total') ? $staff->total() : count($staff);
-    $totalStaffCount = $this->totalStaffCount;
+    $totalStaff = $this->totalStaff;
+    $activeStaff = $this->activeStaff;
+    $totalDepartments = $this->totalDepartments;
     $departments = $this->departments;
-    $deptCount = $this->deptCount;
-    $totalPayroll = $this->totalPayroll;
-    $institution = $this->institution;
-    $currentDept = $this->department;
-    $currentStatus = $this->status;
+
     $currentSearch = $this->search;
-    $hasActiveFilters = !empty($currentDept) || !empty($currentStatus) || !empty($currentSearch);
+    $currentDepartment = $this->department;
+    $currentStatus = $this->status;
+
+    $totalCount = method_exists($staff, 'total') ? $staff->total() : count($staff);
+    $hasActiveFilters = !empty($currentSearch) || !empty($currentDepartment) || !empty($currentStatus);
 @endphp
 
-<x-layouts::app :title="__('Staff Directory')">
-    <div class="flex flex-col gap-8 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        
-        {{-- Header Section --}}
+    <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        {{-- Top Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-blue-50 text-blue-700 border border-blue-200/60">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-200/60">
                         Human Resources
                     </span>
-                    <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-zinc-300">&bull;</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? 'Campus Operations' }}</span>
                 </div>
-                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Staff Directory</flux:heading>
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Staff Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
-                    Manage institutional personnel, professional designations, departments, and payroll allocations.
+                    Manage administrative, operational, and non-teaching personnel, contracts, and compensation.
                 </flux:text>
             </div>
-            
+
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('staff.payments.index') }}" icon="credit-card" variant="subtle" class="font-semibold shadow-sm">
-                    Staff Payments
-                </flux:button>
                 @can('create staff')
-                    <flux:button href="{{ route('staff.create') }}" icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
-                        Add Staff
+                    <flux:button href="{{ route('staff.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
+                        Add Staff Member
                     </flux:button>
                 @endcan
             </div>
@@ -185,193 +134,190 @@ new #[Title('Staff')] class extends Component
             </div>
         @endif
 
-        {{-- Top Staff & Payroll KPI Strip --}}
+        {{-- Top Executive Metrics Strip --}}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <x-kpi-card 
-                title="Total Staff Employed" 
+                title="Total Staff" 
                 icon="users" 
                 color="sky" 
-                :count="$totalStaffCount ?? $totalCount" 
-                subtext="Verified employment contracts" 
+                :count="$totalStaff" 
+                subtext="Registered staff members" 
+            />
+            
+            <x-kpi-card 
+                title="Active Personnel" 
+                icon="check-badge" 
+                color="emerald" 
+                :count="$activeStaff" 
+                subtext="Currently on active duty" 
+                href="{{ route('staff.index', ['status' => 'active']) }}" 
             />
             
             <x-kpi-card 
                 title="Operational Units" 
                 icon="building-office-2" 
                 color="indigo" 
-                :count="$deptCount ?? count($departments)" 
-                subtext="Active administrative branches" 
-            />
-            
-            <x-kpi-card 
-                title="Monthly Payroll Commitment" 
-                icon="banknotes" 
-                color="emerald" 
-                count="KES {{ number_format($totalPayroll ?? 0, 2) }}" 
-                href="{{ route('staff.payments.index') }}"
-                subtext="Institutional payroll allocation" 
+                :count="$totalDepartments" 
+                subtext="Configured departments" 
             />
         </div>
 
-                {{-- Reusable Single-Row Filter Toolbar --}}
+        {{-- Reusable Single-Row Filter Toolbar --}}
         <x-filter-toolbar 
             action="{{ route('staff.index') }}"
-            placeholder="Search staff name, staff no, or email..."
+            placeholder="Search staff name, employee ID, role, or phone..."
             :search="$currentSearch"
             :hasActiveFilters="$hasActiveFilters"
             resetRoute="{{ route('staff.index') }}"
         >
-            {{-- Department Selector --}}
-            <div style="flex: 0 1 220px;">
+            {{-- Department Filter --}}
+            <div style="flex: 0 1 200px;">
                 <select name="department" onchange="this.form.submit()"
-                    class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
-                    <option value="">All Departments ({{ count($departments) }})</option>
+                    class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                    <option value="">All Departments</option>
                     @foreach ($departments as $dept)
-                        <option value="{{ $dept }}" {{ $currentDept === $dept ? 'selected' : '' }}>
-                            {{ $dept }}
-                        </option>
+                        <option value="{{ $dept }}" {{ $currentDepartment == $dept ? 'selected' : '' }}>{{ $dept }}</option>
                     @endforeach
                 </select>
             </div>
 
-            {{-- Status Selector --}}
+            {{-- Status Filter --}}
             <div style="flex: 0 1 150px;">
                 <select name="status" onchange="this.form.submit()"
-                    class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                    class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Statuses</option>
-                    <option value="active" {{ $currentStatus === 'active' ? 'selected' : '' }}>Active Only</option>
-                    <option value="inactive" {{ $currentStatus === 'inactive' ? 'selected' : '' }}>Inactive Only</option>
-                    <option value="on_leave" {{ $currentStatus === 'on_leave' ? 'selected' : '' }}>On Leave</option>
-                    <option value="suspended" {{ $currentStatus === 'suspended' ? 'selected' : '' }}>Suspended</option>
+                    <option value="active" {{ $currentStatus == 'active' ? 'selected' : '' }}>Active Only</option>
+                    <option value="on_leave" {{ $currentStatus == 'on_leave' ? 'selected' : '' }}>On Leave</option>
+                    <option value="suspended" {{ $currentStatus == 'suspended' ? 'selected' : '' }}>Suspended</option>
+                    <option value="resigned" {{ $currentStatus == 'resigned' ? 'selected' : '' }}>Resigned</option>
                 </select>
             </div>
 
+            {{-- Filter Scope Removal Tags --}}
             <x-slot:scopeTags>
-                @if ($currentDept)
+                @if ($currentDepartment)
                     <a href="{{ route('staff.index', ['search' => $currentSearch, 'status' => $currentStatus]) }}" 
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-semibold transition border border-zinc-200/60"
                         title="Remove Department Filter">
-                        <span>Dept: <strong>{{ $currentDept }}</strong></span>
-                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">Γ£ò</span>
+                        <span>Dept: <strong>{{ $currentDepartment }}</strong></span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
                     </a>
                 @endif
 
                 @if ($currentStatus)
-                    <a href="{{ route('staff.index', ['search' => $currentSearch, 'department' => $currentDept]) }}" 
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
+                    <a href="{{ route('staff.index', ['search' => $currentSearch, 'department' => $currentDepartment]) }}" 
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-semibold transition border border-zinc-200/60"
                         title="Remove Status Filter">
                         <span>Status: <strong>{{ ucfirst(str_replace('_', ' ', $currentStatus)) }}</strong></span>
-                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">Γ£ò</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
                     </a>
                 @endif
 
                 @if ($currentSearch)
-                    <a href="{{ route('staff.index', ['department' => $currentDept, 'status' => $currentStatus]) }}" 
+                    <a href="{{ route('staff.index', ['department' => $currentDepartment, 'status' => $currentStatus]) }}" 
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold transition border border-blue-200/60"
                         title="Remove Search Keyword">
                         <span>Search: <strong>"{{ $currentSearch }}"</strong></span>
-                        <span class="text-blue-500 hover:text-blue-800 font-bold">Γ£ò</span>
+                        <span class="text-blue-500 hover:text-blue-800 font-bold">✕</span>
                     </a>
                 @endif
             </x-slot:scopeTags>
         </x-filter-toolbar>
 
-        {{-- Smart Grouped 4-Column Staff Ledger (Zero Horizontal Scroll) --}}
-        <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
+        {{-- Smart Grouped 4-Column Staff Ledger --}}
+        <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
             @if($staff->isNotEmpty())
                 <div class="w-full">
                     <table class="w-full text-left text-sm table-fixed">
-                        <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
+                        <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                             <tr>
-                                <th class="py-3.5 px-5 w-5/12">Staff Personnel & ID</th>
-                                <th class="py-3.5 px-5 w-3/12">Role & Department</th>
-                                <th class="py-3.5 px-5 w-2/12">Contact & Salary</th>
-                                <th class="py-3.5 px-5 w-2/12 text-right">Status & Actions</th>
+                                <th class="py-3.5 px-5 w-5/12">Staff Personnel &amp; ID</th>
+                                <th class="py-3.5 px-5 w-3/12">Role &amp; Department</th>
+                                <th class="py-3.5 px-5 w-2/12">Contact &amp; Salary</th>
+                                <th class="py-3.5 px-5 w-2/12 text-right">Status &amp; Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-100">
+                        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                             @foreach ($staff as $member)
                                 @php
-    $staff = $this->staff;
-    $totalCount = method_exists($staff, 'total') ? $staff->total() : count($staff);
-    $totalStaffCount = $this->totalStaffCount;
-    $departments = $this->departments;
-    $deptCount = $this->deptCount;
-    $totalPayroll = $this->totalPayroll;
-    $institution = $this->institution;
-    $currentDept = $this->department;
-    $currentStatus = $this->status;
-    $currentSearch = $this->search;
-    $hasActiveFilters = !empty($currentDept) || !empty($currentStatus) || !empty($currentSearch);
-@endphp
-                                <tr class="hover:bg-zinc-50/60 transition-colors">
-                                    {{-- Col 1: Staff Personnel & ID --}}
+                                    $initials = strtoupper(substr($member->name, 0, 2));
+                                    $phone = $member->phone ?? '';
+                                    $email = $member->user?->email ?? '';
+                                    $staffNo = $member->staff_number ?? 'EMP-S-' . str_pad($member->id, 3, '0', STR_PAD_LEFT);
+                                @endphp
+                                <tr class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
                                     <td class="py-4 px-5">
                                         <div class="flex items-center gap-3">
-                                            <div class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">
+                                            <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
                                                 {{ $initials }}
                                             </div>
                                             <div class="min-w-0 flex-1">
-                                                <a href="{{ route('staff.show', $member->id) }}" class="font-bold text-zinc-900 hover:text-zinc-600 transition truncate block">
+                                                <a href="{{ route('staff.show', $member->id) }}" wire:navigate.hover class="font-bold text-zinc-900 dark:text-white hover:text-zinc-600 transition truncate block">
                                                     {{ $member->name }}
                                                 </a>
-                                                <div class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">
-                                                    <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-semibold border border-zinc-200 text-[11px]">{{ $staffNo }}</span>
+                                                <div class="text-xs text-zinc-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                                                    <span class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200 dark:border-zinc-700 text-[11px]">{{ $staffNo }}</span>
                                                     @if($email)
                                                         <span class="text-zinc-300">&bull;</span>
-                                                        <a href="mailto:{{ $email }}" class="text-zinc-500 hover:text-zinc-800 font-sans text-xs truncate max-w-[160px]">{{ $email }}</a>
+                                                        <span class="text-[11px] text-zinc-500 font-sans truncate">{{ $email }}</span>
                                                     @endif
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
 
-                                    {{-- Col 2: Role & Department --}}
                                     <td class="py-4 px-5">
-                                        <div class="font-bold text-xs text-zinc-900 truncate" title="{{ $member->job_title }}">
+                                        <div class="font-bold text-xs text-zinc-900 dark:text-white truncate" title="{{ $member->job_title }}">
                                             {{ $member->job_title ?? 'Staff Personnel' }}
                                         </div>
-                                        <div class="text-[11px] text-zinc-500 mt-1 font-medium">
-                                            <span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/60">
+                                        <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 font-medium">
+                                            <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium border border-zinc-200/60 dark:border-zinc-700">
                                                 {{ $member->department ?? 'General' }}
                                             </span>
                                         </div>
                                     </td>
 
-                                    {{-- Col 3: Contact & Monthly Salary --}}
                                     <td class="py-4 px-5">
                                         @if($phone)
-                                            <a href="tel:{{ $phone }}" class="text-xs font-semibold text-zinc-800 hover:text-blue-600 transition flex items-center gap-1">
+                                            <a href="tel:{{ $phone }}" class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-blue-600 transition flex items-center gap-1">
                                                 <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
                                                 <span class="truncate">{{ $phone }}</span>
                                             </a>
                                         @else
-                                            <span class="text-xs text-zinc-400 italic">ΓÇö</span>
+                                            <span class="text-xs text-zinc-400 italic">—</span>
                                         @endif
-                                        <div class="font-mono text-xs font-bold text-zinc-900 mt-1">
-                                            {{ $member->salary ? 'KES ' . number_format($member->salary, 2) : 'ΓÇö' }}
+                                        <div class="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                                            {{ $member->salary ? 'KES ' . number_format($member->salary, 2) : '—' }}
                                         </div>
                                     </td>
 
-                                    {{-- Col 4: Status & Actions --}}
                                     <td class="py-4 px-5 text-right">
-                                        <div class="flex flex-col items-end gap-2">
-                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
-                                                {{ $member->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200' }}">
-                                                <span class="size-1.5 rounded-full {{ $member->is_active ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
-                                                {{ ucfirst(str_replace('_', ' ', $member->status)) }}
-                                            </span>
+                                        <div class="flex items-center justify-end gap-2">
+                                            @if($member->status === 'active')
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200">
+                                                    <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                                    Active
+                                                </span>
+                                            @elseif($member->status === 'on_leave')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200">
+                                                    On Leave
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                                    {{ ucfirst($member->status ?? 'Inactive') }}
+                                                </span>
+                                            @endif
 
-                                            <div class="flex items-center justify-end gap-1">
-                                                <flux:button href="{{ route('staff.show', $member->id) }}" size="sm" icon="eye" variant="subtle" tooltip="View Profile" />
+                                            <div class="flex items-center gap-1">
+                                                <flux:button href="{{ route('staff.show', $member->id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" title="View Profile" />
                                                 @can('edit staff')
-                                                    <flux:button href="{{ route('staff.edit', $member->id) }}" size="sm" icon="pencil-square" variant="subtle" tooltip="Edit Staff" />
+                                                    <flux:button href="{{ route('staff.edit', $member->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" title="Edit Staff" />
                                                 @endcan
                                                 @can('delete staff')
-                                                    <form action="{{ route('staff.destroy', $member->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove this staff member?');">
+                                                    <form action="{{ route('staff.destroy', $member->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this staff record?');">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <flux:button type="submit" size="sm" icon="trash" variant="subtle" class="text-rose-500 hover:text-rose-600 hover:bg-rose-50" tooltip="Delete" />
+                                                        <flux:button type="submit" size="sm" icon="trash" variant="subtle" class="text-rose-600 hover:text-rose-700" title="Delete Staff" />
                                                     </form>
                                                 @endcan
                                             </div>
@@ -383,31 +329,18 @@ new #[Title('Staff')] class extends Component
                     </table>
                 </div>
 
-                {{-- Table Footer Summary & Pagination --}}
-                <div class="border-t border-zinc-200/80 px-6 py-4 bg-zinc-50/50 flex flex-col sm:flex-row justify-between items-center text-xs text-zinc-500 gap-4">
-                    <div class="flex items-center gap-3">
-                        <span>Showing <strong class="text-zinc-800 font-semibold">{{ $staff->count() }}</strong> of <strong class="text-zinc-800 font-semibold">{{ number_format($totalCount) }}</strong> staff members</span>
-                        <span class="text-zinc-300">&bull;</span>
-                        <span>Page <strong class="text-zinc-800 font-semibold">{{ $staff->currentPage() }}</strong> of <strong class="text-zinc-800 font-semibold">{{ $staff->lastPage() }}</strong></span>
+                @if($staff->hasPages())
+                    <div class="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                        {{ $staff->links() }}
                     </div>
-                    @if(method_exists($staff, 'links') && $staff->hasPages())
-                        <div>
-                            {{ $staff->links() }}
-                        </div>
-                    @endif
-                </div>
+                @endif
             @else
-                {{-- Empty State --}}
-                <div class="flex flex-col items-center justify-center py-20 text-center">
-                    <div class="size-14 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-3">
-                        <flux:icon icon="users" class="size-7" />
-                    </div>
-                    <h4 class="text-base font-bold text-zinc-900">No Staff Members Found</h4>
-                    <p class="text-zinc-500 text-xs max-w-sm mx-auto mt-1 mb-4">
-                        There are no personnel matching your active filter criteria. Try resetting your search or department filter.
-                    </p>
+                <div class="py-16 text-center">
+                    <flux:icon icon="users" class="size-12 mx-auto text-zinc-300 mb-3" />
+                    <h4 class="text-base font-bold text-zinc-900 dark:text-white">No Staff Members Found</h4>
+                    <p class="text-xs text-zinc-500 mt-1 mb-4">No staff records match your active search or filter criteria.</p>
                     @can('create staff')
-                        <flux:button href="{{ route('staff.create') }}" variant="primary" icon="plus" size="sm">
+                        <flux:button href="{{ route('staff.create') }}" variant="primary" size="sm">
                             Add Staff Member
                         </flux:button>
                     @endcan
@@ -415,5 +348,3 @@ new #[Title('Staff')] class extends Component
             @endif
         </div>
     </div>
-</x-layouts::app>
-

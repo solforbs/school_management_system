@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -35,14 +35,13 @@ new #[Title('Subject')] class extends Component
 }; ?>
 <div>
     @if($subject)
-<x-layouts::app :title="__('Edit Subject - ' . $subject->name)">
     <div class="flex flex-col gap-6 w-full max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <a href="{{ route('subject.show', $subject->id) }}" class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
+                    <a href="{{ route('subject.show', $subject->id) }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Subject Dossier</span>
                     </a>
@@ -89,26 +88,29 @@ new #[Title('Subject')] class extends Component
                     <div>
                         <label class="text-xs font-bold text-zinc-700 block mb-1.5">Subject Name *</label>
                         <input type="text" name="name" value="{{ old('name', $subject->name) }}" required
-                            class="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
-                    </div>
-                    
-                    <div>
-                        <label class="text-xs font-bold text-zinc-700 block mb-1.5">Course Code</label>
-                        <input type="text" name="code" value="{{ old('code', $subject->code) }}"
-                            class="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                            class="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                            placeholder="e.g. Mathematics, English, Biology">
                     </div>
 
-                    <div class="pt-4 border-t border-zinc-100 space-y-4">
-                        <div class="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
-                            <input type="checkbox" name="is_compulsory" id="is_compulsory" value="1" {{ old('is_compulsory', $subject->is_compulsory) ? 'checked' : '' }}
-                                class="mt-0.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900">
-                            <label for="is_compulsory" class="text-xs">
-                                <span class="font-bold text-zinc-900 block">Compulsory Core Subject</span>
-                                <span class="text-zinc-500 block mt-0.5">If checked, this subject is automatically mandatory for all learners in enrolled classes.</span>
-                            </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-zinc-700 block mb-1.5">Subject Code</label>
+                            <input type="text" name="code" value="{{ old('code', $subject->code) }}"
+                                class="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-xs font-mono font-semibold uppercase focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                placeholder="e.g. MATH-101">
                         </div>
 
+                        <div>
+                            <flux:select name="is_compulsory" label="Requirement Type *">
+                                <flux:select.option value="1" :selected="old('is_compulsory', $subject->is_compulsory) == 1">Compulsory (Core)</flux:select.option>
+                                <flux:select.option value="0" :selected="old('is_compulsory', $subject->is_compulsory) == 0">Optional (Elective)</flux:select.option>
+                            </flux:select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
                         <div class="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+                            <input type="hidden" name="is_active" value="0">
                             <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $subject->is_active) ? 'checked' : '' }}
                                 class="mt-0.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900">
                             <label for="is_active" class="text-xs">
@@ -120,7 +122,7 @@ new #[Title('Subject')] class extends Component
                 </div>
 
                 <div class="pt-6 border-t border-zinc-100 flex items-center justify-end gap-3">
-                    <flux:button href="{{ route('subject.show', $subject->id) }}" variant="subtle" class="font-semibold">
+                    <flux:button href="{{ route('subject.show', $subject->id) }}" wire:navigate.hover variant="subtle" class="font-semibold">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold px-6">
@@ -130,17 +132,15 @@ new #[Title('Subject')] class extends Component
             </form>
         </div>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Add New Subject')">
     <div class="flex flex-col gap-6 w-full max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <a href="{{ route('subject.index') }}" class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
+                    <a href="{{ route('subject.index') }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Subjects Directory</span>
                     </a>
@@ -198,6 +198,7 @@ new #[Title('Subject')] class extends Component
 
                     <div class="pt-4 border-t border-zinc-100 space-y-4">
                         <div class="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+                            <input type="hidden" name="is_compulsory" value="0">
                             <input type="checkbox" name="is_compulsory" id="is_compulsory" value="1" {{ old('is_compulsory') ? 'checked' : '' }}
                                 class="mt-0.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900">
                             <label for="is_compulsory" class="text-xs">
@@ -207,6 +208,7 @@ new #[Title('Subject')] class extends Component
                         </div>
 
                         <div class="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+                            <input type="hidden" name="is_active" value="0">
                             <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}
                                 class="mt-0.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900">
                             <label for="is_active" class="text-xs">
@@ -218,7 +220,7 @@ new #[Title('Subject')] class extends Component
                 </div>
 
                 <div class="pt-6 border-t border-zinc-100 flex items-center justify-end gap-3">
-                    <flux:button href="{{ route('subject.index') }}" variant="subtle" class="font-semibold">
+                    <flux:button href="{{ route('subject.index') }}" wire:navigate.hover variant="subtle" class="font-semibold">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" icon="plus" class="font-semibold px-6">
@@ -228,7 +230,5 @@ new #[Title('Subject')] class extends Component
             </form>
         </div>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

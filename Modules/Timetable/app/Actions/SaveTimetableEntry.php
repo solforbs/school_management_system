@@ -68,7 +68,7 @@ class SaveTimetableEntry
         $payload = [
             'institution_id' => $institutionId,
             'class_id' => $data['class_id'],
-            'teacher_id' => $data['teacher_id'] ?: null,
+            'teacher_id' => ! empty($data['teacher_id']) ? $data['teacher_id'] : null,
             'subject' => $data['subject'],
             'day_of_week' => $data['day_of_week'],
             'start_time' => $data['start_time'],

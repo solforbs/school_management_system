@@ -1,7 +1,9 @@
-﻿<?php
+<?php
 
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Institution\Models\Institution;
 use Modules\Teacher\Actions\SaveTeacher;
 use Modules\Teacher\Models\TeacherDetails;
 
@@ -23,6 +25,12 @@ new #[Title('Teacher')] class extends Component
         $this->authorizeAccessTo($this->teacher);
     }
 
+    #[Computed]
+    public function institutions()
+    {
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
+    }
+
     private function authorizeAccessTo(TeacherDetails $details): void
     {
         if (isAdmin()) {
@@ -34,7 +42,6 @@ new #[Title('Teacher')] class extends Component
 }; ?>
 <div>
     @if($teacher)
-<x-layouts::app :title="__('Edit Teacher')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -42,12 +49,12 @@ new #[Title('Teacher')] class extends Component
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Teacher Profile</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update employment and contact information for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $teacher->teacher->name }}</span>.
+                    Update employment and contact information for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $teacher->teacher?->name }}</span>.
                 </flux:text>
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('teacher.show', $teacher->teacher_id) }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('teacher.show', $teacher->teacher_id) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Profile
                 </flux:button>
             </div>
@@ -71,20 +78,34 @@ new #[Title('Teacher')] class extends Component
             @csrf
             @method('PUT')
 
-            <x-stepper.layout defaultActive="employment">
+            <x-stepper.layout defaultActive="account-info">
                 
                 <x-slot:sidebar>
+                    <x-stepper.step id="account-info" title="Account Setup" description="Name, email, and password." isLast="false" />
                     <x-stepper.step id="employment" title="Employment" description="Institution and role details." isLast="false" />
-                    <x-stepper.step id="profile" title="Profile Details" description="Contact info and notes." isLast="false" />
-                    <x-stepper.step id="account-info" title="System Account" description="Update name or credentials." isLast="true" />
+                    <x-stepper.step id="profile" title="Profile Details" description="Contact info and notes." isLast="true" />
                 </x-slot:sidebar>
 
-                {{-- Step 1: Employment Details --}}
-                <x-stepper.section id="employment" title="Employment Record" description="Update this teacher's institution and academic role.">
+                {{-- Step 1: Account Info --}}
+                <x-stepper.section id="account-info" title="System Account" description="Update login credentials for this teacher.">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <flux:input type="text" name="name" label="Full Name" value="{{ old('name', $teacher->teacher?->name) }}" placeholder="e.g. Jane Doe" required />
+                        </div>
+                        
+                        <flux:input type="email" name="email" label="Email Address" value="{{ old('email', $teacher->teacher?->email) }}" placeholder="jane@example.com" autocomplete="new-password" required />
+                        
+                        <flux:input type="password" name="password" label="New Password (optional)" placeholder="Leave blank to keep existing password" autocomplete="new-password" />
+                    </div>
+                </x-stepper.section>
+
+                {{-- Step 2: Employment Details --}}
+                <x-stepper.section id="employment" title="Employment Record" description="Manage institution and academic role details.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="md:col-span-2">
                             <flux:select name="institution_id" label="Assigned Institution" required>
-                                @foreach ($institutions as $institution)
+                                <flux:select.option value="">Select Institution...</flux:select.option>
+                                @foreach ($this->institutions as $institution)
                                     <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $teacher->institution_id) == $institution->id">
                                         {{ $institution->name }}
                                     </flux:select.option>
@@ -98,12 +119,12 @@ new #[Title('Teacher')] class extends Component
                         
                         <flux:input type="text" name="qualification" label="Highest Qualification" value="{{ old('qualification', $teacher->qualification) }}" placeholder="e.g. BSc. Education, PhD Physics" />
                         
-                        <flux:input type="date" name="hire_date" label="Hire Date" value="{{ old('hire_date', $teacher->hire_date?->format('Y-m-d')) }}" />
+                        <flux:input type="date" name="hire_date" label="Hire Date" value="{{ old('hire_date', $teacher->hire_date ? \Carbon\Carbon::parse($teacher->hire_date)->format('Y-m-d') : '') }}" />
                     </div>
                 </x-stepper.section>
 
-                {{-- Step 2: Profile Details --}}
-                <x-stepper.section id="profile" title="Profile Details" description="Update contact information and current status.">
+                {{-- Step 3: Profile Details --}}
+                <x-stepper.section id="profile" title="Profile Details" description="Contact information and current status.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:input type="text" name="phone" label="Phone Number" value="{{ old('phone', $teacher->phone) }}" placeholder="+1 (555) 000-0000" />
                         
@@ -129,30 +150,8 @@ new #[Title('Teacher')] class extends Component
                     </div>
                 </x-stepper.section>
 
-                {{-- Step 3: Account Info --}}
-                <x-stepper.section id="account-info" title="System Account" description="Update login credentials. Leave password blank if you do not wish to change it.">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2">
-                            <flux:input type="text" name="name" label="Full Name" value="{{ old('name', $teacher->teacher->name) }}" required />
-                        </div>
-                        
-                        <flux:input type="email" name="email" label="Email Address" value="{{ old('email', $teacher->teacher->email) }}" autocomplete="new-password" required />
-                        
-                        <flux:input type="password" name="password" label="New Password (Optional)" description="Leave blank to keep current password." autocomplete="new-password" />
-                        
-                        <div class="md:col-span-2">
-                            <div class="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30 rounded-xl p-4 flex items-start gap-3">
-                                <flux:icon icon="exclamation-triangle" class="size-5 text-amber-500 mt-0.5 shrink-0" />
-                                <div class="text-sm text-amber-800 dark:text-amber-300">
-                                    Changing the email or password here will immediately affect the teacher's ability to log in. Please ensure you communicate any new credentials to them securely.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </x-stepper.section>
-
                 <x-slot:actions>
-                    <flux:button href="{{ route('teacher.show', $teacher->teacher_id) }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('teacher.show', $teacher->teacher_id) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -163,10 +162,8 @@ new #[Title('Teacher')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Create Teacher')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -179,7 +176,7 @@ new #[Title('Teacher')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('teacher.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('teacher.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Directory
                 </flux:button>
             </div>
@@ -238,7 +235,7 @@ new #[Title('Teacher')] class extends Component
                         <div class="md:col-span-2">
                             <flux:select name="institution_id" label="Assigned Institution" required>
                                 <flux:select.option value="">Select Institution...</flux:select.option>
-                                @foreach ($institutions as $institution)
+                                @foreach ($this->institutions as $institution)
                                     <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
                                         {{ $institution->name }}
                                     </flux:select.option>
@@ -284,7 +281,7 @@ new #[Title('Teacher')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('teacher.index') }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('teacher.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -295,7 +292,5 @@ new #[Title('Teacher')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\Plan;
 use Illuminate\Support\Collection;
@@ -44,7 +44,6 @@ new #[Title('Institution')] class extends Component
 }; ?>
 <div>
     @if($institution)
-<x-layouts::app :title="__('Edit Workspace')">
     <div x-data="{ 
             photoPreview: null,
             updatePhotoPreview() {
@@ -117,6 +116,25 @@ new #[Title('Institution')] class extends Component
                             <flux:input type="text" name="education_level" label="Education Level"
                                 value="{{ old('education_level', $institution->education_level) }}" placeholder="e.g. Primary, Secondary" />
                         </div>
+
+                        <div>
+                            <flux:input type="text" name="timezone" label="Timezone"
+                                value="{{ old('timezone', $institution->timezone ?? 'Africa/Nairobi') }}" required />
+                        </div>
+
+                        <div>
+                            <flux:input type="number" name="min_electives" label="Minimum Electives"
+                                value="{{ old('min_electives', $institution->min_electives ?? 0) }}" required />
+                        </div>
+
+                        <div>
+                            <flux:input type="number" name="max_electives" label="Maximum Electives"
+                                value="{{ old('max_electives', $institution->max_electives) }}" />
+                        </div>
+
+                        @unlessrole('Admin')
+                            <input type="hidden" name="is_active" value="{{ $institution->is_active ? 1 : 0 }}">
+                        @endunlessrole
 
                         {{-- Live Image Preview & Drag and Drop --}}
                         <div class="md:col-span-2 mt-2">
@@ -253,17 +271,15 @@ new #[Title('Institution')] class extends Component
                 @endhasrole
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('institution.index') }}" variant="subtle">Cancel</flux:button>
+                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle">Cancel</flux:button>
                     <flux:button type="submit" variant="primary" class="px-6 font-semibold">Update Institution</flux:button>
                 </x-slot:actions>
 
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Create Workspace')">
     <div x-data="{ 
             photoPreview: null,
             updatePhotoPreview() {
@@ -409,14 +425,12 @@ new #[Title('Institution')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('institution.index') }}" variant="subtle">Cancel</flux:button>
+                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle">Cancel</flux:button>
                     <flux:button type="submit" variant="primary" class="px-6 font-semibold">Create Workspace</flux:button>
                 </x-slot:actions>
 
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

@@ -26,7 +26,7 @@
 
             <div class="flex-1 space-y-2.5">
                 @forelse ($dayEntries as $entry)
-                    <a href="{{ route('timetable.show', $entry->id) }}" class="block p-3 rounded-xl border border-zinc-200/70 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 hover:bg-indigo-50/40 hover:border-indigo-200 dark:hover:bg-zinc-800 transition-all hover:shadow-xs group">
+                    <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block p-3 rounded-xl border border-zinc-200/70 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 hover:bg-indigo-50/40 hover:border-indigo-200 dark:hover:bg-zinc-800 transition-all hover:shadow-xs group">
                         <div class="flex items-center justify-between mb-1.5">
                             <span class="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
                                 {{ $entry->start_time?->format('H:i') }} - {{ $entry->end_time?->format('H:i') }}

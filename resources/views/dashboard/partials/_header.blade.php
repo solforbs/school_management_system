@@ -37,8 +37,9 @@
             @endif
             @can('view report')
                 <span class="text-zinc-300 mx-1">&bull;</span>
-                <a href="{{ route('report.index') }}" class="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5 font-medium">
-                    Open Institutional Reports &rarr;
+                <a href="{{ route('report.index') }}" wire:navigate.hover class="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5 font-medium">
+                    Explore Analytics
+                    <flux:icon icon="arrow-right" class="size-3" />
                 </a>
             @endcan
         </flux:text>

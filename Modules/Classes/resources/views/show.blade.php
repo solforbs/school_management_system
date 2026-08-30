@@ -11,9 +11,9 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 text-xs text-zinc-500 mb-1">
-                    <a href="{{ route('dashboard') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Dashboard</a>
+                    <a href="{{ route('dashboard') }}" wire:navigate.hover class="hover:text-zinc-800 dark:hover:text-zinc-200">Dashboard</a>
                     <span>/</span>
-                    <a href="{{ route('classes.index') }}" class="hover:text-zinc-800 dark:hover:text-zinc-200">Classes</a>
+                    <a href="{{ route('classes.index') }}" wire:navigate.hover class="hover:text-zinc-800 dark:hover:text-zinc-200">Classes</a>
                     <span>/</span>
                     <span class="text-zinc-800 dark:text-zinc-200 font-medium">{{ $schoolClass->name }}</span>
                 </div>
@@ -34,11 +34,11 @@
             </div>
             
             <div class="flex items-center gap-2.5">
-                <flux:button href="{{ route('classes.index') }}" icon="arrow-left" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                <flux:button href="{{ route('classes.index') }}" wire:navigate.hover icon="arrow-left" variant="ghost" class="hover:bg-zinc-100 dark:hover:bg-zinc-800">
                     Back to Classes
                 </flux:button>
                 @can('edit classes')
-                    <flux:button href="{{ route('classes.edit', $schoolClass->id) }}" icon="pencil" variant="primary" class="shadow-sm">
+                    <flux:button href="{{ route('classes.edit', $schoolClass->id) }}" wire:navigate.hover icon="pencil" variant="primary" class="shadow-sm">
                         Edit Class
                     </flux:button>
                 @endcan

@@ -48,7 +48,7 @@
         <div class="flex items-center justify-between mb-4">
             <flux:heading size="lg" class="font-semibold">Recent Fees</flux:heading>
             @can('view feemanagement')
-                <flux:button href="{{ route('feemanagement.index') }}" variant="ghost" size="sm" icon-trailing="chevron-right" class="text-xs">
+                <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm" icon-trailing="chevron-right" class="text-xs">
                     View All
                 </flux:button>
             @endcan

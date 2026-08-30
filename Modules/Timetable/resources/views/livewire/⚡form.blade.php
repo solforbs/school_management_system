@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -6,6 +6,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Modules\Classes\Models\SchoolClass;
+use Modules\Institution\Models\Institution;
 use Modules\Subject\Models\Subject;
 use Modules\Timetable\Actions\SaveTimetableEntry;
 use Modules\Timetable\Models\TimetableEntry;
@@ -69,6 +70,16 @@ new #[Title('Timetable Entry')] class extends Component
         return $query->orderBy('name')->get();
     }
 
+    #[Computed]
+    public function institutions(): Collection
+    {
+        if (isAdmin()) {
+            return Institution::orderBy('name')->get();
+        }
+
+        return Institution::where('id', currentInstitution()?->id ?? 0)->get();
+    }
+
     private function scoped()
     {
         $query = TimetableEntry::query();
@@ -82,7 +93,6 @@ new #[Title('Timetable Entry')] class extends Component
 }; ?>
 <div>
     @if($entry)
-<x-layouts::app :title="__('Edit Timetable Entry')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -95,7 +105,7 @@ new #[Title('Timetable Entry')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('timetable.show', $entry) }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('timetable.show', $entry) }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Entry
                 </flux:button>
             </div>
@@ -131,7 +141,7 @@ new #[Title('Timetable Entry')] class extends Component
                 <x-stepper.section id="academic-details" title="Academic Details" description="Update the core academic context for this schedule entry.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:select name="institution_id" label="Institution" required>
-                            @foreach ($institutions as $institution)
+                            @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $entry->institution_id) == $institution->id">
                                     {{ $institution->name }}
                                 </flux:select.option>
@@ -176,6 +186,7 @@ new #[Title('Timetable Entry')] class extends Component
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:input type="text" name="room" label="Room / Location" value="{{ old('room', $entry->room) }}" />
                         
+                        <input type="hidden" name="teacher_id" value="">
                         <flux:select name="teacher_id" label="Teacher">
                             <flux:select.option value="">Unassigned (TBA)</flux:select.option>
                             @foreach ($this->teachers as $teacher)
@@ -192,7 +203,7 @@ new #[Title('Timetable Entry')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('timetable.show', $entry) }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('timetable.show', $entry) }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -203,10 +214,8 @@ new #[Title('Timetable Entry')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
 
     @else
-<x-layouts::app :title="__('Create Timetable Entry')">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
@@ -219,7 +228,7 @@ new #[Title('Timetable Entry')] class extends Component
             </div>
             
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('timetable.index') }}" icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
+                <flux:button href="{{ route('timetable.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Timetable
                 </flux:button>
             </div>
@@ -255,7 +264,7 @@ new #[Title('Timetable Entry')] class extends Component
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:select name="institution_id" label="Institution" required>
                             <flux:select.option value="">Select Institution</flux:select.option>
-                            @foreach ($institutions as $institution)
+                            @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
                                     {{ $institution->name }}
                                 </flux:select.option>
@@ -302,6 +311,7 @@ new #[Title('Timetable Entry')] class extends Component
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:input type="text" name="room" label="Room / Location" value="{{ old('room') }}" placeholder="e.g. Room 402, Main Hall..." />
                         
+                        <input type="hidden" name="teacher_id" value="">
                         <flux:select name="teacher_id" label="Teacher">
                             <flux:select.option value="">Unassigned (TBA)</flux:select.option>
                             @foreach ($this->teachers as $teacher)
@@ -318,7 +328,7 @@ new #[Title('Timetable Entry')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('timetable.index') }}" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('timetable.index') }}" wire:navigate.hover variant="subtle" class="font-semibold shadow-sm">
                         Cancel
                     </flux:button>
                     <flux:button type="submit" variant="primary" class="font-semibold shadow-sm px-6">
@@ -329,7 +339,5 @@ new #[Title('Timetable Entry')] class extends Component
             </x-stepper.layout>
         </form>
     </div>
-</x-layouts::app>
-
     @endif
 </div>

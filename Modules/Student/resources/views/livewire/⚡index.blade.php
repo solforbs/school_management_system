@@ -121,7 +121,15 @@ new #[Title('Student Directory')] class extends Component
     #[Computed]
     public function classes()
     {
-        return SchoolClass::all();
+        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderBy('name')
+            ->get();
+    }
+    
+    #[Computed]
+    public function currentInstitutionModel()
+    {
+        return currentInstitution();
     }
 
     private function scoped()
@@ -133,7 +141,7 @@ new #[Title('Student Directory')] class extends Component
         }
 
         if (! isAdmin()) {
-            return $query->where('institution_id', currentInstitution()?->id ?? 0);
+            return $query->where('institution_id', currentInstitutionId() ?? 0);
         }
 
         return $query;
@@ -143,9 +151,9 @@ new #[Title('Student Directory')] class extends Component
     $totalCount = method_exists($this->students, 'total') ? $this->students->total() : count($this->students);
     $hasActiveFilters = !empty($this->search) || !empty($this->classId) || !empty($this->status) || !empty($this->gender);
     $selectedClass = $this->classes->firstWhere('id', $this->classId);
+    $institution = $this->currentInstitutionModel;
 @endphp
 
-<x-layouts::app :title="__('Student Directory')">
     <div class="flex flex-col gap-8 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
         {{-- Top Header Section --}}
@@ -156,7 +164,7 @@ new #[Title('Student Directory')] class extends Component
                         Academic Enrollment
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? 'Campus Operations' }}</span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Student Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -166,7 +174,7 @@ new #[Title('Student Directory')] class extends Component
 
             <div class="flex items-center gap-3">
                 @can('create student')
-                    <flux:button href="{{ route('student.create') }}" icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
+                    <flux:button href="{{ route('student.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Enroll Student
                     </flux:button>
                 @endcan
@@ -262,7 +270,7 @@ new #[Title('Student Directory')] class extends Component
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
                         title="Remove Class Filter">
                         <span>Class: <strong>{{ $selectedClass->name }}</strong></span>
-                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">Γ£ò</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">×</span>
                     </a>
                 @endif
 
@@ -271,7 +279,7 @@ new #[Title('Student Directory')] class extends Component
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
                         title="Remove Status Filter">
                         <span>Status: <strong>{{ ucfirst($this->status) }}</strong></span>
-                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">Γ£ò</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">×</span>
                     </a>
                 @endif
 
@@ -280,7 +288,7 @@ new #[Title('Student Directory')] class extends Component
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
                         title="Remove Gender Filter">
                         <span>Gender: <strong>{{ ucfirst($this->gender) }}</strong></span>
-                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">Γ£ò</span>
+                        <span class="text-zinc-400 hover:text-zinc-700 font-bold">×</span>
                     </a>
                 @endif
 
@@ -289,7 +297,7 @@ new #[Title('Student Directory')] class extends Component
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold transition border border-blue-200/60"
                         title="Remove Search Keyword">
                         <span>Search: <strong>"{{ $this->search }}"</strong></span>
-                        <span class="text-blue-500 hover:text-blue-800 font-bold">Γ£ò</span>
+                        <span class="text-blue-500 hover:text-blue-800 font-bold">×</span>
                     </a>
                 @endif
             </x-slot:scopeTags>
@@ -311,10 +319,16 @@ new #[Title('Student Directory')] class extends Component
                         <tbody class="divide-y divide-zinc-100">
                             @foreach ($this->students as $student)
                                 @php
-    $totalCount = method_exists($this->students, 'total') ? $this->students->total() : count($this->students);
-    $hasActiveFilters = !empty($this->search) || !empty($this->classId) || !empty($this->status) || !empty($this->gender);
-    $selectedClass = $this->classes->firstWhere('id', $this->classId);
-@endphp
+                                    $user = $student->student ?? $student->user ?? $student;
+                                    $initials = collect(explode(' ', $user?->name ?? ''))->map(fn($w) => strtoupper(substr($w, 0, 1)))->take(2)->join('');
+                                    $admNo = $student->admission_number ?? 'ADM-' . str_pad($student->id, 4, '0', STR_PAD_LEFT);
+                                    $guardian = $student->guardian_name ?? $student->parent_name ?? 'Not Listed';
+                                    $guardianPhone = $student->guardian_phone ?? $student->parent_phone ?? $student->phone;
+                                    $status = $student->enrollment_status ?? ($student->is_active ? 'active' : 'inactive');
+                                    $schoolClass = $student->schoolClass ?? null;
+                                    $className = $schoolClass?->name ?? 'Unassigned Class';
+                                    $classLevel = $schoolClass?->level ?? null;
+                                @endphp
                                 <tr class="hover:bg-zinc-50/60 transition-colors">
                                     {{-- Col 1: Student Profile & Admission --}}
                                     <td class="py-4 px-5">
@@ -328,7 +342,7 @@ new #[Title('Student Directory')] class extends Component
                                                 </div>
                                             @endif
                                             <div class="min-w-0 flex-1">
-                                                <a href="{{ $user ? route('student.show', $user->id) : '#' }}" class="font-bold text-zinc-900 hover:text-blue-600 transition truncate block">
+                                                <a href="{{ $user ? route('student.show', $user->id) : '#' }}" wire:navigate.hover class="font-bold text-zinc-900 hover:text-blue-600 transition truncate block">
                                                     {{ $user?->name ?? 'Student' }}
                                                 </a>
                                                 <div class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">
@@ -385,9 +399,9 @@ new #[Title('Student Directory')] class extends Component
 
                                             @if($user)
                                                 <div class="flex items-center justify-end gap-1">
-                                                    <flux:button href="{{ route('student.show', $user->id) }}" size="sm" icon="eye" variant="subtle" tooltip="View Dossier" />
+                                                    <flux:button href="{{ route('student.show', $user->id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" tooltip="View Dossier" />
                                                     @can('edit student')
-                                                        <flux:button href="{{ route('student.edit', $user->id) }}" size="sm" icon="pencil-square" variant="subtle" tooltip="Edit Profile" />
+                                                        <flux:button href="{{ route('student.edit', $user->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" tooltip="Edit Profile" />
                                                     @endcan
                                                     @can('delete student')
                                                         <form action="{{ route('student.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove student {{ addslashes($user->name) }} from the directory?');">
@@ -438,6 +452,5 @@ new #[Title('Student Directory')] class extends Component
             @endif
         </div>
     </div>
-</x-layouts::app>
 
 

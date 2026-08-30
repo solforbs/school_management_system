@@ -1,15 +1,13 @@
-﻿<?php
+<?php
 
-use Flux\Flux;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Curriculum\Models\Curriculum;
-use Modules\Student\Models\StudentDetails;
 
-new #[Title('Curricula')] class extends Component
+new #[Title('Curricula & Frameworks')] class extends Component
 {
     #[Url]
     public string $search = '';
@@ -22,75 +20,51 @@ new #[Title('Curricula')] class extends Component
     public function delete(int $id): void
     {
         abort_unless(auth()->user()->can('delete curriculum'), 403);
-
-        $this->scoped()->findOrFail($id)->delete();
-
-        Flux::toast(text: 'Curriculum removed.', variant: 'success');
+        $curriculum = Curriculum::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->findOrFail($id);
+        $curriculum->delete();
     }
 
     #[Computed]
     public function curricula(): Collection
     {
-        return $this->scoped()
-            ->with('institution')
-            ->when($this->search !== '', fn ($query) => $query->where('name', 'like', '%'.$this->search.'%'))
+        return Curriculum::with('institution')
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($this->search !== '', fn ($q) => $q->where(function ($sq) {
+                $sq->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('system', 'like', '%'.$this->search.'%');
+            }))
             ->orderBy('name')
             ->get();
     }
-
-    private function scoped()
-    {
-        $user = auth()->user();
-        $query = Curriculum::query();
-
-        if (isAdmin()) {
-            return $query;
-        }
-
-        if ($user->hasRole('Teacher')) {
-            return $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0);
-        }
-
-        if ($user->hasAnyRole(['Parent', 'Student'])) {
-            $institutionIds = $user->hasRole('Parent')
-                ? StudentDetails::where('parent_id', $user->id)->pluck('institution_id')
-                : StudentDetails::where('student_id', $user->id)->pluck('institution_id');
-
-            return $query->whereIn('institution_id', $institutionIds);
-        }
-
-        return $query->where('institution_id', currentInstitution()?->id ?? 0);
-    }
 }; ?>
+
 @php
     $curricula = $this->curricula;
-    $totalCurricula = $curricula->count();
-    $activeCount = $curricula->filter(fn($c) => $c->status === 'active')->count();
-    $dismissedCount = $curricula->filter(fn($c) => $c->status !== 'active')->count();
+    $totalFrameworks = $curricula->count();
+    $activeInstitutions = $curricula->pluck('institution_id')->unique()->count();
+    $canManageClasses = Route::has('classes.index') && auth()->user()->can('view classes');
 @endphp
 
-<x-layouts::app :title="__(config('curriculum.name'))">
     <div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <div class="flex items-center gap-2.5">
-                    <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">
-                        Academic Curricula
-                    </flux:heading>
+                <div class="flex items-center gap-2">
+                    <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Curricula &amp; Frameworks</flux:heading>
                     <flux:badge size="sm" color="indigo" class="font-semibold">
-                        {{ $totalCurricula }} {{ Str::plural('Framework', $totalCurricula) }}
+                        {{ $totalFrameworks }} Frameworks
                     </flux:badge>
                 </div>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Manage educational curricula, national standards, and instructional programs.
+                    Manage educational systems (CBC, 8-4-4, Cambridge, IB), grade structures, and academic frameworks.
                 </flux:text>
             </div>
             
             <div class="flex items-center gap-3">
                 @can('create curriculum')
-                    <flux:button href="{{ route('curriculum.create') }}" icon="plus" variant="primary" class="shadow-sm hover:shadow-md transition-all">
+                    <flux:button href="{{ route('curriculum.create') }}" wire:navigate.hover icon="plus" variant="primary" class="shadow-sm hover:shadow-md transition-all">
                         Add Curriculum
                     </flux:button>
                 @endcan
@@ -110,100 +84,88 @@ new #[Title('Curricula')] class extends Component
         {{-- Animated KPI Metrics Grid --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <x-kpi-card 
-                title="Total Curricula" 
+                title="Active Frameworks" 
                 icon="book-open" 
                 color="indigo" 
-                :count="$totalCurricula" 
-                subtext="registered frameworks" 
+                :count="$totalFrameworks" 
+                subtext="curricula registered" 
                 :href="route('curriculum.index')" 
             />
             <x-kpi-card 
-                title="Active Programs" 
-                icon="check-circle" 
-                color="emerald" 
-                :count="$activeCount" 
-                countSuffix="/{{ $totalCurricula }}" 
-                subtext="in active instruction" 
+                title="Institutions Enrolled" 
+                icon="building-library" 
+                color="sky" 
+                :count="$activeInstitutions" 
+                subtext="campuses adhering" 
+                :href="isAdmin() ? route('institution.index') : null" 
             />
             <x-kpi-card 
-                title="Archived / Inactive" 
-                icon="archive-box" 
-                color="zinc" 
-                :count="$dismissedCount" 
-                subtext="dismissed curricula" 
+                title="Class Streams" 
+                icon="academic-cap" 
+                color="emerald" 
+                :count="$totalFrameworks" 
+                subtext="structured pathways" 
+                :href="$canManageClasses ? route('classes.index') : null" 
             />
         </div>
 
-        {{-- Table Card --}}
+        {{-- Curricula Table Card --}}
         <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
             <div class="overflow-x-auto">
                 <flux:table>
                     <flux:table.columns>
-                        <flux:table.column>Curriculum Framework</flux:table.column>
+                        <x-sortable-column column="name">Curriculum Framework</x-sortable-column>
                         @if (isAdmin())
-                            <flux:table.column>Campus / Institution</flux:table.column>
+                            <flux:table.column>Institution</flux:table.column>
                         @endif
-                        <flux:table.column>Status</flux:table.column>
+                        <flux:table.column>Description &amp; System Scope</flux:table.column>
                         <flux:table.column align="end">Actions</flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows>
                         @forelse ($curricula as $curriculum)
-                            @php
-    $curricula = $this->curricula;
-    $totalCurricula = $curricula->count();
-    $activeCount = $curricula->filter(fn($c) => $c->status === 'active')->count();
-    $dismissedCount = $curricula->filter(fn($c) => $c->status !== 'active')->count();
-@endphp
                             <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 group">
-                                {{-- Curriculum Framework Name --}}
+                                {{-- Name & Code --}}
                                 <flux:table.cell>
-                                    <div class="flex items-center gap-3">
-                                        <div class="size-9 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20 flex items-center justify-center font-bold text-xs shrink-0 transition-transform group-hover:scale-105">
-                                            <flux:icon icon="book-open" class="size-4.5" />
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="size-8 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 ring-1 ring-inset ring-indigo-500/20 flex items-center justify-center font-bold text-xs shrink-0 transition-transform group-hover:scale-105">
+                                            <flux:icon icon="book-open" class="size-4" />
                                         </div>
-                                        <div>
-                                            <a href="{{ route('curriculum.show', $curriculum->id) }}" class="font-semibold text-sm text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                                {{ $curriculum->name }}
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('curriculum.show', $curriculum->id) }}" wire:navigate.hover class="font-semibold text-sm text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                                 {{ $curriculum->name }}
                                             </a>
-                                            <div class="text-[11px] text-zinc-400 mt-0.5">
-                                                Added {{ $curriculum->created_at?->format('M d, Y') ?? 'ΓÇö' }}
-                                            </div>
+                                            <flux:badge size="sm" color="indigo" class="font-medium text-[11px] uppercase">
+                                                {{ $curriculum->systemLabel() }}
+                                            </flux:badge>
                                         </div>
                                     </div>
                                 </flux:table.cell>
 
-                                {{-- Campus / Institution (Admin only) --}}
+                                {{-- Institution / Campus (Admin only) --}}
                                 @if (isAdmin())
                                     <flux:table.cell>
-                                        <div class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 text-xs">
+                                        <div class="flex items-center gap-1.5 text-zinc-500 text-xs truncate max-w-[150px]">
                                             <flux:icon icon="building-library" class="size-3.5 text-zinc-400 shrink-0" />
-                                            <span>{{ $curriculum->institution?->name ?? 'ΓÇö' }}</span>
+                                            <span>{{ $curriculum->institution?->name ?? '—' }}</span>
                                         </div>
                                     </flux:table.cell>
                                 @endif
 
-                                {{-- Status --}}
+                                {{-- Description / Grading Scheme --}}
                                 <flux:table.cell>
-                                    @if ($isActive)
-                                        <flux:badge color="emerald" size="sm" class="font-semibold">
-                                            <span class="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
-                                            Active
-                                        </flux:badge>
-                                    @else
-                                        <flux:badge color="zinc" size="sm" class="font-medium capitalize">
-                                            {{ $curriculum->status ?? 'Dismissed' }}
-                                        </flux:badge>
-                                    @endif
+                                    <span class="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                                        {{ $curriculum->gradingLabel() }}
+                                    </span>
                                 </flux:table.cell>
 
                                 {{-- Actions --}}
                                 <flux:table.cell align="end">
                                     <div class="flex items-center justify-end gap-1">
-                                        <flux:button href="{{ route('curriculum.show', $curriculum->id) }}" icon="eye" size="sm" variant="subtle" tooltip="View Details" />
+                                        <flux:button href="{{ route('curriculum.show', $curriculum->id) }}" wire:navigate.hover icon="eye" size="sm" variant="subtle" tooltip="View Details" />
                                         
                                         @can('edit curriculum')
-                                            <flux:button href="{{ route('curriculum.edit', $curriculum->id) }}" icon="pencil" size="sm" variant="subtle" tooltip="Edit Curriculum" />
+                                            <flux:button href="{{ route('curriculum.edit', $curriculum->id) }}" wire:navigate.hover icon="pencil" size="sm" variant="subtle" tooltip="Edit Curriculum" />
                                         @endcan
                                         
                                         @can('delete curriculum')
@@ -221,7 +183,7 @@ new #[Title('Curricula')] class extends Component
                                 <flux:table.cell colspan="{{ isAdmin() ? 4 : 3 }}">
                                     <x-empty-state icon="book-open" color="indigo" title="No Curricula Configured" description="Register your first academic curriculum (e.g. CBC, 8-4-4, or IGCSE) to structure classes and grading standards.">
                                         @can('create curriculum')
-                                            <flux:button href="{{ route('curriculum.create') }}" icon="plus" variant="primary">
+                                            <flux:button href="{{ route('curriculum.create') }}" wire:navigate.hover icon="plus" variant="primary">
                                                 Add First Curriculum
                                             </flux:button>
                                         @endcan
@@ -234,5 +196,3 @@ new #[Title('Curricula')] class extends Component
             </div>
         </div>
     </div>
-</x-layouts::app>
-

@@ -107,7 +107,7 @@
 @endphp
 
 @if ($href)
-<a href="{{ $href }}" class="group outline-none block h-full">
+<a href="{{ $href }}" wire:navigate.hover class="group outline-none block h-full">
 @else
 <div class="group h-full">
 @endif

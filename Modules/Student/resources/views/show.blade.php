@@ -17,7 +17,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1.5">
-                    <a href="{{ route('student.index') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
+                    <a href="{{ route('student.index') }}" wire:navigate.hover class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Student Directory</span>
                     </a>
@@ -38,7 +38,7 @@
                     </a>
                 @endif
                 @can('edit student')
-                    <flux:button href="{{ route('student.edit', $student->id) }}" icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('student.edit', $student->id) }}" wire:navigate.hover icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
                         Edit Profile
                     </flux:button>
                 @endcan
@@ -297,7 +297,7 @@
                         Back to Student Directory
                     </flux:button>
                     @can('view fee')
-                        <flux:button href="{{ route('fee.index', ['search' => $student->name]) }}" variant="subtle" icon="banknotes" class="justify-start">
+                        <flux:button href="{{ route('feemanagement.index', ['search' => $student->name]) }}" variant="subtle" icon="banknotes" class="justify-start">
                             View Fee Transactions
                         </flux:button>
                     @endcan
