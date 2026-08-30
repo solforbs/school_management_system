@@ -46,7 +46,7 @@ class FeeReceiptController extends Controller
      */
     public function extract(Request $request)
     {
-        dd($request->all());
+    
         $this->authorizeFeature();
 
         $validated = $request->validate([
