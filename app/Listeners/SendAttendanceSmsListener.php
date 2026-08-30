@@ -8,6 +8,7 @@ use Athwari\LaravelZktecoAdms\Enums\AttendanceStatus;
 use Athwari\LaravelZktecoAdms\Events\AttendanceReceived;
 use Athwari\LaravelZktecoAdms\Models\ZktecoUser;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Texts a student's parent every time the student punches a ZKTeco
@@ -37,6 +38,28 @@ class SendAttendanceSmsListener
             return;
         }
 
+        /*
+     * Prevent the same biometric attendance event from sending
+     * the parent an SMS more than once.
+     *
+     * The key is based on the actual attendance event, not merely
+     * the student, so legitimate later punches can still send.
+     */
+        $timestamp = $record->timestamp->format('Y-m-d H:i:s');
+        $status = $record->statusEnum()->value;
+
+        $lockKey = "attendance-sms:{$student->id}:{$timestamp}:{$status}";
+
+        if (! Cache::add($lockKey, true, now()->addMinutes(10))) {
+            Log::debug('Duplicate attendance SMS prevented', [
+                'student_id' => $student->id,
+                'timestamp' => $timestamp,
+                'status' => $status,
+            ]);
+
+            return;
+        }
+
         $phone = $student->studentParent?->parent?->parent_phone;
 
         if (! $phone) {
@@ -50,7 +73,10 @@ class SendAttendanceSmsListener
             $record->timestamp->format('d M Y, h:i A'),
         );
 
-        $result = $this->smsService->send((int) preg_replace('/\D/', '', $phone), $message);
+        $result = $this->smsService->send(
+            (int) preg_replace('/\D/', '', $phone),
+            $message
+        );
 
         if (! ($result['success'] ?? false)) {
             Log::warning('Attendance SMS failed', [
