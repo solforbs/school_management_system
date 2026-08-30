@@ -19,24 +19,28 @@ class SmsService
     public function send(int $mobile, string $message, ?string $provider = null): array
     {
         if (! featureEnabled('sms')) {
-            return ['success' => false, 'error' => 'SMS is currently disabled in site settings'];
+            return [
+                'success' => false,
+                'error' => 'SMS is currently disabled in site settings',
+            ];
         }
 
         // Use default provider if none specified
-        if ($provider === null) {
-            $provider = $this->config['default'];
-        }
+        $provider ??= $this->config['default'];
 
         // Get provider configuration
         $providerConfig = $this->config['providers'][$provider] ?? null;
 
         if (! $providerConfig) {
-            return ['success' => false, 'error' => "SMS provider '{$provider}' not found in configuration"];
+            return [
+                'success' => false,
+                'error' => "SMS provider '{$provider}' not found in configuration",
+            ];
         }
 
         $mobile = $this->formatMobile($mobile);
 
-        // Build POST data using config values with fallbacks
+        // Build POST data from provider configuration
         $postData = http_build_query([
             'userid' => $providerConfig['userid'],
             'password' => $providerConfig['password'],
@@ -52,7 +56,7 @@ class SmsService
         $curl = curl_init();
 
         curl_setopt_array($curl, [
-            CURLOPT_URL => $providerConfig['url'] ?? 'https://smsportal.hostpinnacle.co.ke/SMSApi/send',
+            CURLOPT_URL => $providerConfig['url'],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postData,
@@ -70,9 +74,16 @@ class SmsService
 
         curl_close($curl);
 
+        // cURL/network error
         if ($error) {
-            return ['success' => false, 'error' => $error, 'http_code' => $httpCode];
+            return [
+                'success' => false,
+                'error' => $error,
+                'http_code' => $httpCode,
+            ];
         }
+
+        // Decode gateway response
         $decodedResponse = json_decode($response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decodedResponse)) {
@@ -90,6 +101,12 @@ class SmsService
                 'http_code' => $httpCode,
             ];
         }
+
+        // Log the actual gateway response
+        \Illuminate\Support\Facades\Log::debug('HostPinnacle response', [
+            'http_code' => $httpCode,
+            'response' => $decodedResponse,
+        ]);
 
         return $this->normaliseResponse($decodedResponse);
     }
