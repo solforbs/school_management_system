@@ -4,19 +4,14 @@ namespace App\Services;
 
 class SmsService
 {
-    /**
-     * @var array<string, mixed>
-     */
-    protected array $config;
+    protected $config;
 
     public function __construct()
     {
         $this->config = config('sms');
     }
-    /**
-     * @return array<string, mixed>
-     */
-    public function send(int $mobile, string $message, ?string $provider = null): array
+
+    public function send(int $mobile, string $message, $provider = null)
     {
         if (! featureEnabled('sms')) {
             return ['success' => false, 'error' => 'SMS is currently disabled in site settings'];
@@ -59,7 +54,7 @@ class SmsService
             CURLOPT_TIMEOUT => $this->config['options']['timeout'] ?? 30,
             CURLOPT_MAXREDIRS => $this->config['options']['max_redirects'] ?? 10,
             CURLOPT_HTTPHEADER => [
-                'apikey: ' . ($providerConfig['apikey'] ?? ''),
+                'apikey: '.($providerConfig['apikey'] ?? ''),
                 'Content-Type: application/x-www-form-urlencoded',
             ],
         ]);
@@ -76,19 +71,7 @@ class SmsService
         $decodedResponse = json_decode($response, true);
 
         if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decodedResponse)) {
-            \Illuminate\Support\Facades\Log::error('HostPinnacle invalid response', [
-                'http_code' => $httpCode,
-                'curl_error' => $error,
-                'raw_response' => $response,
-                'json_error' => json_last_error_msg(),
-            ]);
-
-            return [
-                'success' => false,
-                'error' => 'Invalid JSON response',
-                'raw_response' => $response,
-                'http_code' => $httpCode,
-            ];
+            return ['success' => false, 'error' => 'Invalid JSON response', 'raw_response' => $response];
         }
 
         return $this->normaliseResponse($decodedResponse);
@@ -114,7 +97,7 @@ class SmsService
         $mobile = preg_replace('/[^0-9]/', '', $mobile);
 
         if (strlen($mobile) == 10 && substr($mobile, 0, 1) == '0') {
-            return '254' . substr($mobile, 1);
+            return '254'.substr($mobile, 1);
         }
 
         return $mobile;
