@@ -4,6 +4,8 @@ namespace Modules\ReportCard\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,6 +20,18 @@ class ReportCardController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function index()
+    {
+        abort_unless(Auth::user()->can('view reportcard'), 403);
+
+        $query = ReportCard::with(['institution', 'schoolClass', 'student']);
+        $this->scopeToViewer($query);
+
+        $reportCards = $query->paginate();
+
+        return view('reportcard::index', compact('reportCards'));
+    }
+
     /**
      * Show the specified resource.
      */
@@ -66,6 +80,32 @@ class ReportCardController extends Controller
         );
     }
 
+    /**
+     * Generate and return a PDF for an authenticated user viewing a report card.
+     */
+    public function pdf(ReportCard $reportCard): Response
+    {
+        // Authorization check
+        abort_unless(Auth::user()->can('view reportcard'), 403);
+
+        $query = ReportCard::with(['institution', 'schoolClass', 'student']);
+        $this->scopeToViewer($query);
+
+        // Verify the user has access to this report card
+        $query->findOrFail($reportCard->id);
+
+        $pdf = Pdf::loadView('reportcard::pdf', [
+            'reportCard' => $reportCard->load(['student', 'schoolClass', 'institution']),
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'report-card-' . $reportCard->student->id . '-' . $reportCard->schoolClass?->id . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Scope query to current viewer's permissions.
+     */
     private function scopeToViewer($query): void
     {
         $user = Auth::user();
@@ -97,13 +137,20 @@ class ReportCardController extends Controller
         $query->where('institution_id', currentInstitution()?->id ?? 0);
     }
 
+    /**
+     * Delete the specified resource.
+     */
     public function destroy(string $id)
     {
+        abort_unless(Auth::user()->can('delete reportcard'), 403);
+
         $reportCard = ReportCard::findOrFail($id);
-        // first unlink its pdf then delete the report card
+
+        // First unlink its PDF then delete the report card
         if ($reportCard->pdf_path && Storage::disk('public')->exists($reportCard->pdf_path)) {
             Storage::disk('public')->delete($reportCard->pdf_path);
         }
+
         $reportCard->delete();
 
         return redirect()->route('reportcard.index')->with('success', 'Report card deleted successfully.');
