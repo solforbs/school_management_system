@@ -6,23 +6,10 @@ use Carbon\Carbon;
 use Smalot\PdfParser\Parser as PdfParser;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
-/**
- * Local, self-hosted alternative to a cloud AI read of a receipt: OCR via
- * Tesseract for images, embedded-text extraction via smalot/pdfparser for
- * PDFs, then regex/heuristic parsing of the raw text for the fields we
- * care about.
- *
- * This is meaningfully less robust than an AI-based read - it has no
- * understanding of the receipt, just pattern-matching over whatever text
- * came out. The patterns here are tuned for Safaricom M-Pesa confirmation
- * messages (the dominant payment method for Kenyan schools) with generic
- * fallbacks for other formats; expect to extend these patterns as new
- * receipt formats show up in practice.
- */
 class ReceiptOcrService
 {
     /**
-     * @return array{amount: ?float, currency: ?string, admission_number: ?string, student_name: ?string, paid_at: ?string, reference: ?string, payment_method: ?string, raw: array}
+     * @return array{amount: ?float, currency: ?string, index_number: ?string, admission_number: ?string, student_name: ?string, paid_at: ?string, reference: ?string, payment_method: ?string, raw: array}
      */
     public function extractReceiptDetails(string $absoluteFilePath, string $mimeType): array
     {
@@ -44,29 +31,21 @@ class ReceiptOcrService
         return $ocr->run();
     }
 
-    /**
-     * Only reads a PDF's embedded text layer (e.g. an emailed bank
-     * statement or digitally generated receipt) - a scanned/photographed
-     * PDF with no text layer will come back empty, since that would need
-     * rasterizing pages to images first (not implemented here).
-     */
     private function extractPdfText(string $path): string
     {
         return (new PdfParser)->parseFile($path)->getText();
     }
 
-    /**
-     * @return array{amount: ?float, currency: ?string, admission_number: ?string, student_name: ?string, paid_at: ?string, reference: ?string, payment_method: ?string, raw: array}
-     */
     private function parse(string $text): array
     {
         $normalized = preg_replace('/\s+/', ' ', trim($text));
-
+        
         return [
             'amount' => $this->extractAmount($normalized),
             'currency' => $this->extractCurrency($normalized),
+            'index_number' => $this->extractIndexNumber($normalized),
             'admission_number' => $this->extractAdmissionNumber($normalized),
-            'student_name' => $this->extractPayerName($normalized),
+            'student_name' => $this->extractStudentName($normalized),
             'paid_at' => $this->extractDate($normalized),
             'reference' => $this->extractReference($normalized),
             'payment_method' => $this->extractPaymentMethod($normalized),
@@ -74,11 +53,30 @@ class ReceiptOcrService
         ];
     }
 
+    /**
+     * Handles multiple amount formats:
+     * - "6000.00 KSH"
+     * - "AMOUNT: KES 50,000.00"
+     * - "AMOUNT: KES950.00"
+     * - "Grand Total 50,000"
+     */
     private function extractAmount(string $text): ?float
     {
-        // "Ksh1,500.00" / "KES 1500" / "Kshs. 1,500"
-        if (preg_match('/\b(?:Ksh|KES|Kshs)\.?\s?([\d,]+(?:\.\d{1,2})?)/i', $text, $m)) {
-            return (float) str_replace(',', '', $m[1]);
+        $patterns = [
+            // "AMOUNT: 6000.00 KSH"
+            '/\b(?:Amount|Total|Grand Total)\s*[:]?\s*([\d,]+(?:\.\d{1,2})?)\s*(?:KSH|KES|Kshs)?/i',
+            // "AMOUNT: KES 50,000.00" or "AMOUNT: KES950.00"
+            '/\b(?:Amount|Total|Grand Total)\s*[:]?\s*(?:KSH|KES|Kshs)?\s*([\d,]+(?:\.\d{1,2})?)/i',
+            // "Kshs. 1,500"
+            '/\b(?:Ksh|KES|Kshs)\s*[:.]?\s*([\d,]+(?:\.\d{1,2})?)/i',
+            // "1,500.00 KSH"
+            '/\b([\d,]+(?:\.\d{1,2})?)\s*(?:KSH|KES|Kshs)\b/i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $text, $m)) {
+                return (float) str_replace(',', '', $m[1]);
+            }
         }
 
         return null;
@@ -90,17 +88,35 @@ class ReceiptOcrService
     }
 
     /**
-     * Looks for an explicit label first ("account", "acc no", "admission
-     * no") since that's the most reliable signal; falls back to any
-     * standalone alphanumeric token that looks admission-number-shaped
-     * (mixes letters and digits, 5-15 chars) if no label is found.
+     * Extracts Index Number (common in Kenya for secondary schools).
+     * Examples: "INDEX NO: 1573"
      */
-    private function extractAdmissionNumber(string $text): ?string
+    private function extractIndexNumber(string $text): ?string
     {
-        if (preg_match('/\b(?:for\s+)?(?:account|acc\.?\s*no\.?|admission\s*no\.?|adm\.?\s*no\.?)\s*[:\-]?\s*([A-Z0-9\-\/]{3,20})/i', $text, $m)) {
+        if (preg_match('/\b(?:INDEX\s*NO\.?|REG\s*NO\.?|STUDENT\s*NO\.?)\s*[:\-]?\s*([A-Z0-9\-\/]{2,20})/i', $text, $m)) {
             return trim($m[1]);
         }
 
+        return null;
+    }
+
+    /**
+     * Extracts Admission Number (common for primary schools).
+     * Examples: "ADM NO: 3423", "ADMISSION NO: 3423", "Account: 1116762668" (fallback)
+     */
+    private function extractAdmissionNumber(string $text): ?string
+    {
+        // Specific Admission Number patterns
+        if (preg_match('/\b(?:ADM\s*NO\.?|ADMISSION\s*NO\.?|Acc\.?\s*No\.?)\s*[:\-]?\s*([A-Z0-9\-\/]{3,20})/i', $text, $m)) {
+            return trim($m[1]);
+        }
+
+        // Fallback to "Account" or "Bill A/C" if no specific ADM is present
+        if (preg_match('/\b(?:Account|Bill\s*A\/C|DESTINATION\s*ACC)\s*[:\-]?\s*([A-Z0-9\-\/]{3,20})/i', $text, $m)) {
+            return trim($m[1]);
+        }
+
+        // Fallback to any alphanumeric code
         if (preg_match('/\b([A-Z]{2,5}[\-\/]?\d{3,8})\b/', $text, $m)) {
             return $m[1];
         }
@@ -109,26 +125,50 @@ class ReceiptOcrService
     }
 
     /**
-     * Best-effort only - "sent to NAME" / "paid to NAME" is the M-Pesa
-     * pattern; there's no reliable generic fallback for other formats.
+     * Extracts Student/Payer Name from various layouts.
+     * Examples: "NAME: JOSEPH KAMAU", "NARRATION: Agnes Okol", "Tells of Student: JOSEPH"
      */
-    private function extractPayerName(string $text): ?string
+    private function extractStudentName(string $text): ?string
     {
-        if (preg_match('/\b(?:sent to|paid to|received from|from)\s+([A-Z][A-Z\s]{2,40}?)(?=\s+\d|\s+for\b|\.|,)/', $text, $m)) {
+        // Priority 1: "NAME: JOSEPH KAMAU" or "Student Name: JOSEPH"
+        if (preg_match('/\b(?:Student\s*Name|Tells\s*of\s*Student|NAME)\s*[:]?\s*([A-Z][A-Z\s]{2,40}?)(?=\s+(?:INDEX|ADM|Account|Class|Date|Receipt|Amount|\.|,|$))/i', $text, $m)) {
+            return trim($m[1]);
+        }
+
+        // Priority 2: "NARRATION: Agnes Okol"
+        if (preg_match('/\b(?:NARRATION|Narration|Paid\s*by)\s*[:]?\s*([A-Z][A-Z\s]{2,40}?)(?=\s+(?:AMOUNT|Amount|BANK_REF|Ref|\.|,|$))/i', $text, $m)) {
+            return trim($m[1]);
+        }
+
+        // Priority 3: M-PESA patterns "Sent to", "Paid to"
+        if (preg_match('/\b(?:sent to|paid to|received from)\s+([A-Z][A-Z\s]{2,40}?)(?=\s+\d|\s+for\b|\.|,)/', $text, $m)) {
             return trim($m[1]);
         }
 
         return null;
     }
 
+    /**
+     * Handles DD/MM/YYYY and DD MON YYYY formats.
+     */
     private function extractDate(string $text): ?string
     {
-        // "5/8/26", "05/08/2026", "5-8-26" - Kenyan receipts are day/month/year.
+        // Standard numeric date format: 22/04/19 or 27-05-2020
         if (preg_match('/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/', $text, $m)) {
             try {
                 $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
-
                 return Carbon::create((int) $year, (int) $m[2], (int) $m[1])->toDateString();
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        // Text month format: 27 MAY 2020
+        if (preg_match('/\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})\b/', $text, $m)) {
+            try {
+                $month = Carbon::parse($m[2])->month;
+                $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
+                return Carbon::create((int) $year, (int) $month, (int) $m[1])->toDateString();
             } catch (\Throwable) {
                 return null;
             }
@@ -138,17 +178,30 @@ class ReceiptOcrService
     }
 
     /**
-     * M-Pesa transaction codes are a 10-character alphanumeric string,
-     * conventionally the very first token in the confirmation message.
+     * Extracts reference numbers from various systems.
+     * M-Pesa code, Receipt No, RRM, Bank Ref, Authorization Code.
      */
     private function extractReference(string $text): ?string
     {
+        // Priority 1: M-Pesa confirmation code at the very beginning (e.g. "QGH7X2K9PL ...")
         if (preg_match('/^([A-Z0-9]{10})\b/', $text, $m)) {
             return $m[1];
         }
 
-        if (preg_match('/\b(?:ref(?:erence)?|transaction\s*(?:code|id))\.?\s*[:\-]?\s*([A-Z0-9]{6,15})/i', $text, $m)) {
-            return $m[1];
+        // Priority 2: Specific Bank Reference Patterns
+        $patterns = [
+            '/\bBANK_REF\s*[:]?\s*([A-Z0-9]{4,20})/i',
+            '/\bREF\s*NO\.?\s*[:]?\s*([A-Z0-9]{4,20})/i',
+            '/\bRRM\s*[:]?\s*([A-Z0-9]{4,20})/i',
+            '/\bReceipt\s*(?:No\.?)?\s*[:]?\s*([A-Z0-9]{4,20})/i',
+            '/\bAuthorization\s*code\s*[:]?\s*([A-Z0-9]{4,20})/i',
+            '/\bTransaction\s*(?:Code|ID)\s*[:]?\s*([A-Z0-9]{4,20})/i'
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $text, $m)) {
+                return $m[1];
+            }
         }
 
         return null;
