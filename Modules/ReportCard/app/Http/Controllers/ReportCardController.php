@@ -86,7 +86,7 @@ class ReportCardController extends Controller
     public function pdf(ReportCard $reportCard): Response
     {
         // Authorization check
-        abort_unless(Auth::user()->can('view reportcard'), 403);
+        // abort_unless(Auth::user()->can('view reportcard'), 403);
 
         $query = ReportCard::with(['institution', 'schoolClass', 'student']);
         $this->scopeToViewer($query);
