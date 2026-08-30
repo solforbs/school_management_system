@@ -83,24 +83,112 @@ class ReportCardController extends Controller
     /**
      * Generate and return a PDF for an authenticated user viewing a report card.
      */
-    public function pdf(ReportCard $reportCard): Response
+    public function pdf(int $reportCard): Response
     {
-        // Authorization check
-        // abort_unless(Auth::user()->can('view reportcard'), 403);
+        abort_unless(Auth::user()->can('view reportcard'), 403);
 
-        $query = ReportCard::with(['institution', 'schoolClass', 'student']);
+        $query = ReportCard::with([
+            'institution',
+            'schoolClass',
+            'student',
+        ]);
+
         $this->scopeToViewer($query);
 
-        // Verify the user has access to this report card
-        $query->findOrFail($reportCard->id);
+        $reportCardModel = $query->findOrFail($reportCard);
 
-        $pdf = Pdf::loadView('reportcard::pdf', [
-            'reportCard' => $reportCard->load(['student', 'schoolClass', 'institution']),
-        ])->setPaper('a4', 'portrait');
+        $student = $reportCardModel->student;
+        $institution = $reportCardModel->institution;
+        $schoolClass = $reportCardModel->schoolClass;
 
-        $filename = 'report-card-' . $reportCard->student->id . '-' . $reportCard->schoolClass?->id . '.pdf';
+        $html = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Report Card</title>
 
-        return $pdf->download($filename);
+            <style>
+                @page {
+                    size: A4 portrait;
+                    margin: 15mm;
+                }
+
+                body {
+                    font-family: Arial, sans-serif;
+                    color: #111;
+                    margin: 0;
+                }
+
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                }
+
+                .student-info {
+                    margin-bottom: 25px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+
+                th,
+                td {
+                    border: 1px solid #222;
+                    padding: 8px;
+                    text-align: left;
+                }
+
+                th {
+                    background: #f3f4f6;
+                }
+
+                .print-button {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 10px 18px;
+                    background: #111827;
+                    color: white;
+                    border: 0;
+                    border-radius: 6px;
+                    cursor: pointer;
+                }
+
+                @media print {
+                    .print-button {
+                        display: none;
+                    }
+                }
+            </style>
+        </head>
+
+        <body>
+
+            <button class="print-button" onclick="window.print()">
+                Print / Save PDF
+            </button>
+
+            <div class="header">
+                <h1>' . e($institution->name ?? 'Institution') . '</h1>
+                <h2>STUDENT REPORT CARD</h2>
+            </div>
+
+            <div class="student-info">
+                <p><strong>Student:</strong> ' . e($student->name ?? '') . '</p>
+                <p><strong>Class:</strong> ' . e($schoolClass->name ?? '') . '</p>
+            </div>
+
+            <!-- Add your report-card subjects/marks here -->
+
+        </body>
+        </html>
+    ';
+
+        return response($html)
+            ->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     /**
