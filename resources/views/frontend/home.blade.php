@@ -111,8 +111,8 @@
                             <div class="size-1.5 rounded-full bg-zinc-700/80"></div>
                         </div>
 
-                        {{-- Screen Bezel & Display Content --}}
-                        <div class="w-full aspect-[500/685] rounded-[2rem] overflow-hidden bg-zinc-900 relative">
+                        {{-- Screen Bezel & Display Content (iPhone 16 Pro Max 19.5:9 Aspect Ratio) --}}
+                        <div class="w-full aspect-[9/19.5] rounded-[2rem] overflow-hidden bg-zinc-900 relative">
                             <img src="{{ asset('screenshots/dashboard-mobile.png') }}" alt="Solforbs Mobile Dashboard" class="w-full h-full object-cover object-top select-none pointer-events-none" />
                         </div>
 
