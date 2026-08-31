@@ -140,6 +140,12 @@
                                 {{-- Actions --}}
                                 <flux:table.cell>
                                     <div class="flex items-center gap-1">
+                                        <form action="{{ route('devices.set-time', $device) }}" method="POST" class="inline">
+                                            @csrf
+                                            <flux:button type="submit" variant="subtle" icon="clock" size="sm"
+                                                :disabled="! $device->zktecoDevice"
+                                                tooltip="Set this terminal's clock to the server time">Set Time</flux:button>
+                                        </form>
                                         <flux:button wire:navigate href="{{ route('devices.edit', $device) }}" icon="pencil" size="sm" variant="subtle" tooltip="Edit Device" />
                                         <form action="{{ route('devices.destroy', $device) }}" method="POST" class="inline" onsubmit="return confirm('Delete this device permanently?');">
                                             @csrf

@@ -69,10 +69,10 @@ it('refuses to pull over uncommitted work on the server', function () {
 
 it('reports being up to date without touching anything', function () {
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
-        '*rev-parse origin/main*' => Process::result('abc123'),
+        '*rev-parse*origin*' => Process::result('abc123'),
         '*log*' => Process::result('an earlier commit'),
     ]);
 
@@ -88,10 +88,10 @@ it('resets to the recorded commit when a step fails', function () {
     Artisan::shouldReceive('call')->andReturn(0);
 
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
-        '*rev-parse origin/main*' => Process::result('def456'),
+        '*rev-parse*origin*' => Process::result('def456'),
         '*diff*' => Process::result(''),
         '*checkout*' => Process::result(output: '', errorOutput: 'cannot lock ref', exitCode: 1),
         '*' => Process::result(''),
@@ -109,7 +109,7 @@ it('resets to the recorded commit when a step fails', function () {
 
 it('reports a remote it cannot reach without changing anything', function () {
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(output: '', errorOutput: 'Could not resolve host', exitCode: 1),
     ]);
@@ -128,12 +128,12 @@ it('flags a release that changes dependencies instead of running composer', func
     Artisan::shouldReceive('call')->andReturn(0);
 
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
-        '*rev-parse origin/main*' => Process::result('def456'),
+        '*rev-parse*origin*' => Process::result('def456'),
         // Non-zero from `git diff --quiet` means composer.lock differs.
-        '*diff --quiet*' => Process::result(output: '', errorOutput: '', exitCode: 1),
+        '*diff*' => Process::result(output: '', errorOutput: '', exitCode: 1),
         '*checkout*' => Process::result(''),
         '*rev-list*' => Process::result('3'),
         '*log*' => Process::result('some release'),
@@ -159,10 +159,10 @@ it('flags a release that changes dependencies instead of running composer', func
  */
 it('rebuilds the route cache, which a new route depends on', function () {
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
-        '*rev-parse origin/main*' => Process::result('def456'),
+        '*rev-parse*origin*' => Process::result('def456'),
         '*rev-list*' => Process::result('1'),
         '*log*' => Process::result('a release'),
         '*' => Process::result(''),
@@ -179,10 +179,10 @@ it('rebuilds the route cache, which a new route depends on', function () {
 
 it('rolls back when a cache rebuild fails', function () {
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
-        '*rev-parse origin/main*' => Process::result('def456'),
+        '*rev-parse*origin*' => Process::result('def456'),
         '*' => Process::result(''),
     ]);
 
@@ -230,10 +230,10 @@ it('runs for an Admin and reports back on the page', function () {
     Artisan::shouldReceive('call')->andReturn(0);
 
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
-        '*rev-parse origin/main*' => Process::result('def456'),
+        '*rev-parse*origin*' => Process::result('def456'),
         '*rev-list*' => Process::result('2'),
         '*log*' => Process::result('set the terminal clock from the server'),
         '*' => Process::result(''),
