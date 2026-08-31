@@ -211,22 +211,55 @@
 
                 {{-- 2. Biometrics & Devices Tab --}}
                 <div x-show="activeTab === 'devices'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="grid gap-8 lg:grid-cols-12 lg:items-center" style="display: none;">
-                    <div class="lg:col-span-4 space-y-4">
+                    <div class="lg:col-span-5 space-y-4">
                         <div class="inline-flex p-3 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                             <flux:icon icon="device-phone-mobile" class="size-6" />
                         </div>
-                        <h3 class="text-2xl font-bold text-zinc-900 dark:text-white">Biometric Hardware & Gate Clocks</h3>
+                        <h3 class="text-2xl font-bold text-zinc-900 dark:text-white">ZKTeco Biometric Hardware & Live Gate Clocks</h3>
                         <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                            Connect standard ZKTeco ADMS biometric turnstiles and gate terminals directly. Every student tap-in is logged instantly, synchronised with cloud records, and dispatches automated arrival texts to guardians.
+                            Connect standard, affordable <strong class="text-zinc-900 dark:text-white font-semibold">ZKTeco K40 Pro / ADMS</strong> biometric terminals directly. Fast fingerprint verification eliminates buddy punching, stores offline logs during network drops, and dispatches automated arrival texts to parents.
                         </p>
-                        <ul class="space-y-2.5 text-xs text-zinc-600 dark:text-zinc-400 pt-2">
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Real-time live status monitor (Online / Offline)</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> One-click remote terminal clock sync</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Offline tethering so gates function during internet drops</li>
+                        <ul class="space-y-2 text-xs text-zinc-600 dark:text-zinc-400 pt-1">
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Sub-Second Biometric Recognition:</strong> Fast fingerprint & RFID card authentication reduces morning queues.</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Zero Buddy Punching:</strong> Tamper-proof logs tied to unique biometric templates.</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Offline Resilience:</strong> Onboard memory caches attendance during internet outages and syncs upon reconnect.</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Instant Parent SMS:</strong> Sends gate arrival & departure alerts automatically with custom Sender ID.</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Hardware Compatible:</strong> Plug-and-play with ZKTeco K40 Pro, F18, and standard ADMS terminals.</li>
                         </ul>
                     </div>
-                    <div class="lg:col-span-8 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900">
-                        <img src="{{ asset('screenshots/devices.png') }}" alt="Solforbs Biometric Hardware" class="w-full h-auto object-cover" />
+                    
+                    {{-- Visual Showcase (Hardware + Live Software Dashboard) --}}
+                    <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                        {{-- ZKTeco K40 Pro Hardware Card --}}
+                        <div class="sm:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-lg flex flex-col items-center justify-between text-center space-y-3">
+                            <div class="w-full flex items-center justify-between">
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
+                                    Hardware Ready
+                                </span>
+                                <span class="text-[10px] text-zinc-400 font-mono">ZKTeco K40 Pro</span>
+                            </div>
+                            <div class="w-full aspect-square flex items-center justify-center p-2 bg-zinc-50 dark:bg-zinc-950 rounded-xl">
+                                <img src="{{ asset('screenshots/zktecok40pro.png') }}" alt="ZKTeco K40 Pro Biometric Machine" class="max-h-40 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-md" />
+                            </div>
+                            <div class="text-left w-full space-y-0.5 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                                <p class="text-xs font-bold text-zinc-900 dark:text-white">ZKTeco K40 Pro Terminal</p>
+                                <p class="text-[10px] text-zinc-500">Fingerprint + RFID + TCP/IP & USB</p>
+                            </div>
+                        </div>
+
+                        {{-- Software Devices Monitor Card --}}
+                        <div class="sm:col-span-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden flex flex-col">
+                            <div class="px-3.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 flex items-center justify-between">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span class="text-[10px] font-bold text-zinc-700 dark:text-zinc-300">Live Device Gateways</span>
+                                </div>
+                                <span class="text-[10px] text-emerald-600 font-bold">Cloud Synced</span>
+                            </div>
+                            <div class="w-full bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
+                                <img src="{{ asset('screenshots/devices.png') }}" alt="Solforbs Biometric Hardware Gateway" class="w-full h-auto object-cover" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 

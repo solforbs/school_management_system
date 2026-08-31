@@ -73,26 +73,55 @@
     <section class="py-20 sm:py-28">
         <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
             <div data-animate="left">
-                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Biometric Attendance
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Biometric Attendance & Hardware
                 </p>
                 <h2
                     class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
                     Attendance without the guesswork
                 </h2>
                 <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
-                    Connect ZKTeco biometric turnstiles and gate devices directly. Every tap-in flows straight into the platform—no paper register to reconcile by hand at the end of the day.
+                    Connect market-standard <strong class="text-zinc-900 dark:text-white font-semibold">ZKTeco K40 Pro</strong> biometric turnstiles and gate devices directly. Fast fingerprint and RFID card verification eliminates buddy punching, while onboard memory caches logs during network drops.
                 </p>
                 <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
-                    <x-frontend.check-item>Biometric gate terminals sync attendance automatically</x-frontend.check-item>
-                    <x-frontend.check-item>Instant SMS dispatched to parents upon student arrival</x-frontend.check-item>
-                    <x-frontend.check-item>Class-level and school-wide attendance visibility for staff</x-frontend.check-item>
-                    <x-frontend.check-item>Offline tethering mode keeps gates working during internet drops</x-frontend.check-item>
+                    <x-frontend.check-item><strong>ZKTeco K40 Pro & ADMS Ready:</strong> Fast sub-second fingerprint recognition & RFID card support</x-frontend.check-item>
+                    <x-frontend.check-item><strong>Anti-Buddy Punching:</strong> Tamper-proof attendance tied to unique biometric templates</x-frontend.check-item>
+                    <x-frontend.check-item><strong>Instant Parent SMS:</strong> Real-time arrival and departure alerts dispatched with custom school Sender ID</x-frontend.check-item>
+                    <x-frontend.check-item><strong>Offline Tethering:</strong> Gates function continuously during internet outages, syncing automatically on reconnect</x-frontend.check-item>
                 </ul>
             </div>
 
             <div class="relative" data-animate="right">
-                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
-                    <img src="{{ asset('screenshots/devices.png') }}" alt="Biometric Hardware Management" class="w-full h-auto object-cover" />
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                    {{-- Hardware Card --}}
+                    <div class="sm:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-xl text-center space-y-3">
+                        <div class="w-full flex items-center justify-between">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
+                                Hardware
+                            </span>
+                            <span class="text-[10px] text-zinc-400 font-mono">ZKTeco K40 Pro</span>
+                        </div>
+                        <div class="w-full aspect-square flex items-center justify-center p-2 bg-zinc-50 dark:bg-zinc-950 rounded-xl">
+                            <img src="{{ asset('screenshots/zktecok40pro.png') }}" alt="ZKTeco K40 Pro Hardware Terminal" class="max-h-36 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-md" />
+                        </div>
+                        <div class="text-left w-full space-y-0.5 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                            <p class="text-xs font-bold text-zinc-900 dark:text-white">ZKTeco K40 Pro</p>
+                            <p class="text-[10px] text-zinc-500">Optical Fingerprint + RFID Card</p>
+                        </div>
+                    </div>
+
+                    {{-- Software Devices Monitor --}}
+                    <div class="sm:col-span-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                        <div class="px-3.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
+                                <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span class="text-[10px] font-bold text-zinc-700 dark:text-zinc-300">Live Device Gateways</span>
+                            </div>
+                            <span class="text-[10px] text-emerald-600 font-bold">Cloud Synced</span>
+                        </div>
+                        <div class="w-full bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
+                            <img src="{{ asset('screenshots/devices.png') }}" alt="Biometric Hardware Management" class="w-full h-auto object-cover" />
+                        </div>
+                    </div>
                 </div>
             </div>
         </x-frontend.container>
