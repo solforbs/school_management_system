@@ -53,38 +53,74 @@
                 </div>
             </div>
 
-            <!-- Tilted Overlapping Real Device Mockups -->
-            <div class="relative w-full max-w-xl mx-auto aspect-[4/3]" data-animate="right" style="--reveal-delay:120ms">
+            <!-- Interactive 3D Device Showcase (Click to Swap Front / Back Layer) -->
+            <div class="relative w-full max-w-xl mx-auto flex flex-col items-center" data-animate="right" style="--reveal-delay:120ms" x-data="{ focusedDevice: 'desktop' }">
                 
-                <!-- Back Device (Laptop / Desktop View) -->
-                <div class="absolute right-0 top-0 w-[88%] transform rotate-2 hover:rotate-0 transition-transform duration-500 rounded-2xl border border-zinc-200/90 bg-white p-2 shadow-2xl shadow-zinc-900/20 dark:border-white/10 dark:bg-zinc-900">
-                    <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 rounded-t-xl">
-                        <div class="flex items-center gap-1.5">
-                            <span class="size-2.5 rounded-full bg-red-400"></span>
-                            <span class="size-2.5 rounded-full bg-amber-400"></span>
-                            <span class="size-2.5 rounded-full bg-emerald-400"></span>
-                        </div>
-                        <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 text-[10px] font-mono text-zinc-500">
-                            <flux:icon icon="lock-closed" class="size-2.5 text-emerald-500" />
-                            <span>sms.solforbs.com/dashboard</span>
-                        </div>
-                        <div class="size-3"></div>
-                    </div>
-                    <div class="w-full aspect-[16/10] rounded-b-xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 relative group">
-                        <img src="{{ asset('screenshots/dashboard-desktop.png') }}" alt="Solforbs Executive Dashboard" class="w-full h-full object-contain object-top transition-transform duration-700 group-hover:scale-[1.02]" />
-                    </div>
+                {{-- Interactive Switcher Pill --}}
+                <div class="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800/80 border border-zinc-300/50 dark:border-zinc-700/60 mb-4 text-xs font-semibold shadow-xs">
+                    <button type="button" @click="focusedDevice = 'desktop'"
+                        :class="focusedDevice === 'desktop' ? 'bg-white dark:bg-zinc-900 text-[#0047FF] dark:text-[#00A3FF] shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                        class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                        <flux:icon icon="computer-desktop" class="size-3.5" />
+                        <span>Desktop View</span>
+                    </button>
+                    <button type="button" @click="focusedDevice = 'mobile'"
+                        :class="focusedDevice === 'mobile' ? 'bg-white dark:bg-zinc-900 text-[#0047FF] dark:text-[#00A3FF] shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                        class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                        <flux:icon icon="device-phone-mobile" class="size-3.5" />
+                        <span>Mobile View</span>
+                    </button>
                 </div>
 
-                <!-- Front Device (Smartphone Frame with Exact-Fit Real Mobile Screenshot) -->
-                <div class="absolute -left-2 bottom-0 w-[42%] transform -rotate-3 hover:rotate-0 transition-transform duration-500 rounded-[2.2rem] border-[5px] border-zinc-900 bg-zinc-900 shadow-2xl shadow-zinc-950/60 dark:border-zinc-700 p-1">
-                    <div class="flex justify-center pt-2 pb-1.5 bg-zinc-900 rounded-t-[1.6rem]">
-                        <div class="w-12 h-1.5 rounded-full bg-zinc-700 dark:bg-zinc-800"></div>
+                {{-- Devices Stage Container --}}
+                <div class="relative w-full aspect-[4/3]">
+                    
+                    <!-- Desktop / Laptop Device Frame -->
+                    <div @click="focusedDevice = 'desktop'"
+                        :class="focusedDevice === 'desktop' 
+                            ? 'z-30 right-0 top-0 w-full sm:w-[94%] rotate-0 scale-100 shadow-2xl shadow-zinc-900/30 ring-2 ring-[#0047FF]/20' 
+                            : 'z-10 right-0 top-3 w-[84%] sm:w-[86%] rotate-3 opacity-90 hover:opacity-100 hover:rotate-1 scale-95 shadow-xl shadow-zinc-900/10 cursor-pointer'"
+                        class="absolute transition-all duration-500 ease-out rounded-2xl border border-zinc-200/90 bg-white p-2 dark:border-white/10 dark:bg-zinc-900 select-none">
+                        
+                        <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 rounded-t-xl">
+                            <div class="flex items-center gap-1.5">
+                                <span class="size-2.5 rounded-full bg-red-400"></span>
+                                <span class="size-2.5 rounded-full bg-amber-400"></span>
+                                <span class="size-2.5 rounded-full bg-emerald-400"></span>
+                            </div>
+                            <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 text-[10px] font-mono text-zinc-500">
+                                <flux:icon icon="lock-closed" class="size-2.5 text-emerald-500" />
+                                <span>sms.solforbs.com/dashboard</span>
+                            </div>
+                            <div class="size-3"></div>
+                        </div>
+                        <div class="w-full aspect-[16/10] rounded-b-xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 relative group">
+                            <img src="{{ asset('screenshots/dashboard-desktop.png') }}" alt="Solforbs Executive Dashboard" class="w-full h-full object-contain object-top transition-transform duration-700 group-hover:scale-[1.02] pointer-events-none" />
+                        </div>
                     </div>
-                    <div class="w-full aspect-[500/685] rounded-b-[1.6rem] overflow-hidden bg-zinc-50 dark:bg-zinc-950 relative">
-                        <img src="{{ asset('screenshots/dashboard-mobile.png') }}" alt="Solforbs Mobile Experience" class="w-full h-full object-contain object-top" />
-                    </div>
-                </div>
 
+                    <!-- Smartphone Device Frame (Real Chassis & Speaker Notch) -->
+                    <div @click="focusedDevice = 'mobile'"
+                        :class="focusedDevice === 'mobile'
+                            ? 'z-30 left-2 sm:left-4 bottom-0 w-[46%] sm:w-[42%] -rotate-2 hover:rotate-0 scale-100 shadow-2xl shadow-zinc-950/70 ring-2 ring-[#0047FF]/30 cursor-pointer'
+                            : 'z-20 -left-2 bottom-0 w-[34%] sm:w-[32%] -rotate-6 opacity-90 hover:opacity-100 scale-90 shadow-xl shadow-zinc-950/50 cursor-pointer'"
+                        class="absolute transition-all duration-500 ease-out rounded-[2.4rem] border-[6px] border-zinc-900 bg-zinc-900 shadow-2xl ring-1 ring-zinc-800 p-0 relative select-none">
+                        
+                        {{-- Top Speaker Notch / Dynamic Island --}}
+                        <div class="w-14 h-3.5 rounded-full bg-zinc-900 absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center">
+                            <div class="size-1.5 rounded-full bg-zinc-700/80"></div>
+                        </div>
+
+                        {{-- Screen Bezel & Display Content --}}
+                        <div class="w-full aspect-[500/685] rounded-[2rem] overflow-hidden bg-zinc-900 relative">
+                            <img src="{{ asset('screenshots/dashboard-mobile.png') }}" alt="Solforbs Mobile Dashboard" class="w-full h-full object-cover object-top select-none pointer-events-none" />
+                        </div>
+
+                        {{-- Bottom Home Indicator Bar --}}
+                        <div class="w-16 h-1 rounded-full bg-zinc-600/50 absolute bottom-1.5 left-1/2 -translate-x-1/2 z-20"></div>
+                    </div>
+
+                </div>
             </div>
         </x-frontend.container>
     </section>
