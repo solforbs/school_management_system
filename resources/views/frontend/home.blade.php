@@ -54,28 +54,34 @@
             </div>
 
             <!-- Tilted Overlapping Real Device Mockups -->
-            <div class="relative w-full max-w-lg mx-auto aspect-[4/3]" data-animate="right" style="--reveal-delay:120ms">
+            <div class="relative w-full max-w-xl mx-auto aspect-[4/3]" data-animate="right" style="--reveal-delay:120ms">
                 
                 <!-- Back Device (Laptop / Desktop View) -->
-                <div class="absolute right-0 top-2 w-[88%] transform rotate-3 hover:rotate-1 transition-transform duration-500 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-2xl shadow-zinc-900/15 dark:border-white/10 dark:bg-zinc-900">
-                    <div class="flex items-center gap-1.5 px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-t-lg">
-                        <span class="size-2.5 rounded-full bg-red-400"></span>
-                        <span class="size-2.5 rounded-full bg-amber-400"></span>
-                        <span class="size-2.5 rounded-full bg-emerald-400"></span>
-                        <span class="ml-3 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Solforbs Executive Dashboard</span>
+                <div class="absolute right-0 top-0 w-[88%] transform rotate-2 hover:rotate-0 transition-transform duration-500 rounded-2xl border border-zinc-200/90 bg-white p-2 shadow-2xl shadow-zinc-900/20 dark:border-white/10 dark:bg-zinc-900">
+                    <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 rounded-t-xl">
+                        <div class="flex items-center gap-1.5">
+                            <span class="size-2.5 rounded-full bg-red-400"></span>
+                            <span class="size-2.5 rounded-full bg-amber-400"></span>
+                            <span class="size-2.5 rounded-full bg-emerald-400"></span>
+                        </div>
+                        <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 text-[10px] font-mono text-zinc-500">
+                            <flux:icon icon="lock-closed" class="size-2.5 text-emerald-500" />
+                            <span>app.solforbs.com/dashboard</span>
+                        </div>
+                        <div class="size-3"></div>
                     </div>
-                    <div class="w-full aspect-video rounded-b overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative group">
-                        <img src="{{ asset('screenshots/dashboard-desktop.png') }}" alt="Solforbs Executive Dashboard" class="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
+                    <div class="w-full aspect-[16/10] rounded-b-xl overflow-hidden bg-zinc-100 dark:bg-zinc-950 relative group">
+                        <img src="{{ asset('screenshots/dashboard-desktop.png') }}" alt="Solforbs Executive Dashboard" class="w-full h-full object-contain object-top transition-transform duration-700 group-hover:scale-[1.02]" />
                     </div>
                 </div>
 
-                <!-- Front Device (Mobile Smartphone View) -->
-                <div class="absolute -left-2 bottom-0 w-[34%] transform -rotate-6 hover:-rotate-2 transition-transform duration-500 rounded-[1.8rem] border-[4px] border-zinc-900 bg-zinc-900 shadow-2xl shadow-zinc-900/50 dark:border-zinc-700">
-                    <div class="flex justify-center pt-2 pb-1.5 bg-zinc-900 rounded-t-[1.5rem]">
+                <!-- Front Device (Smartphone Frame with Exact-Fit Real Mobile Screenshot) -->
+                <div class="absolute -left-2 bottom-0 w-[42%] transform -rotate-3 hover:rotate-0 transition-transform duration-500 rounded-[2.2rem] border-[5px] border-zinc-900 bg-zinc-900 shadow-2xl shadow-zinc-950/60 dark:border-zinc-700 p-1">
+                    <div class="flex justify-center pt-2 pb-1.5 bg-zinc-900 rounded-t-[1.6rem]">
                         <div class="w-12 h-1.5 rounded-full bg-zinc-700 dark:bg-zinc-800"></div>
                     </div>
-                    <div class="w-full aspect-[9/16] rounded-b-[1.5rem] overflow-hidden bg-zinc-950 relative">
-                        <img src="{{ asset('screenshots/dashboard-mobile.png') }}" alt="Solforbs Mobile Experience" class="w-full h-full object-cover object-top" />
+                    <div class="w-full aspect-[500/685] rounded-b-[1.6rem] overflow-hidden bg-zinc-50 dark:bg-zinc-950 relative">
+                        <img src="{{ asset('screenshots/dashboard-mobile.png') }}" alt="Solforbs Mobile Experience" class="w-full h-full object-contain object-top" />
                     </div>
                 </div>
 
