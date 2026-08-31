@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Modules\FeeManagement\Models\Fee;
 use Modules\FeeManagement\Models\FeePayment;
@@ -25,9 +26,9 @@ use Modules\FeeManagement\Models\FeePayment;
  * @property string|null $source
  * @property string|null $extraction_raw_response
  * @property string|null $recorded_by
- * @property \Illuminate\Support\Carbon|null $paid_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $paid_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property array $data
  */
 class FeePaymentService

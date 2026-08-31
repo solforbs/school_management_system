@@ -17,7 +17,7 @@ if (! function_exists('progress')) {
     {
         $institutionColumns = $institution->toArray();
         $columns = count($institutionColumns);
-        $filled = Arr::where($institutionColumns, fn($value) => filled($value));
+        $filled = Arr::where($institutionColumns, fn ($value) => filled($value));
 
         return round((count($filled) / $columns) * 100, 0);
     }

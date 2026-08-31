@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use Modules\FeeManagement\Models\Fee;
 use App\Notifications\FeePaymentReminder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
+use Modules\FeeManagement\Models\Fee;
 
 /**
  * Sends a consolidated fee-balance reminder (email + SMS where a contact is
@@ -18,8 +18,8 @@ class FeeReminderService
     public function __construct(private readonly SmsService $smsService) {}
 
     /**
-     * @param Builder<Fee> $query A Fee query already scoped to whatever the
-     *                            caller is allowed to send reminders for.
+     * @param  Builder<Fee>  $query  A Fee query already scoped to whatever the
+     *                               caller is allowed to send reminders for.
      * @return array{
      *     parents_notified: int,
      *     emails_sent: int,

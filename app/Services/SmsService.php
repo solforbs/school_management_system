@@ -16,6 +16,7 @@ class SmsService
     {
         $this->config = config('sms');
     }
+
     /**
      * @return array<string, mixed>
      */
@@ -52,9 +53,9 @@ class SmsService
      * - recipient
      * - message
      */
-        $dedupeKey = 'sms:dedupe:' . hash(
+        $dedupeKey = 'sms:dedupe:'.hash(
             'sha256',
-            $provider . '|' . $mobile . '|' . $message
+            $provider.'|'.$mobile.'|'.$message
         );
 
         $lock = Cache::lock($dedupeKey, 30);
@@ -96,7 +97,7 @@ class SmsService
                 CURLOPT_TIMEOUT => $this->config['options']['timeout'] ?? 30,
                 CURLOPT_MAXREDIRS => $this->config['options']['max_redirects'] ?? 10,
                 CURLOPT_HTTPHEADER => [
-                    'apikey: ' . ($providerConfig['apikey'] ?? ''),
+                    'apikey: '.($providerConfig['apikey'] ?? ''),
                     'Content-Type: application/x-www-form-urlencoded',
                 ],
             ]);
@@ -150,6 +151,7 @@ class SmsService
             $lock->release();
         }
     }
+
     /**
      * The gateway reports its outcome in `status`, while the failure paths
      * above return a `success` flag. Callers shouldn't have to know the
@@ -170,7 +172,7 @@ class SmsService
         $mobile = preg_replace('/[^0-9]/', '', $mobile);
 
         if (strlen($mobile) == 10 && substr($mobile, 0, 1) == '0') {
-            return '254' . substr($mobile, 1);
+            return '254'.substr($mobile, 1);
         }
 
         return $mobile;

@@ -1,0 +1,1411 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$institution\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Helpers/helpers.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Helpers/helpers.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$is_approved\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Helpers/helpers.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$plan\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Helpers/helpers.php
+
+		-
+			message: '#^Function currentInstitution\(\) should return Modules\\Institution\\Models\\Institution\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Helpers/helpers.php
+
+		-
+			message: '#^Function progress\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Helpers/helpers.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Payment\:\:\$institution\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Payment\:\:\$plan\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: mixed$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\BillingController\:\:callback\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\BillingController\:\:initiate\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\BillingController\:\:webhook\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, Modules\\Institution\\Models\\Institution\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Parameter \#1 \$plan of method Modules\\Institution\\Models\\Institution\:\:amountDueForPlan\(\) expects App\\Models\\Plan, App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/BillingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ContactMessageController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ContactMessageController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ContactMessageController\:\:sortCollection\(\) has parameter \$collection with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/ContactMessageController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ContactMessageController\:\:sortCollection\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/ContactMessageController.php
+
+		-
+			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ContactMessageController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DashboardController\:\:__invoke\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DashboardController.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DeviceProfileController.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DeviceProfileController.php
+
+		-
+			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$ip_address\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:setTime\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:sortCollection\(\) has parameter \$collection with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:sortCollection\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/DevicesController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:show\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\ModuleController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/ModuleController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:isSelfServe\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\OnboardingController\:\:alreadyOnboarded\(\) has parameter \$user with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\OnboardingController\:\:callback\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\OnboardingController\:\:pay\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\OnboardingController\:\:plan\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\OnboardingController\:\:setupFeeSettled\(\) has parameter \$user with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/OnboardingController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:edit\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:update\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\PlanController\:\:validateData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>slug" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/PlanController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\SyncDevice\:\:\$token\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncDeviceController\:\:create\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncDeviceController\:\:destroy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncDeviceController\:\:index\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncDeviceController\:\:store\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Parameter \#1 \$boolean of function abort_unless expects bool, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Relation ''institution'' is not found in App\\Models\\SyncDevice model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Relation ''user'' is not found in App\\Models\\SyncDevice model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/SyncDeviceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 9
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:hasRole\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\>\:\:update\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:buildDeviceUserData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:syncStudent\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:syncStudent\(\) has parameter \$studentId with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:syncStudentToDevice\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:syncStudentToDevice\(\) has parameter \$deviceSerial with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:syncStudentToDevice\(\) has parameter \$studentId with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Parameter \#1 \$student of method App\\Http\\Controllers\\SyncStudentToDeviceController\:\:buildDeviceUserData\(\) expects App\\Models\\User, App\\Models\\User\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\User\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/SyncStudentToDeviceController.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 1
+			path: app/Http/Middleware/EnsureAccountIsActive.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Resources/PlanResource.php
+
+		-
+			message: '#^Parameter \#1 \$keys of method App\\Http\\Resources\\PlanResource\:\:labelled\(\) expects array\<int, string\>\|null, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Resources/PlanResource.php
+
+		-
+			message: '#^Parameter \#1 \$keys of method App\\Http\\Resources\\PlanResource\:\:labelled\(\) expects array\<int, string\>\|null, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Resources/PlanResource.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Listeners/SendAttendanceSmsListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Listeners/SendAttendanceSmsListener.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$studentParent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Listeners/SendAttendanceSmsListener.php
+
+		-
+			message: '#^Class App\\Models\\ChatbotVerification uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/ChatbotVerification.php
+
+		-
+			message: '#^Method App\\Models\\Devices\:\:institution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Devices.php
+
+		-
+			message: '#^Method App\\Models\\Devices\:\:zktecoDevice\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Devices.php
+
+		-
+			message: '#^Method App\\Models\\Payment\:\:initiatedBy\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Method App\\Models\\Payment\:\:institution\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Method App\\Models\\Payment\:\:plan\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Method App\\Models\\Payment\:\:scopeUnclaimedSetupFee\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Method App\\Models\\Payment\:\:scopeUnclaimedSetupFee\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Payment.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Class App\\Models\\Plan uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Method App\\Models\\Plan\:\:institutions\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Method App\\Models\\Plan\:\:scopeActive\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Method App\\Models\\Plan\:\:scopeActive\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\*NEVER\*, \*NEVER\*\>\|iterable\<\*NEVER\*, \*NEVER\*\>\|null, array\{\}\|string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of function in_array expects array, array\|string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Models/Plan.php
+
+		-
+			message: '#^Class App\\Models\\SyncDevice uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/SyncDevice.php
+
+		-
+			message: '#^Method App\\Models\\SyncDevice\:\:institution\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/SyncDevice.php
+
+		-
+			message: '#^Method App\\Models\\SyncDevice\:\:token\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/SyncDevice.php
+
+		-
+			message: '#^Method App\\Models\\SyncDevice\:\:user\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Models/SyncDevice.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/SyncSetting.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:activeInstitution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:childFees\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:children\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:fees\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:institution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasMany does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:parent\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:parentInstitution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOneThrough does not specify its types\: TRelatedModel, TIntermediateModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:parentUserDetails\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOneThrough does not specify its types\: TRelatedModel, TIntermediateModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:staffUserDetails\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:studentParent\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOneThrough does not specify its types\: TRelatedModel, TIntermediateModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:studentUserDetails\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Models\\User\:\:teacherUserDetails\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^PHPDoc tag @use has invalid type App\\Models\\UserFactory\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Property App\\Models\\User\:\:\$tetherSyncable \(array\<string\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Type App\\Models\\UserFactory in generic type Illuminate\\Database\\Eloquent\\Factories\\HasFactory\<App\\Models\\UserFactory\> in PHPDoc tag @use is not subtype of template type TFactory of Illuminate\\Database\\Eloquent\\Factories\\Factory of trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory\.$#'
+			identifier: generics.notSubtype
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Method App\\Notifications\\ChatbotVerificationCode\:\:toMail\(\) has parameter \$notifiable with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Notifications/ChatbotVerificationCode.php
+
+		-
+			message: '#^Method App\\Notifications\\ChatbotVerificationCode\:\:via\(\) has parameter \$notifiable with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Notifications/ChatbotVerificationCode.php
+
+		-
+			message: '#^Method App\\Notifications\\ChatbotVerificationCode\:\:via\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Notifications/ChatbotVerificationCode.php
+
+		-
+			message: '#^Method App\\Notifications\\FeePaymentReminder\:\:toMail\(\) has parameter \$notifiable with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Notifications/FeePaymentReminder.php
+
+		-
+			message: '#^Method App\\Notifications\\FeePaymentReminder\:\:via\(\) has parameter \$notifiable with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Notifications/FeePaymentReminder.php
+
+		-
+			message: '#^Method App\\Notifications\\FeePaymentReminder\:\:via\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Notifications/FeePaymentReminder.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Notifications/FeePaymentReminder.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$institution_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToInstitution\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToInstitution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToOwnInstitutionRow\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToOwnInstitutionRow\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToSchoolParents\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToSchoolParents\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToSchoolPeople\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Method App\\Providers\\TetherServiceProvider\:\:scopeToSchoolPeople\(\) return type with generic class Illuminate\\Database\\Eloquent\\Builder does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^PHPDoc tag @var for constant App\\Providers\\TetherServiceProvider\:\:SYNCED_MODELS with type array\<string, class\-string\<Illuminate\\Database\\Eloquent\\Model\>\> is incompatible with value array\{App\\Sync\\Models\\Curriculum\: array\{''Modules\\\\Curriculum\\\\Models\\\\Curriculum'', ''everything'', true\}, App\\Sync\\Models\\User\: array\{''App\\\\Models\\\\User'', ''schoolPeople'', true\}, App\\Sync\\Models\\ParentDetails\: array\{''Modules\\\\Parent\\\\Models\\\\ParentDetails'', ''schoolParents'', true\}, App\\Sync\\Models\\Institution\: array\{''Modules\\\\Institution\\\\Models\\\\Institution'', ''ownRow'', true\}, App\\Sync\\Models\\StudentDetails\: array\{''Modules\\\\Student\\\\Models\\\\StudentDetails'', ''byInstitution'', true\}, App\\Sync\\Models\\StaffDetails\: array\{''Modules\\\\Staff\\\\Models\\\\StaffDetails'', ''byInstitution'', false\}, App\\Sync\\Models\\Fee\: array\{''Modules\\\\FeeManagement\\\\Models\\\\Fee'', ''byInstitution'', false\}, App\\Sync\\Models\\FeePayment\: array\{''Modules\\\\FeeManagement\\\\Models\\\\FeePayment'', ''byInstitution'', false\}, \.\.\.\}\.$#'
+			identifier: classConstant.phpDocType
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between \*NEVER\* and ''App\\\\Models\\\\User'' will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Providers/TetherServiceProvider.php
+
+		-
+			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$ip_address\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$parent_occupation\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$parent_phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\FeeManagement\\Models\\Fee\:\:\$institution\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\FeeManagement\\Models\\Fee\:\:\$student\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$city\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$county\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$is_active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$is_approved\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$owner\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$city\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$date_of_birth\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$enrollment_status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$gender\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addAttendanceSheet\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addDevicesSheet\(\) has parameter \$devices with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addFeesSheet\(\) has parameter \$fees with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addInstitutionsSheet\(\) has parameter \$institutions with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addMessagesSheet\(\) has parameter \$messages with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addParentsSheet\(\) has parameter \$parents with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addStudentsSheet\(\) has parameter \$students with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:addUsersSheet\(\) has parameter \$users with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsExportService\:\:institutionWorkbook\(\) has parameter \$institutionIds with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: argument.unresolvableType
+			count: 4
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Relation ''institution'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Relation ''owner'' is not found in Modules\\Institution\\Models\\Institution model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Relation ''student'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Return type of call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
+			identifier: method.unresolvableReturnType
+			count: 4
+			path: app/Services/AnalyticsExportService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$institution\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:feesByStatus\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:feesByStatus\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:forUser\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:institutionStats\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:monthlyCounts\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:monthlyCounts\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:monthlyFeeTrend\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:monthlyFeeTrend\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:parentStats\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:sortCollection\(\) has parameter \$collection with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:sortCollection\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:studentStats\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:systemStats\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:teacherStats\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:usersByRole\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Models\\Devices\>\:\:filter\(\) expects \(callable\(App\\Models\\Devices, int\)\: bool\)\|null, Closure\(App\\Models\\Devices\)\: \(bool\|null\) given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Relation ''owner'' is not found in Modules\\Institution\\Models\\Institution model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Relation ''student'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Unable to resolve the template type TGroupKey in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:groupBy\(\)$#'
+			identifier: argument.templateType
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoAttendanceLog\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Modules\\Classes\\Models\\SchoolClass\>\|Modules\\Classes\\Models\\SchoolClass\:\:\$classTeacher\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Modules\\Classes\\Models\\SchoolClass\>\|Modules\\Classes\\Models\\SchoolClass\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Result\\Models\\Result\:\:\$examination\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Result\\Models\\Result\:\:\$grade\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Result\\Models\\Result\:\:\$marks_obtained\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$class_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Timetable\\Models\\TimetableEntry\:\:\$end_time\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Timetable\\Models\\TimetableEntry\:\:\$start_time\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\Timetable\\Models\\TimetableEntry\:\:\$subject\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Method App\\Services\\Chatbot\\StudentDataService\:\:attendance\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Method App\\Services\\Chatbot\\StudentDataService\:\:fees\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Method App\\Services\\Chatbot\\StudentDataService\:\:profile\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Method App\\Services\\Chatbot\\StudentDataService\:\:results\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Method App\\Services\\Chatbot\\StudentDataService\:\:timetable\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Relation ''examination'' is not found in Modules\\Result\\Models\\Result model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>subject_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>title" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Chatbot/StudentDataService.php
+
+		-
+			message: '#^Class App\\Services\\FeePaymentService has PHPDoc tag @property for property \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/FeePaymentService.php
+
+		-
+			message: '#^Method App\\Services\\FeePaymentService\:\:record\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/FeePaymentService.php
+
+		-
+			message: '#^Access to an undefined property Modules\\FeeManagement\\Models\\Fee\:\:\$parent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/FeeReminderService.php
+
+		-
+			message: '#^Relation ''parent'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/FeeReminderService.php
+
+		-
+			message: '#^Method App\\Services\\GeminiService\:\:extractReceiptDetails\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/GeminiService.php
+
+		-
+			message: '#^Parameter \#1 \$string of function base64_encode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/GeminiService.php
+
+		-
+			message: '#^Method App\\Services\\GitDeploy\:\:git\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Services/GitDeploy.php
+
+		-
+			message: '#^Method App\\Services\\GitDeploy\:\:process\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Services/GitDeploy.php
+
+		-
+			message: '#^Method App\\Services\\PaystackService\:\:initializeTransaction\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/PaystackService.php
+
+		-
+			message: '#^Method App\\Services\\PaystackService\:\:initializeTransaction\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/PaystackService.php
+
+		-
+			message: '#^Method App\\Services\\PaystackService\:\:verifyTransaction\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/PaystackService.php
+
+		-
+			message: '#^Method App\\Services\\ReceiptOcrService\:\:extractReceiptDetails\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/ReceiptOcrService.php
+
+		-
+			message: '#^Method App\\Services\\ReceiptOcrService\:\:extractReceiptDetails\(\) should return array\{amount\: float\|null, currency\: string\|null, index_number\: string\|null, admission_number\: string\|null, student_name\: string\|null, paid_at\: string\|null, reference\: string\|null, payment_method\: string\|null, \.\.\.\} but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/ReceiptOcrService.php
+
+		-
+			message: '#^Method App\\Services\\ReceiptOcrService\:\:parse\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/ReceiptOcrService.php
+
+		-
+			message: '#^Method App\\Services\\SmsService\:\:formatMobile\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: app/Services/SmsService.php
+
+		-
+			message: '#^Method App\\Services\\SmsService\:\:formatMobile\(\) has parameter \$mobile with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Services/SmsService.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, bool\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/SmsService.php
+
+		-
+			message: '#^Cannot cast 0\|Athwari\\LaravelZktecoAdms\\Enums\\UserPrivilege to int\.$#'
+			identifier: cast.int
+			count: 2
+			path: app/Services/ZKTecoUserSyncService.php
+
+		-
+			message: '#^Method App\\Services\\ZKTecoUserSyncService\:\:addUserToDevice\(\) has parameter \$userData with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/ZKTecoUserSyncService.php
+
+		-
+			message: '#^Offset ''pin'' on non\-empty\-array on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/ZKTecoUserSyncService.php
+
+		-
+			message: '#^Parameter \#4 \$color of function imagefill expects int, int\<0, max\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/ZKTecoUserSyncService.php

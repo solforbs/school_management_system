@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Services\PaystackService;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 
 class BillingController extends Controller
@@ -61,7 +61,7 @@ class BillingController extends Controller
             return back()->with('error', 'Nothing left to pay for this plan.');
         }
 
-        $reference = 'sms_' . Str::uuid();
+        $reference = 'sms_'.Str::uuid();
 
         $payment = Payment::create([
             'institution_id' => $institution->id,

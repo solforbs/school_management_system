@@ -39,7 +39,7 @@ class ReceiptOcrService
     private function parse(string $text): array
     {
         $normalized = preg_replace('/\s+/', ' ', trim($text));
-        
+
         return [
             'amount' => $this->extractAmount($normalized),
             'currency' => $this->extractCurrency($normalized),
@@ -157,6 +157,7 @@ class ReceiptOcrService
         if (preg_match('/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/', $text, $m)) {
             try {
                 $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
+
                 return Carbon::create((int) $year, (int) $m[2], (int) $m[1])->toDateString();
             } catch (\Throwable) {
                 return null;
@@ -168,6 +169,7 @@ class ReceiptOcrService
             try {
                 $month = Carbon::parse($m[2])->month;
                 $year = strlen($m[3]) === 2 ? '20'.$m[3] : $m[3];
+
                 return Carbon::create((int) $year, (int) $month, (int) $m[1])->toDateString();
             } catch (\Throwable) {
                 return null;
@@ -195,7 +197,7 @@ class ReceiptOcrService
             '/\bRRM\s*[:]?\s*([A-Z0-9]{4,20})/i',
             '/\bReceipt\s*(?:No\.?)?\s*[:]?\s*([A-Z0-9]{4,20})/i',
             '/\bAuthorization\s*code\s*[:]?\s*([A-Z0-9]{4,20})/i',
-            '/\bTransaction\s*(?:Code|ID)\s*[:]?\s*([A-Z0-9]{4,20})/i'
+            '/\bTransaction\s*(?:Code|ID)\s*[:]?\s*([A-Z0-9]{4,20})/i',
         ];
 
         foreach ($patterns as $pattern) {

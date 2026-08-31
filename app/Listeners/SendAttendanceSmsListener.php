@@ -7,8 +7,8 @@ use Athwari\LaravelZktecoAdms\DTOs\AttendanceRecord;
 use Athwari\LaravelZktecoAdms\Enums\AttendanceStatus;
 use Athwari\LaravelZktecoAdms\Events\AttendanceReceived;
 use Athwari\LaravelZktecoAdms\Models\ZktecoUser;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Texts a student's parent every time the student punches a ZKTeco

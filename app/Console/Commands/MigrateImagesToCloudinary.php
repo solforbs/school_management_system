@@ -17,7 +17,6 @@ use Modules\Student\Models\StudentDetails;
  * as the storage key - so no database column needs updating, only the
  * backend the path resolves against.
  */
-
 #[Signature('app:migrate-images-to-cloudinary
     {--delete-local : Remove the local copy after a successful upload}')]
 #[Description('Upload existing local institution logos and student profile photos to Cloudinary')]

@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\Institution\Models\Institution;
+
 /**
  * @property int $id
  * @property string $serial_number
  * @property int|null $institution_id
  * @property int|null $zkteco_device_id
  * @property bool $is_active
- *
  * @property-read Institution|null $institution
  * @property-read ZktecoDevice|null $zktecoDevice
  */
@@ -34,7 +34,6 @@ class Devices extends Model
     {
         return $this->belongsTo(Institution::class);
     }
-    
 
     public function zktecoDevice(): BelongsTo
     {
