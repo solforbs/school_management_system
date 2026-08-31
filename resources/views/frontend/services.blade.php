@@ -13,48 +13,48 @@
                             'icon' => 'academic-cap',
                             'title' => 'Admissions & Students',
                             'body' =>
-                                'Enroll students, keep guardian and address details in one place, and give every learner a single academic profile.',
+                                'Enroll students digitally, maintain guardian and address records, and give every learner a single comprehensive profile.',
                         ],
                         [
-                            'icon' => 'finger-print',
+                            'icon' => 'device-phone-mobile',
                             'title' => 'Biometric Attendance',
                             'body' =>
-                                'Connect ZKTeco devices for tap-in attendance that syncs automatically, with manual registers as a fallback.',
+                                'Connect ZKTeco gate terminals for tap-in attendance that syncs automatically with instant parent SMS alerts.',
                         ],
                         [
                             'icon' => 'banknotes',
-                            'title' => 'Fees & M-Pesa Payments',
+                            'title' => 'Fees & AI Receipt OCR',
                             'body' =>
-                                'Bill fees per term, track balances per student, and accept M-Pesa payments directly into the platform.',
+                                'Bill fees per term, accept M-Pesa payments directly, and scan paper bank slips in seconds with integrated AI OCR.',
                         ],
                         [
                             'icon' => 'clipboard-document-check',
                             'title' => 'Examinations & Report Cards',
                             'body' =>
-                                'Record marks, compute grades, and generate report cards teachers, parents and admins can all trust.',
+                                'Record marks, compute CBC & KCSE grading bands, and generate official printable PDF report cards with QR codes.',
                         ],
                         [
                             'icon' => 'calendar-days',
                             'title' => 'Timetable & Classes',
                             'body' =>
-                                'Build class timetables, assign subjects and teachers, and keep every lesson slot conflict-free.',
+                                'Build conflict-free weekly timetables, assign teachers to streams, and track period lesson attendance effortlessly.',
                         ],
                         [
                             'icon' => 'chat-bubble-left-right',
-                            'title' => 'Parent Communication',
+                            'title' => 'Branded School SMS',
                             'body' =>
-                                'A secure self-service chat assistant for results, attendance and fees, verified with a one-time code.',
+                                'Send broadcast group messages and automated attendance alerts to parents from your school\'s own custom Sender ID.',
                         ],
                         [
                             'icon' => 'shield-check',
                             'title' => 'Roles & Permissions',
                             'body' =>
-                                'Fine-grained, role-based access so administrators, teachers and staff only see what they need to.',
+                                'Fine-grained access control so directors, accountants, teachers, and staff only access what they need.',
                         ],
                         [
                             'icon' => 'building-office-2',
-                            'title' => 'Multi-School Support',
-                            'body' => 'Each institution gets its own private, isolated workspace on the same platform.',
+                            'title' => 'Multi-Campus Support',
+                            'body' => 'Each institution gets its own private, isolated workspace with custom branding and logos.',
                         ],
                     ];
                 @endphp
@@ -69,155 +69,129 @@
         </x-frontend.container>
     </section>
 
-    {{-- Spotlight: Attendance --}}
+    {{-- Spotlight: Attendance & Biometrics --}}
     <section class="py-20 sm:py-28">
         <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
             <div data-animate="left">
-                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Attendance
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Biometric Attendance
                 </p>
                 <h2
                     class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
                     Attendance without the guesswork
                 </h2>
                 <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
-                    Connect a ZKTeco biometric device at the gate or classroom door, and every tap-in flows
-                    straight into the platform — no register to reconcile by hand at the end of the day.
+                    Connect ZKTeco biometric turnstiles and gate devices directly. Every tap-in flows straight into the platform—no paper register to reconcile by hand at the end of the day.
                 </p>
                 <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
-                    <x-frontend.check-item>Biometric devices sync attendance automatically</x-frontend.check-item>
-                    <x-frontend.check-item>Manual entry still available where a device isn't
-                        installed</x-frontend.check-item>
-                    <x-frontend.check-item>Class-level and school-wide attendance visibility for
-                        staff</x-frontend.check-item>
-                    <x-frontend.check-item>Parents can check their child's attendance through the chat
-                        assistant</x-frontend.check-item>
+                    <x-frontend.check-item>Biometric gate terminals sync attendance automatically</x-frontend.check-item>
+                    <x-frontend.check-item>Instant SMS dispatched to parents upon student arrival</x-frontend.check-item>
+                    <x-frontend.check-item>Class-level and school-wide attendance visibility for staff</x-frontend.check-item>
+                    <x-frontend.check-item>Offline tethering mode keeps gates working during internet drops</x-frontend.check-item>
                 </ul>
             </div>
 
             <div class="relative" data-animate="right">
-                <div
-                    class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-zinc-900">
-                    <div class="flex items-center gap-2 border-b border-zinc-100 pb-4 dark:border-white/10">
-                        <span
-                            class="flex size-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
-                            <flux:icon icon="finger-print" class="size-5" />
-                        </span>
-                        <span class="text-sm font-semibold text-zinc-900 dark:text-white">Device sync log</span>
-                    </div>
-                    <ul class="mt-4 space-y-3">
-                        @foreach (['Gate reader · 07:42', 'Block A reader · 07:51', 'Block B reader · 08:03'] as $entry)
-                            <li
-                                class="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-white/5">
-                                <span class="text-zinc-600 dark:text-zinc-300">{{ $entry }}</span>
-                                <flux:icon icon="check-circle" class="size-4 text-emerald-500" />
-                            </li>
-                        @endforeach
-                    </ul>
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                    <img src="{{ asset('screenshots/devices.png') }}" alt="Biometric Hardware Management" class="w-full h-auto object-cover" />
                 </div>
             </div>
         </x-frontend.container>
     </section>
 
-    {{-- Spotlight: Fees --}}
+    {{-- Spotlight: Fees & AI OCR --}}
     <section class="bg-zinc-50 py-20 sm:py-28 dark:bg-white/[0.02]">
         <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
             <div class="order-2 relative lg:order-1" data-animate="left">
-                <div
-                    class="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-zinc-900">
-                    <div class="flex items-center justify-between border-b border-zinc-100 pb-4 dark:border-white/10">
-                        <span class="text-sm font-semibold text-zinc-900 dark:text-white">Term fee balance</span>
-                        <span
-                            class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">M-Pesa</span>
-                    </div>
-                    <div class="mt-4 space-y-2">
-                        <div class="h-2.5 w-full rounded-full bg-zinc-100 dark:bg-white/5"></div>
-                        <div class="h-2.5 w-4/5 rounded-full bg-indigo-500"></div>
-                    </div>
-                    <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">80% of this term's fees collected so far
-                    </p>
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                    <img src="{{ asset('screenshots/fees.png') }}" alt="Fee Management & AI OCR" class="w-full h-auto object-cover" />
                 </div>
             </div>
 
             <div class="order-1 lg:order-2" data-animate="right">
-                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Fees</p>
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Fee Management & M-Pesa</p>
                 <h2
                     class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
                     Get paid the way parents already pay
                 </h2>
                 <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
-                    Bill fees per term, track every student's balance, and let parents pay by M-Pesa directly —
-                    so the finance office stops chasing paper receipts.
+                    Bill fees per term, track every student's balance, accept M-Pesa payments directly, and scan paper bank deposit slips with our AI OCR scanner.
                 </p>
                 <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
                     <x-frontend.check-item>Per-term fee structures, tracked per student</x-frontend.check-item>
-                    <x-frontend.check-item>M-Pesa payments recorded automatically</x-frontend.check-item>
-                    <x-frontend.check-item>Parents check balances any time through the chat
-                        assistant</x-frontend.check-item>
+                    <x-frontend.check-item>Instant AI text extraction for bank deposit slips and M-Pesa codes</x-frontend.check-item>
+                    <x-frontend.check-item>Automated payment receipt SMS sent straight to parents</x-frontend.check-item>
+                    <x-frontend.check-item>Comprehensive fee defaulter reports with bulk reminder blasts</x-frontend.check-item>
                 </ul>
             </div>
         </x-frontend.container>
     </section>
 
-    {{-- Spotlight: Assistant --}}
+    {{-- Spotlight: Examinations & Report Cards --}}
     <section class="py-20 sm:py-28">
         <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
             <div data-animate="left">
-                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Parent
-                    communication</p>
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Academic Grading</p>
                 <h2
                     class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
-                    A parent assistant that actually answers
+                    Official CBC & KCSE Report Cards in One Click
                 </h2>
                 <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
-                    Every school on the platform gets the same chat assistant you can try right now — the one
-                    in the corner of this page. Parents ask about results, attendance, fees or their child's
-                    profile, and get a verified answer in seconds, no phone call needed.
+                    Enter subject marks once. Solforbs automatically calculates mean scores, assigns expectation bands, formats teacher remarks, and generates tamper-evident PDF report cards ready for distribution.
                 </p>
-                {{-- No wire:navigate: Livewire carries a #fragment through to
-                the new URL but never scrolls to it, so this would land at the
-                top of the homepage instead of at the assistant section. --}}
-                <flux:button :href="route('home').
-                '#assistant'" variant="outline" class="mt-6">
-                    See it explained on the homepage
-                </flux:button>
+                <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    <x-frontend.check-item>Full support for CBC expectation levels (EE, ME, AE, BE) and 8-4-4 letter grades</x-frontend.check-item>
+                    <x-frontend.check-item>Tamper-proof PDF generation with QR verification</x-frontend.check-item>
+                    <x-frontend.check-item>Single-use secure download links delivered via SMS and Email</x-frontend.check-item>
+                </ul>
             </div>
 
             <div class="relative" data-animate="right">
-                <div
-                    class="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-zinc-900">
-                    <div class="flex items-center gap-2 border-b border-zinc-100 pb-3 dark:border-white/10">
-                        <span
-                            class="flex size-8 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
-                            <flux:icon icon="chat-bubble-left-right" class="size-4" />
-                        </span>
-                        <span class="text-sm font-semibold text-zinc-900 dark:text-white">{{ config('app.name') }}
-                            Assistant</span>
-                    </div>
-                    <div class="mt-3 flex justify-start">
-                        <div
-                            class="max-w-[85%] rounded-2xl bg-zinc-100 px-3 py-2 text-sm text-zinc-800 dark:bg-white/10 dark:text-zinc-100">
-                            Sure — what's your child's admission number?
-                        </div>
-                    </div>
-                    <p class="mt-4 text-xs text-zinc-400 dark:text-zinc-500">
-                        ↘ Try the real thing — click the chat bubble in the corner of your screen.
-                    </p>
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                    <img src="{{ asset('screenshots/reportcards.png') }}" alt="Academic Grading & Report Cards" class="w-full h-auto object-cover" />
                 </div>
             </div>
         </x-frontend.container>
     </section>
 
-    <section class="pb-20 sm:pb-28">
-        <x-frontend.container>
-            <x-frontend.cta-band heading="Ready to see the whole platform?"
-                description="Compare plans, or create your school's workspace today.">
-                <flux:button :href="route('plans')" variant="outline" wire:navigate>
-                    View plans
-                </flux:button>
-                <flux:button :href="route('register')" variant="primary" wire:navigate>
-                    Get started
-                </flux:button>
-            </x-frontend.cta-band>
+    {{-- Spotlight: Branded SMS --}}
+    <section class="bg-zinc-50 py-20 sm:py-28 dark:bg-white/[0.02]">
+        <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
+            <div class="order-2 relative lg:order-1" data-animate="left">
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 p-8 shadow-xl">
+                    <div class="max-w-sm mx-auto space-y-3 font-sans">
+                        <div class="flex items-center justify-between text-xs text-zinc-400 pb-2 border-b border-zinc-800">
+                            <span>Sender ID: <strong class="text-white">YOUR_SCHOOL_NAME</strong></span>
+                            <span>Delivered</span>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-zinc-800/90 border border-zinc-700 text-zinc-100 text-xs sm:text-sm space-y-1.5 shadow-md">
+                            <p class="font-semibold text-emerald-400">Attendance Alert 🔔</p>
+                            <p>Dear Parent, Faith Muthoni (Adm: 4082) has clocked in safely at Gate 1 at 07:32 AM.</p>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-zinc-800/90 border border-zinc-700 text-zinc-100 text-xs sm:text-sm space-y-1.5 shadow-md">
+                            <p class="font-semibold text-blue-400">School Notice 📢</p>
+                            <p>Reminder: Annual General Meeting (AGM) will be held this Friday at 10:00 AM in the Main Hall.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-1 lg:order-2" data-animate="right">
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Communication</p>
+                <h2
+                    class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
+                    Branded SMS from your school's own name
+                </h2>
+                <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
+                    Stand out with an official custom alphanumeric Sender ID. Broadcast emergency announcements, term opening dates, fee reminders, and event notices to all parents in seconds.
+                </p>
+                <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    <x-frontend.check-item>Dedicated custom school Sender ID for verified authority</x-frontend.check-item>
+                    <x-frontend.check-item>Group broadcast messaging filtered by class or entire school</x-frontend.check-item>
+                    <x-frontend.check-item>High-speed gateway with 30-second atomic deduplication</x-frontend.check-item>
+                </ul>
+            </div>
         </x-frontend.container>
     </section>
+
+    <x-frontend.cta-band />
 </x-layouts::frontend.app>
