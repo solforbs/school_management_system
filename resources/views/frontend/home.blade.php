@@ -66,7 +66,7 @@
                         </div>
                         <div class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-zinc-200/60 dark:bg-zinc-800 text-[10px] font-mono text-zinc-500">
                             <flux:icon icon="lock-closed" class="size-2.5 text-emerald-500" />
-                            <span>app.solforbs.com/dashboard</span>
+                            <span>sms.solforbs.com/dashboard</span>
                         </div>
                         <div class="size-3"></div>
                     </div>
