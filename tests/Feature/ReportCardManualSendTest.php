@@ -5,12 +5,63 @@ use App\Models\User;
 use App\Services\SmsService;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 use Modules\ReportCard\Mail\ReportCardMail;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Services\ReportCardPdfService;
+use Modules\Student\Models\StudentDetails;
+
+if (! function_exists('makeReadyReportCard')) {
+    /**
+     * @param  array{email?: string|null, phone?: string|null}  $contact
+     */
+    function makeReadyReportCard(array $contact = []): ReportCard
+    {
+        $contact = array_merge(['email' => 'parent@example.com', 'phone' => '0712345678'], $contact);
+
+        $owner = User::factory()->create();
+        $institution = Institution::create([
+            'user_id' => $owner->id,
+            'name' => 'Test Institution '.uniqid(),
+            'code' => 'INST-'.uniqid(),
+            'type' => 'School',
+            'is_active' => true,
+            'status' => 'active',
+            'is_approved' => true,
+        ]);
+
+        $class = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 1 '.uniqid()]);
+
+        $parent = User::factory()->create(['email' => $contact['email']]);
+        DB::table('parent_details')->insert([
+            'id' => $parent->id,
+            'parent_id' => $parent->id,
+            'parent_phone' => $contact['phone'],
+        ]);
+
+        $student = User::factory()->create(['name' => 'Jane Wanjiru']);
+        StudentDetails::create([
+            'student_id' => $student->id,
+            'admission_number' => 'ADM-'.uniqid(),
+            'parent_id' => $parent->id,
+            'institution_id' => $institution->id,
+        ]);
+
+        return ReportCard::create([
+            'institution_id' => $institution->id,
+            'student_id' => $student->id,
+            'class_id' => $class->id,
+            'term' => 'Second Term',
+            'academic_year' => 2026,
+            'status' => 'ready',
+            'completed_at' => now()->subDays(2),
+        ]);
+    }
+}
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);

@@ -15,16 +15,16 @@
             </div>
         @else
             <div class="flex flex-col items-center justify-center w-full">
-                <img src="{{ asset('logos/solforbs-logo.png') }}" alt="{{ env('APP_NAME') }}"
-                    class="h-10 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-sm" /> <span>{{ auth()->user()->role }}</span>
+                <img src="{{ asset('logos/solforbs-logo.png') }}" alt="{{ config('app.name', 'Solforbs') }}"
+                    class="h-10 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-sm" />
             </div>
         @endif
     </flux:sidebar.brand>
 @else
     <flux:brand href="{{ route('home') }}" {{ $attributes }}>
         <div class="flex flex-col items-center justify-center w-full">
-            <img src="{{ asset('logos/solforbs-logo.png') }}" alt="{{ env('APP_NAME') }}"
-                class="h-10 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-sm" /> <span>{{ auth()->user()->role }}
+            <img src="{{ asset('logos/solforbs-logo.png') }}" alt="{{ config('app.name', 'Solforbs') }}"
+                class="h-10 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-sm" />
         </div>
     </flux:brand>
 @endif

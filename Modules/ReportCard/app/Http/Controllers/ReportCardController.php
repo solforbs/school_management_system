@@ -4,33 +4,17 @@ namespace Modules\ReportCard\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Services\ReportCardPdfService;
 use Modules\Student\Models\StudentDetails;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportCardController extends Controller
 {
     use Sortable;
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        abort_unless(Auth::user()->can('view reportcard'), 403);
-
-        $query = ReportCard::with(['institution', 'schoolClass', 'student']);
-        $this->scopeToViewer($query);
-
-        $reportCards = $query->paginate();
-
-        return view('reportcard::index', compact('reportCards'));
-    }
 
     /**
      * Show the specified resource.
@@ -83,7 +67,7 @@ class ReportCardController extends Controller
     /**
      * Generate and return a PDF for an authenticated user viewing a report card.
      */
-    public function pdf(int $reportCard): Response
+    public function pdf(int $reportCard, ReportCardPdfService $pdfService): StreamedResponse
     {
         abort_unless(Auth::user()->can('view reportcard'), 403);
 
@@ -97,98 +81,17 @@ class ReportCardController extends Controller
 
         $reportCardModel = $query->findOrFail($reportCard);
 
-        $student = $reportCardModel->student;
-        $institution = $reportCardModel->institution;
-        $schoolClass = $reportCardModel->schoolClass;
+        if (! $reportCardModel->pdf_path || ! Storage::disk('public')->exists($reportCardModel->pdf_path)) {
+            $pdfService->generate($reportCardModel);
+            $reportCardModel->refresh();
+        }
 
-        $html = '
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Report Card</title>
+        $studentName = Str::slug($reportCardModel->student?->name ?? 'student');
 
-            <style>
-                @page {
-                    size: A4 portrait;
-                    margin: 15mm;
-                }
-
-                body {
-                    font-family: Arial, sans-serif;
-                    color: #111;
-                    margin: 0;
-                }
-
-                .header {
-                    text-align: center;
-                    margin-bottom: 30px;
-                }
-
-                .student-info {
-                    margin-bottom: 25px;
-                }
-
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-
-                th,
-                td {
-                    border: 1px solid #222;
-                    padding: 8px;
-                    text-align: left;
-                }
-
-                th {
-                    background: #f3f4f6;
-                }
-
-                .print-button {
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 10px 18px;
-                    background: #111827;
-                    color: white;
-                    border: 0;
-                    border-radius: 6px;
-                    cursor: pointer;
-                }
-
-                @media print {
-                    .print-button {
-                        display: none;
-                    }
-                }
-            </style>
-        </head>
-
-        <body>
-
-            <button class="print-button" onclick="window.print()">
-                Print / Save PDF
-            </button>
-
-            <div class="header">
-                <h1>' . e($institution->name ?? 'Institution') . '</h1>
-                <h2>STUDENT REPORT CARD</h2>
-            </div>
-
-            <div class="student-info">
-                <p><strong>Student:</strong> ' . e($student->name ?? '') . '</p>
-                <p><strong>Class:</strong> ' . e($schoolClass->name ?? '') . '</p>
-            </div>
-
-            <!-- Add your report-card subjects/marks here -->
-
-        </body>
-        </html>
-    ';
-
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=UTF-8');
+        return Storage::disk('public')->response(
+            $reportCardModel->pdf_path,
+            "{$studentName}-report-card.pdf",
+        );
     }
 
     /**

@@ -46,7 +46,7 @@ class FeeReceiptController extends Controller
      */
     public function extract(Request $request)
     {
-    
+
         $this->authorizeFeature();
 
         $validated = $request->validate([
@@ -85,11 +85,16 @@ class FeeReceiptController extends Controller
 
         $institution = currentInstitution();
         $matchedStudent = null;
+        $searchNumber = $extracted['admission_number'] ?? $extracted['index_number'] ?? null;
 
-        if ($extracted['admission_number'] && $institution) {
+        if ($searchNumber && $institution) {
+            $trimmed = trim($searchNumber);
             $matchedStudent = StudentDetails::with('student')
                 ->where('institution_id', $institution->id)
-                ->where('admission_number', trim($extracted['admission_number']))
+                ->where(function ($q) use ($trimmed) {
+                    $q->where('admission_number', $trimmed)
+                        ->orWhere('student_number', $trimmed);
+                })
                 ->first();
         }
 
