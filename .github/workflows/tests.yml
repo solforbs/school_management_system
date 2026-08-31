@@ -123,7 +123,7 @@ jobs:
 
       - name: Install NPM dependencies & Build Assets
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Prepare Application Environment
