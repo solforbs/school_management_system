@@ -429,31 +429,20 @@
                         <div class="inline-flex p-3 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
                             <flux:icon icon="chat-bubble-left-right" class="size-6" />
                         </div>
-                        <h3 class="text-2xl font-bold text-zinc-900 dark:text-white">Branded School SMS Sender IDs</h3>
+                        <h3 class="text-2xl font-bold text-zinc-900 dark:text-white">Branded School SMS Sender IDs & Instant Alerts</h3>
                         <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                            Give your institution instant authority. Every message sent to parents arrives from your school's own name (e.g. <span class="font-mono font-bold text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded">IMAARA_ACAD</span>) rather than a random telephone number.
+                            Give your institution instant authority. Every message sent to parents arrives from your school's own name (e.g. <span class="font-mono font-bold text-zinc-900 dark:text-white bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded">GREEN VALLEY SCHOOL</span>) rather than a random telephone number.
                         </p>
                         <ul class="space-y-2.5 text-xs text-zinc-600 dark:text-zinc-400 pt-2">
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Official custom alphanumeric Sender ID allocation</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Bulk broadcast group alerts (emergency notices, holidays)</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> 30-second atomic deduplication to prevent double-charging</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Official Custom Sender ID:</strong> Instantly recognizable brand identity on every parent's handset</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Automated Fee Reminders:</strong> Direct balance notifications with 7-day payment links</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>1-Click Report Card Delivery:</strong> Instant single-use PDF download links sent straight to parents</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Real-Time Gate Clock-ins:</strong> Immediate arrival alerts when student scans at the school gate</li>
                         </ul>
                     </div>
-                    <div class="lg:col-span-8 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-zinc-950 p-6 flex flex-col justify-center min-h-[320px]">
-                        {{-- Mock SMS Preview Card --}}
-                        <div class="max-w-md mx-auto w-full space-y-3 font-sans">
-                            <div class="flex items-center justify-between text-xs text-zinc-400 pb-2 border-b border-zinc-800">
-                                <span>Sender: <strong class="text-white">SOLFORBS_SMS</strong></span>
-                                <span>Just now</span>
-                            </div>
-                            <div class="p-3.5 rounded-2xl bg-zinc-800/80 border border-zinc-700 text-zinc-100 text-xs sm:text-sm space-y-1.5 shadow-md">
-                                <p class="font-semibold text-emerald-400">Gate Arrival Alert 🔔</p>
-                                <p>Dear Parent, <strong>Brian Kimani (Adm: 4082)</strong> has safely arrived and clocked in at Gate 1 at 07:35 AM today.</p>
-                            </div>
-                            <div class="p-3.5 rounded-2xl bg-zinc-800/80 border border-zinc-700 text-zinc-100 text-xs sm:text-sm space-y-1.5 shadow-md">
-                                <p class="font-semibold text-blue-400">Term 2 Fee Receipt 💳</p>
-                                <p>Received KES 15,000 via M-Pesa (Ref: QHB79X2LK4) for Brian Kimani. Outstanding Term Balance: KES 0. Thank you.</p>
-                            </div>
+                    <div class="lg:col-span-8 flex justify-center py-4 bg-zinc-100 dark:bg-zinc-950/60 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-inner">
+                        <div class="max-w-xs sm:max-w-sm rounded-[2.5rem] border-[6px] border-zinc-800 dark:border-zinc-700 bg-black shadow-2xl overflow-hidden p-1">
+                            <img src="{{ asset('screenshots/sms-preview.png') }}" alt="Real Parent SMS Notifications from Green Valley School" class="w-full h-auto object-cover rounded-[2rem]" />
                         </div>
                     </div>
                 </div>

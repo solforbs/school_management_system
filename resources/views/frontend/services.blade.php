@@ -246,22 +246,9 @@
     {{-- Spotlight: Branded SMS --}}
     <section class="bg-zinc-50 py-20 sm:py-28 dark:bg-white/[0.02]">
         <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
-            <div class="order-2 relative lg:order-1" data-animate="left">
-                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 p-8 shadow-xl">
-                    <div class="max-w-sm mx-auto space-y-3 font-sans">
-                        <div class="flex items-center justify-between text-xs text-zinc-400 pb-2 border-b border-zinc-800">
-                            <span>Sender ID: <strong class="text-white">YOUR_SCHOOL_NAME</strong></span>
-                            <span>Delivered</span>
-                        </div>
-                        <div class="p-3.5 rounded-2xl bg-zinc-800/90 border border-zinc-700 text-zinc-100 text-xs sm:text-sm space-y-1.5 shadow-md">
-                            <p class="font-semibold text-emerald-400">Attendance Alert 🔔</p>
-                            <p>Dear Parent, Faith Muthoni (Adm: 4082) has clocked in safely at Gate 1 at 07:32 AM.</p>
-                        </div>
-                        <div class="p-3.5 rounded-2xl bg-zinc-800/90 border border-zinc-700 text-zinc-100 text-xs sm:text-sm space-y-1.5 shadow-md">
-                            <p class="font-semibold text-blue-400">School Notice 📢</p>
-                            <p>Reminder: Annual General Meeting (AGM) will be held this Friday at 10:00 AM in the Main Hall.</p>
-                        </div>
-                    </div>
+            <div class="order-2 relative lg:order-1 flex justify-center" data-animate="left">
+                <div class="max-w-xs sm:max-w-sm rounded-[2.5rem] border-[6px] border-zinc-800 dark:border-zinc-700 bg-black shadow-2xl overflow-hidden p-1">
+                    <img src="{{ asset('screenshots/sms-preview.png') }}" alt="Real Parent SMS Notifications from Green Valley School" class="w-full h-auto object-cover rounded-[2rem]" />
                 </div>
             </div>
 
