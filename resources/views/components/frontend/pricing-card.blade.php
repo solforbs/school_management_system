@@ -1,52 +1,92 @@
 @props([
     'name' => null,
+    'slug' => null,
     'price' => null,
+    'termlyPrice' => null,
     'period' => null,
+    'termlyPeriod' => '/term',
     'description' => null,
     'featured' => false,
     'ctaLabel' => 'Get started',
     'ctaHref' => '#',
+    'isCustom' => false,
     // A plan can grant every module the system has, which stacked in one
     // column ran the card far past the fold. Two columns keeps the price
     // and the button in view alongside what you get for it.
     'columns' => 2,
 ])
 
-<div {{ $attributes->class([
-        'relative flex flex-col rounded-3xl border p-8 transition duration-300',
-        $featured
-            ? 'dark border-transparent bg-zinc-900 shadow-2xl shadow-zinc-900/20 lg:-translate-y-2 lg:scale-105'
-            : 'border-zinc-200 bg-white hover:-translate-y-1 hover:border-zinc-300 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.03]',
+<div @click="selectedPlan = '{{ $slug }}'"
+    :class="selectedPlan === '{{ $slug }}'
+        ? 'border-2 border-[#00A3FF] bg-gradient-to-b from-[#00A3FF]/[0.08] via-white to-white dark:from-blue-950/40 dark:via-zinc-900 dark:to-zinc-950 shadow-xl shadow-[#00A3FF]/20 lg:-translate-y-1 lg:scale-[1.01] ring-1 ring-[#00A3FF]/30 z-10'
+        : 'border-zinc-200 bg-white hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-white/10 dark:bg-white/[0.03] opacity-90 hover:opacity-100 cursor-pointer'"
+    {{ $attributes->class([
+        'relative flex flex-col justify-between rounded-2xl border p-5 sm:p-6 transition duration-200 select-none cursor-pointer',
     ]) }}>
-    @if ($featured)
-        <span class="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-3 py-1 text-xs font-semibold whitespace-nowrap text-white shadow-lg">
-            Most popular
+
+    {{-- Interactive Top Badge --}}
+    <template x-if="selectedPlan === '{{ $slug }}'">
+        <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#00A3FF] to-blue-600 px-3 py-0.5 text-[10px] font-extrabold whitespace-nowrap text-white shadow-md shadow-[#00A3FF]/30 ring-2 ring-white dark:ring-zinc-900 tracking-wide uppercase">
+            {{ $featured ? '⭐ Most Popular' : '✓ Selected' }}
         </span>
+    </template>
+    @if ($featured)
+        <template x-if="selectedPlan !== '{{ $slug }}'">
+            <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shadow-xs">
+                ⭐ Most Popular
+            </span>
+        </template>
     @endif
 
-    <h3 class="text-lg font-semibold text-zinc-900 dark:text-white">{{ $name }}</h3>
-    <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{{ $description }}</p>
+    <div>
+        <div class="flex items-center justify-between gap-2">
+            <h3 class="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">{{ $name }}</h3>
+            <span :class="selectedPlan === '{{ $slug }}' ? 'bg-[#00A3FF]/15 text-[#00A3FF] border-[#00A3FF]/30' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700'"
+                class="text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors">
+                {{ $featured ? 'All Modules' : ($isCustom ? 'Multi-Campus' : 'Core Suite') }}
+            </span>
+        </div>
+        <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed min-h-[32px]">{{ $description }}</p>
 
-    <div class="mt-6 flex items-baseline gap-1 text-zinc-900 dark:text-white">
-        <span class="text-4xl font-semibold tracking-tight">{{ $price }}</span>
-        @if ($period)
-            <span class="text-sm font-normal text-zinc-500 dark:text-zinc-400">{{ $period }}</span>
-        @endif
+        {{-- Dynamic Price (Reacts to Monthly vs Termly switch) --}}
+        <div class="mt-3 flex items-baseline gap-1 text-zinc-900 dark:text-white border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+            @if ($isCustom)
+                <span class="text-2xl sm:text-3xl font-extrabold tracking-tight">Custom</span>
+                <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Quotation</span>
+            @else
+                <span class="text-2xl sm:text-3xl font-extrabold tracking-tight"
+                    x-text="billingPeriod === 'monthly' ? '{{ $price }}' : '{{ $termlyPrice ?? $price }}'">
+                    {{ $price }}
+                </span>
+                <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400"
+                    x-text="billingPeriod === 'monthly' ? '{{ $period }}' : '{{ $termlyPeriod }}'">
+                    {{ $period }}
+                </span>
+            @endif
+        </div>
+
+        {{-- Dynamic 2-column feature list --}}
+        <ul @class([
+            'mt-3.5 text-xs text-zinc-600 dark:text-zinc-400',
+            'grid gap-x-3 gap-y-1.5 sm:grid-cols-2' => $columns > 1,
+            'space-y-1.5' => $columns <= 1,
+        ])>
+            {{ $slot }}
+        </ul>
     </div>
 
-    {{-- Grid rather than CSS columns: multi-column flows items top-to-bottom
-         and can split one across a column break, which looks broken next to
-         a tick. A grid keeps each item whole and reads left-to-right. Single
-         column below sm, where two would be too narrow to read. --}}
-    <ul @class([
-        'mt-8 flex-1 text-sm text-zinc-600 dark:text-zinc-400',
-        'grid gap-x-5 gap-y-3 sm:grid-cols-2' => $columns > 1,
-        'space-y-3' => $columns <= 1,
-    ])>
-        {{ $slot }}
-    </ul>
-
-    <flux:button :href="$ctaHref" :variant="$featured ? 'primary' : 'outline'" class="mt-8 w-full" wire:navigate>
-        {{ $ctaLabel }}
-    </flux:button>
+    {{-- Interactive CTA Button --}}
+    <div class="mt-5">
+        <template x-if="selectedPlan === '{{ $slug }}'">
+            <a href="{{ $ctaHref }}" wire:navigate class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-[#00A3FF] to-blue-600 hover:from-[#0092e6] hover:to-blue-700 shadow-md shadow-[#00A3FF]/25 hover:shadow-lg transition-all cursor-pointer">
+                <span>{{ $ctaLabel }}</span>
+                <flux:icon icon="arrow-right" class="size-3.5" />
+            </a>
+        </template>
+        <template x-if="selectedPlan !== '{{ $slug }}'">
+            <a href="{{ $ctaHref }}" wire:navigate class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-zinc-700 dark:text-zinc-200 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200/80 dark:border-zinc-700 transition cursor-pointer">
+                <span>Select {{ $name }}</span>
+            </a>
+        </template>
+    </div>
 </div>
