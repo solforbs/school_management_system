@@ -90,36 +90,53 @@
                 </ul>
             </div>
 
-            <div class="relative" data-animate="right">
-                <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                    {{-- Hardware Card --}}
-                    <div class="sm:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-xl text-center space-y-3">
-                        <div class="w-full flex items-center justify-between">
-                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
-                                Hardware
-                            </span>
-                            <span class="text-[10px] text-zinc-400 font-mono">ZKTeco K40 Pro</span>
-                        </div>
-                        <div class="w-full aspect-square flex items-center justify-center p-2 bg-zinc-50 dark:bg-zinc-950 rounded-xl">
-                            <img src="{{ asset('screenshots/zktecok40pro.png') }}" alt="ZKTeco K40 Pro Hardware Terminal" class="max-h-36 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-md" />
-                        </div>
-                        <div class="text-left w-full space-y-0.5 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-                            <p class="text-xs font-bold text-zinc-900 dark:text-white">ZKTeco K40 Pro</p>
-                            <p class="text-[10px] text-zinc-500">Optical Fingerprint + RFID Card</p>
-                        </div>
+            <div class="relative" data-animate="right" x-data="{ deviceView: 'software' }">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <div class="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800 border border-zinc-300/50 dark:border-zinc-700/60 text-xs font-semibold shadow-xs">
+                        <button type="button" @click="deviceView = 'software'"
+                            :class="deviceView === 'software' ? 'bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                            <flux:icon icon="cpu-chip" class="size-3.5" />
+                            <span>Live Cloud Gateways</span>
+                        </button>
+                        <button type="button" @click="deviceView = 'hardware'"
+                            :class="deviceView === 'hardware' ? 'bg-white dark:bg-zinc-900 text-indigo-700 dark:text-indigo-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                            <flux:icon icon="device-phone-mobile" class="size-3.5" />
+                            <span>ZKTeco K40 Pro Terminal</span>
+                        </button>
                     </div>
+                </div>
 
-                    {{-- Software Devices Monitor --}}
-                    <div class="sm:col-span-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
-                        <div class="px-3.5 py-2 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/80 flex items-center justify-between">
-                            <div class="flex items-center gap-1.5">
-                                <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span class="text-[10px] font-bold text-zinc-700 dark:text-zinc-300">Live Device Gateways</span>
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                    <div x-show="deviceView === 'software'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100">
+                        <img src="{{ asset('screenshots/devices.png') }}" alt="Biometric Hardware Management" class="w-full h-auto object-cover" />
+                    </div>
+                    <div x-show="deviceView === 'hardware'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100" style="display: none;" class="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950">
+                        <div class="w-full sm:w-1/2 flex justify-center">
+                            <div class="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-md">
+                                <img src="{{ asset('screenshots/zktecok40pro.png') }}" alt="ZKTeco K40 Pro Hardware Terminal" class="max-h-44 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-md" />
                             </div>
-                            <span class="text-[10px] text-emerald-600 font-bold">Cloud Synced</span>
                         </div>
-                        <div class="w-full bg-zinc-100 dark:bg-zinc-950 overflow-hidden">
-                            <img src="{{ asset('screenshots/devices.png') }}" alt="Biometric Hardware Management" class="w-full h-auto object-cover" />
+                        <div class="w-full sm:w-1/2 space-y-2.5">
+                            <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
+                                <span class="size-1.5 rounded-full bg-indigo-500"></span>
+                                <span>Hardware Ready</span>
+                            </div>
+                            <h4 class="text-base font-bold text-zinc-900 dark:text-white">ZKTeco K40 Pro Terminal</h4>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                                Sub-second optical fingerprint sensor and RFID card reader. Logs check-ins to local memory during power or network outages.
+                            </p>
+                            <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px] pt-0.5">
+                                <div class="p-1.5 rounded bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700">
+                                    <span class="text-zinc-400 block text-[8px] uppercase">Speed</span>
+                                    <strong class="text-zinc-900 dark:text-white">&lt; 0.5s Scan</strong>
+                                </div>
+                                <div class="p-1.5 rounded bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700">
+                                    <span class="text-zinc-400 block text-[8px] uppercase">Protocol</span>
+                                    <strong class="text-zinc-900 dark:text-white">ADMS Cloud</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
