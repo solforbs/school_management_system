@@ -242,8 +242,8 @@ new #[Title('Staff Payroll & Payments')] class extends Component
                             <tr>
                                 <th class="py-3.5 px-5 w-4/12">Staff Personnel &amp; Period</th>
                                 <th class="py-3.5 px-5 w-3/12">Gross &amp; Breakdown</th>
-                                <th class="py-3.5 px-5 w-3/12">Net Payout &amp; Method</th>
-                                <th class="py-3.5 px-5 w-2/12 text-right">Status &amp; Actions</th>
+                                <th class="py-3.5 px-5 w-2.5/12">Net Payout &amp; Method</th>
+                                <th class="py-3.5 px-5 w-2.5/12 text-right">Status &amp; Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -301,24 +301,24 @@ new #[Title('Staff Payroll & Payments')] class extends Component
                                     </td>
 
                                     <td class="py-4 px-5 text-right">
-                                        <div class="flex items-center justify-end gap-2">
+                                        <div class="flex flex-col items-end gap-1.5">
                                             @if($payment->status === 'paid')
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200">
                                                     <span class="size-1.5 rounded-full bg-emerald-500"></span>
                                                     Disbursed
                                                 </span>
                                             @elseif($payment->status === 'pending')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200">
                                                     Pending
                                                 </span>
                                             @else
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400 border border-rose-200">
                                                     Failed
                                                 </span>
                                             @endif
 
-                                            <div class="flex items-center gap-1">
-                                                <flux:button href="{{ route('staff.payments.show', $payment->id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" title="View Payslip" />
+                                            <div class="flex items-center justify-end gap-1">
+                                                <flux:button href="{{ route('staff.payments.show', $payment->id) }}" wire:navigate.hover size="sm" icon="document-text" variant="subtle" title="View Payslip" />
                                                 @can('edit staff payments')
                                                     <flux:button href="{{ route('staff.payments.edit', $payment->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" title="Edit Voucher" />
                                                 @endcan

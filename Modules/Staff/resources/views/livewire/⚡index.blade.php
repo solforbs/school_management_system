@@ -231,10 +231,10 @@ new #[Title('Staff Directory')] class extends Component
                     <table class="w-full text-left text-sm table-fixed">
                         <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                             <tr>
-                                <th class="py-3.5 px-5 w-5/12">Staff Personnel &amp; ID</th>
+                                <th class="py-3.5 px-5 w-4/12">Staff Personnel &amp; ID</th>
                                 <th class="py-3.5 px-5 w-3/12">Role &amp; Department</th>
-                                <th class="py-3.5 px-5 w-2/12">Contact &amp; Salary</th>
-                                <th class="py-3.5 px-5 w-2/12 text-right">Status &amp; Actions</th>
+                                <th class="py-3.5 px-5 w-2.5/12">Contact &amp; Salary</th>
+                                <th class="py-3.5 px-5 w-2.5/12 text-right">Status &amp; Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -279,36 +279,36 @@ new #[Title('Staff Directory')] class extends Component
 
                                     <td class="py-4 px-5">
                                         @if($phone)
-                                            <a href="tel:{{ $phone }}" class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-blue-600 transition flex items-center gap-1">
+                                            <a href="tel:{{ $phone }}" class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:text-blue-600 transition flex items-center gap-1 truncate">
                                                 <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
                                                 <span class="truncate">{{ $phone }}</span>
                                             </a>
                                         @else
                                             <span class="text-xs text-zinc-400 italic">—</span>
                                         @endif
-                                        <div class="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                                        <div class="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-1 truncate">
                                             {{ $member->salary ? 'KES ' . number_format($member->salary, 2) : '—' }}
                                         </div>
                                     </td>
 
                                     <td class="py-4 px-5 text-right">
-                                        <div class="flex items-center justify-end gap-2">
+                                        <div class="flex flex-col items-end gap-1.5">
                                             @if($member->status === 'active')
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200">
                                                     <span class="size-1.5 rounded-full bg-emerald-500"></span>
                                                     Active
                                                 </span>
                                             @elseif($member->status === 'on_leave')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200">
                                                     On Leave
                                                 </span>
                                             @else
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                                                     {{ ucfirst($member->status ?? 'Inactive') }}
                                                 </span>
                                             @endif
 
-                                            <div class="flex items-center gap-1">
+                                            <div class="flex items-center justify-end gap-1">
                                                 <flux:button href="{{ route('staff.show', $member->id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" title="View Profile" />
                                                 @can('edit staff')
                                                     <flux:button href="{{ route('staff.edit', $member->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" title="Edit Staff" />

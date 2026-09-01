@@ -145,10 +145,10 @@
                     <table class="w-full text-left text-sm table-fixed">
                         <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                             <tr>
-                                <th class="py-3.5 px-5 w-5/12">Staff Personnel & ID</th>
+                                <th class="py-3.5 px-5 w-4/12">Staff Personnel & ID</th>
                                 <th class="py-3.5 px-5 w-3/12">Role & Department</th>
-                                <th class="py-3.5 px-5 w-2/12">Contact & Salary</th>
-                                <th class="py-3.5 px-5 w-2/12 text-right">Status & Actions</th>
+                                <th class="py-3.5 px-5 w-2.5/12">Contact & Salary</th>
+                                <th class="py-3.5 px-5 w-2.5/12 text-right">Status & Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-100">
