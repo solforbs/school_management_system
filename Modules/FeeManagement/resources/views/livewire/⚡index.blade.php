@@ -314,10 +314,10 @@ new #[Title('Fee Invoices')] class extends Component
                                             </div>
                                         </div>
                                         <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center gap-1.5 font-medium">
-                                            <span class="text-emerald-700 dark:text-emerald-400 font-semibold">Paid: {{ number_format((float) ($fee->paid_amount ?? 0), 2) }}</span>
+                                            <span class="text-emerald-700 dark:text-emerald-400 font-semibold">Paid: {{ number_format((float) ($fee->amount_paid ?? 0), 2) }}</span>
                                             <span class="text-zinc-300">&bull;</span>
-                                            <span class="{{ (($fee->amount ?? 0) - ($fee->paid_amount ?? 0)) > 0 ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-zinc-400' }}">
-                                                Bal: {{ number_format((float) (($fee->amount ?? 0) - ($fee->paid_amount ?? 0)), 2) }}
+                                            <span class="{{ $fee->balance > 0 ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-emerald-600 dark:text-emerald-400 font-medium' }}">
+                                                Bal: {{ number_format((float) $fee->balance, 2) }}
                                             </span>
                                         </div>
                                     </td>

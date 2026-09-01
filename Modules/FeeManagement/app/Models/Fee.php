@@ -92,6 +92,11 @@ class Fee extends Model
         return round((float) $this->amount - (float) $this->amount_paid, 2);
     }
 
+    public function getPaidAmountAttribute(): float
+    {
+        return (float) ($this->amount_paid ?? 0);
+    }
+
     public function getStatusAttribute(): string
     {
         if ($this->balance <= 0) {
