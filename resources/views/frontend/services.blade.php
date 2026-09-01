@@ -130,9 +130,31 @@
     {{-- Spotlight: Fees & AI OCR --}}
     <section class="bg-zinc-50 py-20 sm:py-28 dark:bg-white/[0.02]">
         <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
-            <div class="order-2 relative lg:order-1" data-animate="left">
+            <div class="order-2 relative lg:order-1" data-animate="left" x-data="{ feeView: 'treasury' }">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <div class="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800 border border-zinc-300/50 dark:border-zinc-700/60 text-xs font-semibold shadow-xs">
+                        <button type="button" @click="feeView = 'treasury'"
+                            :class="feeView === 'treasury' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                            <flux:icon icon="banknotes" class="size-3.5" />
+                            <span>Executive Treasury</span>
+                        </button>
+                        <button type="button" @click="feeView = 'ledger'"
+                            :class="feeView === 'ledger' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                            <flux:icon icon="table-cells" class="size-3.5" />
+                            <span>Detailed Student Ledger</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
-                    <img src="{{ asset('screenshots/fees.png') }}" alt="Fee Management & AI OCR" class="w-full h-auto object-cover" />
+                    <div x-show="feeView === 'treasury'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100">
+                        <img src="{{ asset('screenshots/fees.png') }}" alt="Fee Management & AI OCR" class="w-full h-auto object-cover" />
+                    </div>
+                    <div x-show="feeView === 'ledger'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100" style="display: none;">
+                        <img src="{{ asset('screenshots/fees-ledger.png') }}" alt="Detailed Student Fee Ledger" class="w-full h-auto object-cover" />
+                    </div>
                 </div>
             </div>
 

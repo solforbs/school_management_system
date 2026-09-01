@@ -189,7 +189,7 @@
             <div class="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 p-4 sm:p-8 shadow-xl">
                 
                 {{-- 1. Fee Management Tab --}}
-                <div x-show="activeTab === 'fees'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="grid gap-8 lg:grid-cols-12 lg:items-center">
+                <div x-show="activeTab === 'fees'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="grid gap-8 lg:grid-cols-12 lg:items-center" x-data="{ feeView: 'treasury' }">
                     <div class="lg:col-span-4 space-y-4">
                         <div class="inline-flex p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                             <flux:icon icon="banknotes" class="size-6" />
@@ -199,13 +199,45 @@
                             Track term fee balances per student in real-time. Parents can settle balances via M-Pesa Paybill, and accountants can instantly scan paper bank deposit slips using our integrated AI Receipt OCR engine.
                         </p>
                         <ul class="space-y-2.5 text-xs text-zinc-600 dark:text-zinc-400 pt-2">
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Automated student ledger balance calculations</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> AI OCR scans M-Pesa & Bank slips in seconds</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> One-click SMS fee payment acknowledgements</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Executive Invoicing:</strong> Real-time collection meters and payment velocity</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Per-Student Ledger:</strong> Instant search by Admission No with live 🟢 Paid badges</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>AI Receipt OCR:</strong> Auto-extracts deposit slips and matches student accounts</li>
                         </ul>
                     </div>
-                    <div class="lg:col-span-8 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900">
-                        <img src="{{ asset('screenshots/fees.png') }}" alt="Solforbs Fee Management" class="w-full h-auto object-cover" />
+
+                    {{-- Right Column: Interactive Sub-Toggle & Screenshot Card --}}
+                    <div class="lg:col-span-8 flex flex-col space-y-3">
+                        {{-- Mini View Switcher --}}
+                        <div class="flex items-center justify-between flex-wrap gap-2 px-1">
+                            <div class="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800 border border-zinc-300/50 dark:border-zinc-700/60 text-xs font-semibold shadow-xs">
+                                <button type="button" @click="feeView = 'treasury'"
+                                    :class="feeView === 'treasury' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                                    class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                                    <flux:icon icon="banknotes" class="size-3.5" />
+                                    <span>Executive Treasury</span>
+                                </button>
+                                <button type="button" @click="feeView = 'ledger'"
+                                    :class="feeView === 'ledger' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                                    class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                                    <flux:icon icon="table-cells" class="size-3.5" />
+                                    <span>Detailed Student Ledger</span>
+                                </button>
+                            </div>
+                            <span class="text-[11px] text-zinc-500 font-mono hidden sm:inline" x-text="feeView === 'treasury' ? 'Revenue KPIs & Action Bar' : 'Multi-Student Payment Tracking'"></span>
+                        </div>
+
+                        {{-- Screenshot Container --}}
+                        <div class="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-xl bg-white dark:bg-zinc-900 relative">
+                            {{-- View 1: Executive Treasury --}}
+                            <div x-show="feeView === 'treasury'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100">
+                                <img src="{{ asset('screenshots/fees.png') }}" alt="Solforbs Financial Treasury" class="w-full h-auto object-cover" />
+                            </div>
+
+                            {{-- View 2: Detailed Multi-Student Ledger --}}
+                            <div x-show="feeView === 'ledger'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100" style="display: none;">
+                                <img src="{{ asset('screenshots/fees-ledger.png') }}" alt="Solforbs Detailed Student Fee Ledger" class="w-full h-auto object-cover" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
