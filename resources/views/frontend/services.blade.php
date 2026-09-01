@@ -213,9 +213,31 @@
                 </ul>
             </div>
 
-            <div class="relative" data-animate="right">
+            <div class="relative" data-animate="right" x-data="{ examView: 'ledger' }">
+                <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <div class="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800 border border-zinc-300/50 dark:border-zinc-700/60 text-xs font-semibold shadow-xs">
+                        <button type="button" @click="examView = 'ledger'"
+                            :class="examView === 'ledger' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                            <flux:icon icon="table-cells" class="size-3.5" />
+                            <span>Exam Marks Ledger</span>
+                        </button>
+                        <button type="button" @click="examView = 'reportcard'"
+                            :class="examView === 'reportcard' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                            <flux:icon icon="document-text" class="size-3.5" />
+                            <span>Official Student Report Card</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
-                    <img src="{{ asset('screenshots/reportcards.png') }}" alt="Academic Grading & Report Cards" class="w-full h-auto object-cover" />
+                    <div x-show="examView === 'ledger'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100">
+                        <img src="{{ asset('screenshots/exam-results.png') }}" alt="Exam Results & Marks Ledger" class="w-full h-auto object-cover" />
+                    </div>
+                    <div x-show="examView === 'reportcard'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100" style="display: none;">
+                        <img src="{{ asset('screenshots/reportcards.png') }}" alt="Academic Grading & Official Report Cards" class="w-full h-auto object-cover" />
+                    </div>
                 </div>
             </div>
         </x-frontend.container>

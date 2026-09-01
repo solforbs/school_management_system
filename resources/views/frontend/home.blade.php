@@ -329,23 +329,55 @@
                 </div>
 
                 {{-- 3. Exams & Report Cards Tab --}}
-                <div x-show="activeTab === 'reportcards'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="grid gap-8 lg:grid-cols-12 lg:items-center" style="display: none;">
+                <div x-show="activeTab === 'reportcards'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="grid gap-8 lg:grid-cols-12 lg:items-center" x-data="{ examView: 'ledger' }" style="display: none;">
                     <div class="lg:col-span-4 space-y-4">
                         <div class="inline-flex p-3 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
                             <flux:icon icon="document-chart-bar" class="size-6" />
                         </div>
                         <h3 class="text-2xl font-bold text-zinc-900 dark:text-white">CBC, KCSE & Custom Grading Engine</h3>
                         <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                            Subject teachers enter class scores in bulk with one submission. The system computes grading bands, mean percentages, teacher remarks, and generates printable PDF report cards with single-use secure download links.
+                            Subject teachers enter class scores in bulk with one submission. The platform computes grading bands, mean percentages, teacher remarks, performance charts, and generates official printable PDF report cards.
                         </p>
                         <ul class="space-y-2.5 text-xs text-zinc-600 dark:text-zinc-400 pt-2">
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Supports CBC Expectation Bands (Exceeding, Meeting, Approaching, Below)</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Automated term-over-term performance comparison</li>
-                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> Bulk deliver report cards via SMS and Email to parents</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Exam Marks Ledger:</strong> Real-time cohort achievement tracking and subject grade rankings</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Official CBC Report Cards:</strong> Includes expectation levels (EE, ME, AE, BE) & performance analysis charts</li>
+                            <li class="flex items-center gap-2"><flux:icon icon="check" class="size-4 text-emerald-500 shrink-0" /> <strong>Instant Bulk Delivery:</strong> Single-click dispatch of report cards via secure SMS download links</li>
                         </ul>
                     </div>
-                    <div class="lg:col-span-8 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-lg bg-white dark:bg-zinc-900">
-                        <img src="{{ asset('screenshots/reportcards.png') }}" alt="Solforbs Report Cards" class="w-full h-auto object-cover" />
+
+                    {{-- Right Column: Interactive Sub-Toggle & Display Card --}}
+                    <div class="lg:col-span-8 flex flex-col space-y-3">
+                        {{-- Sub-Toggle Toolbar --}}
+                        <div class="flex items-center justify-between flex-wrap gap-2 px-1">
+                            <div class="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-200/70 dark:bg-zinc-800 border border-zinc-300/50 dark:border-zinc-700/60 text-xs font-semibold shadow-xs">
+                                <button type="button" @click="examView = 'ledger'"
+                                    :class="examView === 'ledger' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                                    class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                                    <flux:icon icon="table-cells" class="size-3.5" />
+                                    <span>Exam Marks Ledger</span>
+                                </button>
+                                <button type="button" @click="examView = 'reportcard'"
+                                    :class="examView === 'reportcard' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'"
+                                    class="px-3 py-1 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+                                    <flux:icon icon="document-text" class="size-3.5" />
+                                    <span>Official Student Report Card</span>
+                                </button>
+                            </div>
+                            <span class="text-[11px] text-zinc-500 font-mono hidden sm:inline" x-text="examView === 'ledger' ? 'Recorded Scores & Class Rankings' : 'Printable CBC & KCSE Assessment Sheet'"></span>
+                        </div>
+
+                        {{-- Display Container --}}
+                        <div class="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-xl bg-white dark:bg-zinc-900 relative">
+                            {{-- View 1: Exam Results & Marks Ledger --}}
+                            <div x-show="examView === 'ledger'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100">
+                                <img src="{{ asset('screenshots/exam-results.png') }}" alt="Solforbs Exam Results & Marks Ledger" class="w-full h-auto object-cover" />
+                            </div>
+
+                            {{-- View 2: Official Student Report Card --}}
+                            <div x-show="examView === 'reportcard'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-[0.99]" x-transition:enter-end="opacity-100 scale-100" style="display: none;">
+                                <img src="{{ asset('screenshots/reportcards.png') }}" alt="Solforbs Official Student Report Card" class="w-full h-auto object-cover" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
