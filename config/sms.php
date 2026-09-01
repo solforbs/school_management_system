@@ -18,7 +18,8 @@ return [
     ],
 
     'options' => [
-        'timeout' => 30,
-        'max_redirects' => 10,
+        'timeout' => (int) env('SMS_TIMEOUT', 5),
+        'connect_timeout' => (int) env('SMS_CONNECT_TIMEOUT', 3),
+        'max_redirects' => 5,
     ],
 ];

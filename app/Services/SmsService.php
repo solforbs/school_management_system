@@ -73,6 +73,18 @@ class SmsService
             ];
         }
 
+        if (empty($providerConfig['userid']) || (empty($providerConfig['password']) && empty($providerConfig['apikey']))) {
+            Log::info('SMS gateway credentials not configured, skipping outbound network call', [
+                'provider' => $provider,
+                'mobile' => $mobile,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'SMS gateway credentials are not configured in environment',
+            ];
+        }
+
         try {
             // Build POST data from provider configuration
             $postData = http_build_query([
@@ -94,8 +106,9 @@ class SmsService
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $postData,
-                CURLOPT_TIMEOUT => $this->config['options']['timeout'] ?? 30,
-                CURLOPT_MAXREDIRS => $this->config['options']['max_redirects'] ?? 10,
+                CURLOPT_CONNECTTIMEOUT => $this->config['options']['connect_timeout'] ?? 3,
+                CURLOPT_TIMEOUT => $this->config['options']['timeout'] ?? 5,
+                CURLOPT_MAXREDIRS => $this->config['options']['max_redirects'] ?? 5,
                 CURLOPT_HTTPHEADER => [
                     'apikey: '.($providerConfig['apikey'] ?? ''),
                     'Content-Type: application/x-www-form-urlencoded',

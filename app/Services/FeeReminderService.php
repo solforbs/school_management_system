@@ -29,6 +29,8 @@ class FeeReminderService
      */
     public function sendForDefaulters(Builder $query): array
     {
+        @set_time_limit(180);
+
         $fees = (clone $query)
             ->whereColumn('amount_paid', '<', 'amount')
             ->whereNotNull('parent_id')
