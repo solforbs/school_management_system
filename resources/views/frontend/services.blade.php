@@ -270,5 +270,131 @@
         </x-frontend.container>
     </section>
 
+    {{-- Spotlight: Digital Admissions & Comprehensive Student 360° Profiles --}}
+    <section class="py-20 sm:py-28">
+        <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
+            <div data-animate="left">
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Learner Lifecycle</p>
+                <h2
+                    class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
+                    Digital Admissions & Comprehensive Student 360° Profiles
+                </h2>
+                <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
+                    Maintain a single source of truth for every learner from enrollment to graduation. Search instantly by Admission Number, Student ID, or Name with guardian phone linkage.
+                </p>
+                <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    <x-frontend.check-item>Instant search by Admission No, Student ID, or Name</x-frontend.check-item>
+                    <x-frontend.check-item>Direct parent account linkage for unified messaging and fee tracking</x-frontend.check-item>
+                    <x-frontend.check-item>Stream promotions, class transfers, and medical records in one click</x-frontend.check-item>
+                </ul>
+            </div>
+
+            <div class="relative" data-animate="right">
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                    <img src="{{ asset('screenshots/students.png') }}" alt="Student Admissions & Profile Directory" class="w-full h-auto object-cover" />
+                </div>
+            </div>
+        </x-frontend.container>
+    </section>
+
+    {{-- Spotlight: Conflict-Free Timetabling & Lesson Attendance --}}
+    <section class="bg-zinc-50 py-20 sm:py-28 dark:bg-white/[0.02]">
+        <x-frontend.container class="grid gap-16 lg:grid-cols-2 lg:items-center">
+            <div class="order-2 relative lg:order-1" data-animate="left">
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden">
+                    <img src="{{ asset('screenshots/timetable.png') }}" alt="Conflict-Free Timetable Matrix" class="w-full h-auto object-cover" />
+                </div>
+            </div>
+
+            <div class="order-1 lg:order-2" data-animate="right">
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Academic Operations</p>
+                <h2
+                    class="mt-3 text-3xl font-semibold tracking-tight text-balance text-zinc-900 sm:text-4xl dark:text-white">
+                    Conflict-Free Timetable & Daily Period Registers
+                </h2>
+                <p class="mt-4 text-lg text-pretty text-zinc-600 dark:text-zinc-400">
+                    Build weekly lesson schedules with zero overlapping teacher or classroom collisions. Teachers access their personalized rosters right on their phones, while principals monitor master school-wide coverage.
+                </p>
+                <ul class="mt-6 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    <x-frontend.check-item>Automated double-booking collision prevention across all teachers and rooms</x-frontend.check-item>
+                    <x-frontend.check-item>Period-by-period attendance register locking for lesson accountability</x-frontend.check-item>
+                    <x-frontend.check-item>1-click CSV schedule import & printable PDF master grids</x-frontend.check-item>
+                </ul>
+            </div>
+        </x-frontend.container>
+    </section>
+
+    {{-- Frequently Asked Questions (FAQ Accordion) --}}
+    <section class="py-20 sm:py-28">
+        <x-frontend.container>
+            <div class="text-center max-w-3xl mx-auto mb-14" data-animate="fade">
+                <p class="text-sm font-semibold tracking-wide text-indigo-600 uppercase dark:text-indigo-400">Got Questions?</p>
+                <h2 class="mt-3 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+                    Frequently Asked Questions
+                </h2>
+                <p class="mt-4 text-base text-zinc-600 dark:text-zinc-400">
+                    Clear answers to the most common questions from Kenyan school directors and administrators.
+                </p>
+            </div>
+
+            <div class="max-w-3xl mx-auto space-y-4" x-data="{ activeFaq: null }">
+                {{-- FAQ 1 --}}
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
+                    <button type="button" @click="activeFaq = activeFaq === 1 ? null : 1" class="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-zinc-900 dark:text-white hover:text-indigo-600 transition cursor-pointer">
+                        <span class="text-base sm:text-lg">How does biometric gate attendance work when our school Wi-Fi is down?</span>
+                        <flux:icon icon="chevron-down" class="size-5 text-zinc-400 transition-transform duration-200 shrink-0" ::class="activeFaq === 1 ? 'rotate-180 text-indigo-600' : ''" />
+                    </button>
+                    <div x-show="activeFaq === 1" x-collapse x-cloak class="px-6 pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800/60 pt-4">
+                        All our certified ZKTeco K40 Pro terminals feature dedicated onboard memory that stores up to 100,000 attendance records offline. Students can continue scanning normally during power cuts or network drops. The moment internet connectivity restores, all queued check-ins sync automatically to the cloud.
+                    </div>
+                </div>
+
+                {{-- FAQ 2 --}}
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
+                    <button type="button" @click="activeFaq = activeFaq === 2 ? null : 2" class="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-zinc-900 dark:text-white hover:text-indigo-600 transition cursor-pointer">
+                        <span class="text-base sm:text-lg">Does the grading engine support both CBC expectation levels and KCSE 8-4-4?</span>
+                        <flux:icon icon="chevron-down" class="size-5 text-zinc-400 transition-transform duration-200 shrink-0" ::class="activeFaq === 2 ? 'rotate-180 text-indigo-600' : ''" />
+                    </button>
+                    <div x-show="activeFaq === 2" x-collapse x-cloak class="px-6 pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800/60 pt-4">
+                        Yes! Solforbs provides native support for CBC competency-based assessment bands (Exceeding Expectations, Meeting Expectations, Approaching Expectations, Below Expectations) as well as traditional KCSE 8-4-4 letter grades (A through E). Report cards automatically calculate cohort means, subject remarks, and comparative performance graphs.
+                    </div>
+                </div>
+
+                {{-- FAQ 3 --}}
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
+                    <button type="button" @click="activeFaq = activeFaq === 3 ? null : 3" class="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-zinc-900 dark:text-white hover:text-indigo-600 transition cursor-pointer">
+                        <span class="text-base sm:text-lg">Can we connect our own school M-Pesa Paybill or Till Number?</span>
+                        <flux:icon icon="chevron-down" class="size-5 text-zinc-400 transition-transform duration-200 shrink-0" ::class="activeFaq === 3 ? 'rotate-180 text-indigo-600' : ''" />
+                    </button>
+                    <div x-show="activeFaq === 3" x-collapse x-cloak class="px-6 pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800/60 pt-4">
+                        Yes. You can link your school's official Safaricom Daraja M-Pesa Paybill or Buy Goods Till. When parents make fee payments, the system automatically verifies transaction codes, reconciles individual student balances, and sends an instant SMS payment receipt.
+                    </div>
+                </div>
+
+                {{-- FAQ 4 --}}
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
+                    <button type="button" @click="activeFaq = activeFaq === 4 ? null : 4" class="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-zinc-900 dark:text-white hover:text-indigo-600 transition cursor-pointer">
+                        <span class="text-base sm:text-lg">How are parent SMS notifications branded?</span>
+                        <flux:icon icon="chevron-down" class="size-5 text-zinc-400 transition-transform duration-200 shrink-0" ::class="activeFaq === 4 ? 'rotate-180 text-indigo-600' : ''" />
+                    </button>
+                    <div x-show="activeFaq === 4" x-collapse x-cloak class="px-6 pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800/60 pt-4">
+                        Every SMS notification (gate arrival alerts, fee payment receipts, report card links, emergency school notices) is delivered under your school's own registered alphanumeric Sender ID (such as <strong class="text-zinc-900 dark:text-white">GREENVALLEY</strong>), establishing trust and official authority with parents.
+                    </div>
+                </div>
+
+                {{-- FAQ 5 --}}
+                <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 overflow-hidden shadow-xs">
+                    <button type="button" @click="activeFaq = activeFaq === 5 ? null : 5" class="w-full px-6 py-5 text-left flex items-center justify-between gap-4 font-bold text-zinc-900 dark:text-white hover:text-indigo-600 transition cursor-pointer">
+                        <span class="text-base sm:text-lg">Is our school data isolated and protected across multiple campuses?</span>
+                        <flux:icon icon="chevron-down" class="size-5 text-zinc-400 transition-transform duration-200 shrink-0" ::class="activeFaq === 5 ? 'rotate-180 text-indigo-600' : ''" />
+                    </button>
+                    <div x-show="activeFaq === 5" x-collapse x-cloak class="px-6 pb-5 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800/60 pt-4">
+                        Absolutely. Each institution runs in an isolated tenant scope. Multi-campus school groups can switch between branches seamlessly, while staff, teachers, and accountants only access records permitted by their role and campus assignment.
+                    </div>
+                </div>
+            </div>
+        </x-frontend.container>
+    </section>
+
     <x-frontend.cta-band />
 </x-layouts::frontend.app>
