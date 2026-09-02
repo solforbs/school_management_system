@@ -4,7 +4,7 @@
         Simple pricing that grows with your school
     </x-frontend.page-hero>
 
-    <section class="py-4 sm:py-8" x-data="{ billingPeriod: 'monthly', selectedPlan: '{{ $plans->where('is_featured', true)->first()?->slug ?? ($plans->first()?->slug ?? 'premium') }}' }">
+    <section class="py-4 sm:py-8" x-data="{ billingPeriod: 'termly', selectedPlan: '{{ $plans->where('is_featured', true)->first()?->slug ?? ($plans->first()?->slug ?? 'premium') }}' }">
         <x-frontend.container>
             @if ($plans->isEmpty())
                 {{-- No plan is on sale. Better to say so and point at a human
@@ -18,19 +18,19 @@
                     </p>
                 </div>
             @else
-                {{-- Billing Switcher (Monthly vs Termly / Annual) --}}
+                {{-- Billing Switcher (Per Term vs Annual / Full Year) --}}
                 <div class="flex justify-center mb-10" data-animate>
                     <div class="inline-flex items-center gap-2 p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 shadow-inner">
-                        <button type="button" @click="billingPeriod = 'monthly'"
-                            :class="billingPeriod === 'monthly' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900'"
-                            class="px-4 py-1.5 rounded-full text-xs sm:text-sm transition cursor-pointer">
-                            Monthly Billing
-                        </button>
                         <button type="button" @click="billingPeriod = 'termly'"
                             :class="billingPeriod === 'termly' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900'"
+                            class="px-4 py-1.5 rounded-full text-xs sm:text-sm transition cursor-pointer">
+                            Per Term (Standard)
+                        </button>
+                        <button type="button" @click="billingPeriod = 'annual'"
+                            :class="billingPeriod === 'annual' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900'"
                             class="px-4 py-1.5 rounded-full text-xs sm:text-sm transition flex items-center gap-1.5 cursor-pointer">
-                            <span>Per Term (Save 15%)</span>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Term 1, 2, 3</span>
+                            <span>Full Year (3 Terms)</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Save 15%</span>
                         </button>
                     </div>
                 </div>
@@ -42,8 +42,15 @@
                 ])>
                     @foreach ($plans as $plan)
                         @php
-                            $termlyAmount = (float) $plan->price * 4 * 0.85;
-                            $termlyPrice = $plan->is_custom_priced ? 'Custom' : 'KES ' . number_format($termlyAmount);
+                            if ($plan->is_custom_priced) {
+                                $annualPrice = 'Custom';
+                            } elseif ((float) $plan->price <= 0) {
+                                $annualPrice = 'Free';
+                            } else {
+                                // Annual prepayment: 3 school terms with 15% discount
+                                $annualAmount = (float) $plan->price * 3 * 0.85;
+                                $annualPrice = 'KES ' . number_format($annualAmount);
+                            }
                         @endphp
                         {{-- A quoted plan has no price to sign up against, so it
                              points at a person instead of the register form. --}}
@@ -51,13 +58,13 @@
                             :name="$plan->name" 
                             :slug="$plan->slug"
                             :price="$plan->priceLabel()" 
-                            :termlyPrice="$termlyPrice"
+                            :annualPrice="$annualPrice"
                             :period="$plan->periodLabel()" 
                             :description="$plan->description"
                             :featured="$plan->is_featured"
                             :isCustom="$plan->is_custom_priced"
                             :ctaHref="$plan->isSelfServe() ? route('register') : route('contact')"
-                            :ctaLabel="$plan->isSelfServe() ? ($plan->is_featured ? 'Get Started with Premium' : 'Get Started') : 'Talk to an Expert'"
+                            :ctaLabel="$plan->isSelfServe() ? 'Get started' : 'Talk to us'"
                             :data-animate="$plan->is_featured ? 'scale' : true"
                             style="--reveal-delay:{{ $loop->index * 90 }}ms">
                             @forelse ($plan->inclusions() as $inclusion)

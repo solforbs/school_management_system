@@ -79,7 +79,7 @@ class PlanController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'billing_cycle' => 'required|in:monthly,yearly,lifetime',
+            'billing_cycle' => 'required|in:termly,monthly,yearly,lifetime',
             'modules' => 'array',
             'modules.*' => 'string|in:'.implode(',', Plan::MODULES),
             'features' => 'array',

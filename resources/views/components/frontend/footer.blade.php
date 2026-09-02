@@ -2,15 +2,12 @@
     <x-frontend.container class="py-16">
         <div class="grid gap-12 lg:grid-cols-3">
             <div class="lg:max-w-sm">
-                <a href="{{ route('home') }}" class="flex items-center gap-2 font-semibold text-zinc-900 dark:text-white" wire:navigate>
-                    <span class="flex size-8 items-center justify-center rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
-                        <x-app-logo-icon class="size-4 fill-current" />
-                    </span>
-                    {{ config('app.name') }}
+                <a href="{{ route('home') }}" class="flex items-center gap-2.5 font-bold text-zinc-900 dark:text-white" wire:navigate>
+                    <img src="{{ asset('logos/solforbs-logo.png') }}" alt="Solforbs" class="h-10 w-auto object-contain">
+                    <span class="text-base font-bold tracking-tight text-zinc-900 dark:text-white">Solforbs SMS</span>
                 </a>
                 <p class="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                    A single platform for admissions, attendance, fees, exams and parent communication —
-                    built so school offices spend less time on paperwork and more time teaching.
+                    <strong>Solforbs SMS</strong> is a cloud School Management System engineered by <strong>Solforbs</strong> to eliminate paperwork, automate fee collection, and unify admissions, exams, and attendance.
                 </p>
             </div>
 

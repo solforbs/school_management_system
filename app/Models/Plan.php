@@ -150,8 +150,9 @@ class Plan extends Model
         }
 
         return match ($this->billing_cycle) {
+            'termly' => '/term',
             'monthly' => '/month',
-            'yearly' => '/year',
+            'yearly', 'annual' => '/year',
             default => null,
         };
     }

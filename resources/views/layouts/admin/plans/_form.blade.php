@@ -25,9 +25,9 @@
     <div>
         <flux:select name="billing_cycle" label="Billing Cycle"
             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-            @foreach (['monthly' => 'Monthly', 'yearly' => 'Yearly', 'lifetime' => 'Lifetime'] as $value => $label)
+            @foreach (['termly' => 'Per Term (3 Months)', 'yearly' => 'Yearly / Annual', 'monthly' => 'Monthly', 'lifetime' => 'Lifetime'] as $value => $label)
                 <option value="{{ $value }}"
-                    {{ old('billing_cycle', $plan->billing_cycle ?? 'monthly') === $value ? 'selected' : '' }}>
+                    {{ old('billing_cycle', $plan->billing_cycle ?? 'termly') === $value ? 'selected' : '' }}>
                     {{ $label }}</option>
             @endforeach
         </flux:select>
