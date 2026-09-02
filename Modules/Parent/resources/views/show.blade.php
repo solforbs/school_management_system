@@ -102,7 +102,7 @@
                 </div>
                 <div class="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-100">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Campus Affiliation</span>
-                    <span class="text-sm font-black text-zinc-900">{{ currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-sm font-black text-zinc-900">{{ currentInstitution()?->name ?? __('Institution') }}</span>
                 </div>
             </div>
         </div>
@@ -169,7 +169,7 @@
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <span class="text-zinc-400">Institution:</span>
-                                        <span class="font-medium text-zinc-700">{{ $child->institution?->name ?? 'Green Valley' }}</span>
+                                        <span class="font-medium text-zinc-700">{{ $child->institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
                                     </div>
                                 </div>
                             </div>

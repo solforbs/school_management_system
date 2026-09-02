@@ -126,7 +126,7 @@
                         Academic Delivery
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? __('Institution') }}</span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Lesson Attendance</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">

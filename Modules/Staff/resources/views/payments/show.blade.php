@@ -54,10 +54,10 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-100">
                 <div class="flex items-center gap-3.5">
                     <div class="size-12 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-base shadow-sm">
-                        {{ strtoupper(substr($payment->institution?->name ?? 'GV', 0, 2)) }}
+                        {{ strtoupper(substr($payment->institution?->name ?? currentInstitution()?->name ?? 'SC', 0, 2)) }}
                     </div>
                     <div>
-                        <h3 class="text-base font-black text-zinc-900">{{ $payment->institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</h3>
+                        <h3 class="text-base font-black text-zinc-900">{{ $payment->institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</h3>
                         <p class="text-xs text-zinc-500">Monthly Compensation & Statutory Disbursement Voucher</p>
                     </div>
                 </div>

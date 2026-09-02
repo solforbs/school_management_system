@@ -125,7 +125,7 @@
 
             {{-- Footer Action Bar --}}
             <div class="border-t border-zinc-100 px-6 py-4 bg-zinc-50 flex items-center justify-between">
-                <span class="text-xs text-zinc-400">Green Valley Academy &middot; Academic Management</span>
+                <span class="text-xs text-zinc-400">{{ $reportCard->institution?->name ?? currentInstitution()?->name ?? config('app.name', 'Institution') }} &middot; Academic Management</span>
                 <div class="flex items-center gap-3">
                     <flux:button href="{{ route('reportcard.pdf', $reportCard->id) }}" target="_blank" variant="primary" icon="printer" class="font-semibold shadow-sm">
                         Print / View Full PDF

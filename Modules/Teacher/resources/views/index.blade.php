@@ -45,7 +45,7 @@
                         Faculty Management
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Teachers Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">

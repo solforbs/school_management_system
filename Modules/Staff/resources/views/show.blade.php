@@ -68,7 +68,7 @@
                             <span class="text-zinc-300">&bull;</span>
                             <span class="font-mono text-zinc-600">{{ $staffNo }}</span>
                             <span class="text-zinc-300">&bull;</span>
-                            <span>{{ $staff->institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                            <span>{{ $staff->institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
                         </div>
                     </div>
                 </div>

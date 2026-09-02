@@ -237,7 +237,7 @@
                     <div class="space-y-3.5 text-xs">
                         <div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Enrolled Institution</span>
-                            <strong class="text-zinc-900 font-bold text-sm">{{ $details?->institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</strong>
+                            <strong class="text-zinc-900 font-bold text-sm">{{ $details?->institution?->name ?? currentInstitution()?->name ?? __('Not Assigned') }}</strong>
                         </div>
 
                         <div>

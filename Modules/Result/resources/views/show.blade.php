@@ -72,7 +72,7 @@
                         <div class="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-zinc-500 font-medium">
                             <span class="font-mono">{{ $admNo }}</span>
                             <span class="text-zinc-300">&bull;</span>
-                            <span>{{ $result->institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                            <span>{{ $result->institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
                         </div>
                     </div>
                 </div>

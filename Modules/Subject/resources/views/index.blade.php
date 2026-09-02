@@ -17,7 +17,7 @@
                         Academic Curriculum
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-600 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-xs text-zinc-600 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
                 </div>
                 <h1 class="text-2xl font-black tracking-tight text-zinc-900">Subjects Directory</h1>
                 <p class="text-zinc-500 text-xs mt-0.5">

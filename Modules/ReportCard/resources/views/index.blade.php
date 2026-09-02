@@ -18,7 +18,7 @@
                         Evaluations & Grading
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? 'Green Valley Academy' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Report Cards & Term Performance</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
