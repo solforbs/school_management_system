@@ -264,7 +264,7 @@ if (! function_exists('institutionCanUpgrade')) {
     }
 }
 if (!function_exists('institutionSubjects')) {
-    function institutionSubjects()
+    function institutionSubjects(): \Illuminate\Support\Collection
     {
         $institution = currentInstitution();
         if (! $institution) {
@@ -274,13 +274,13 @@ if (!function_exists('institutionSubjects')) {
     }
 }
 if (!function_exists('teacherSubjects')) {
-    function teacherSubjects($teacherId)
+    function teacherSubjects(int $teacherId): \Illuminate\Support\Collection
     {
         return TeacherSubjects::where('teacher_id', $teacherId)->get();
     }
 }
 if (!function_exists('getSubjectName')) {
-    function getSubjectName(int $subjectId)
+    function getSubjectName(int $subjectId): string
     {
         $subject = Subject::find($subjectId);
         return $subject ? $subject->name : 'Unknown Subject';
