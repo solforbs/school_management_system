@@ -13,8 +13,7 @@ use Modules\Examinations\Services\ExamTimetableBuilder;
  * Build an examination timetable for a term's sitting, check it on screen,
  * then print it. Leaving the class unset prints every class, one per page.
  */
-new #[Title('Exam Timetable')] class extends Component
-{
+new #[Title('Exam Timetable')] class extends Component {
     #[Url]
     public string $term = '';
 
@@ -43,12 +42,15 @@ new #[Title('Exam Timetable')] class extends Component
      */
     public function filters(): array
     {
-        return array_filter([
-            'term' => $this->term,
-            'academic_year' => $this->academicYear,
-            'exam_type' => $this->examType,
-            'class_id' => $this->classId,
-        ], fn ($value) => $value !== '');
+        return array_filter(
+            [
+                'term' => $this->term,
+                'academic_year' => $this->academicYear,
+                'exam_type' => $this->examType,
+                'class_id' => $this->classId,
+            ],
+            fn($value) => $value !== '',
+        );
     }
 
     /**
@@ -63,7 +65,7 @@ new #[Title('Exam Timetable')] class extends Component
     #[Computed]
     public function paperCount(): int
     {
-        return $this->groups->sum(fn (array $group) => $group['examinations']->count());
+        return $this->groups->sum(fn(array $group) => $group['examinations']->count());
     }
 
     /**
@@ -92,10 +94,8 @@ new #[Title('Exam Timetable')] class extends Component
     {
         $query = SchoolClass::query();
 
-        if (! isAdmin()) {
-            $institutionId = auth()->user()->hasRole('Teacher')
-                ? (auth()->user()->teacherUserDetails?->institution_id ?? 0)
-                : (currentInstitution()?->id ?? 0);
+        if (!isAdmin()) {
+            $institutionId = auth()->user()->hasRole('Teacher') ? auth()->user()->teacherUserDetails?->institution_id ?? 0 : currentInstitution()?->id ?? 0;
 
             $query->where('institution_id', $institutionId);
         }
@@ -161,7 +161,7 @@ new #[Title('Exam Timetable')] class extends Component
             wire:loading.class="opacity-60">
             <flux:heading size="lg" class="mb-3">{{ $group['class_name'] }}</flux:heading>
 
-            <flux:table>
+            <flux:table class="p-2">
                 <flux:table.columns>
                     <flux:table.column>Date</flux:table.column>
                     <flux:table.column>Time</flux:table.column>
@@ -193,7 +193,7 @@ new #[Title('Exam Timetable')] class extends Component
                             </flux:table.cell>
                             <flux:table.cell>{{ $examination->durationLabel() ?? '—' }}</flux:table.cell>
                             <flux:table.cell>
-                                {{ $examination->subject?->name ?? $examination->subject_name ?? '—' }}
+                                {{ $examination->subject?->name ?? ($examination->subject_name ?? '—') }}
                             </flux:table.cell>
                             <flux:table.cell>{{ $examination->title }}</flux:table.cell>
                             <flux:table.cell>

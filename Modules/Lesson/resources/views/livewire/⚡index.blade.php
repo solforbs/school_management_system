@@ -18,8 +18,7 @@ use Modules\Timetable\Models\TimetableEntry;
  * One class, one day, every period on screen - marked and saved in place,
  * which is how it's filled in at the end of a school day.
  */
-new #[Title('Lesson Attendance')] class extends Component
-{
+new #[Title('Lesson Attendance')] class extends Component {
     #[Url(as: 'class_id')]
     public string $classId = '';
 
@@ -59,12 +58,9 @@ new #[Title('Lesson Attendance')] class extends Component
 
     public function save(): void
     {
-        abort_unless(
-            auth()->user()->can('create lesson') || auth()->user()->can('edit lesson'),
-            403
-        );
+        abort_unless(auth()->user()->can('create lesson') || auth()->user()->can('edit lesson'), 403);
 
-        if (! $this->markable) {
+        if (!$this->markable) {
             Flux::toast(text: 'That day has passed - attendance can only be marked for today.', variant: 'warning');
 
             return;
@@ -75,9 +71,7 @@ new #[Title('Lesson Attendance')] class extends Component
 
         $entryIds = $this->rows->pluck('entry.id');
 
-        $marked = collect($this->statuses)
-            ->only($entryIds)
-            ->reject(fn ($status) => blank($status));
+        $marked = collect($this->statuses)->only($entryIds)->reject(fn($status) => blank($status));
 
         if ($marked->isEmpty()) {
             Flux::toast(text: 'Nothing marked yet, so nothing was saved.', variant: 'warning');
@@ -97,15 +91,15 @@ new #[Title('Lesson Attendance')] class extends Component
                     'institution_id' => $class->institution_id,
                     'class_id' => $class->id,
                     'status' => $status,
-                    'remarks' => ($this->remarks[$entryId] ?? null) ?: null,
+                    'remarks' => $this->remarks[$entryId] ?? null ?: null,
                     'marked_by' => auth()->id(),
-                ]
+                ],
             );
         }
 
         unset($this->lessons, $this->rows, $this->recent);
 
-        Flux::toast(text: $marked->count().' period(s) saved.', variant: 'success');
+        Flux::toast(text: $marked->count() . ' period(s) saved.', variant: 'success');
     }
 
     /**
@@ -120,8 +114,7 @@ new #[Title('Lesson Attendance')] class extends Component
         $user = auth()->user();
 
         if ($user->hasRole('Parent')) {
-            $classIds = StudentDetails::where('parent_id', $user->id)
-                ->pluck('class_id')->filter()->map(fn ($id) => (int) $id)->unique();
+            $classIds = StudentDetails::where('parent_id', $user->id)->pluck('class_id')->filter()->map(fn($id) => (int) $id)->unique();
 
             return SchoolClass::whereIn('id', $classIds)->orderBy('name')->get();
         }
@@ -129,14 +122,16 @@ new #[Title('Lesson Attendance')] class extends Component
         if ($user->hasRole('Student')) {
             $classId = StudentDetails::where('student_id', $user->id)->value('class_id');
 
-            return SchoolClass::whereIn('id', array_filter([(int) $classId]))->orderBy('name')->get();
+            return SchoolClass::whereIn('id', array_filter([(int) $classId]))
+                ->orderBy('name')
+                ->get();
         }
 
         $query = SchoolClass::query();
 
         if ($user->hasRole('Teacher')) {
             $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0);
-        } elseif (! isAdmin()) {
+        } elseif (!isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
@@ -150,7 +145,7 @@ new #[Title('Lesson Attendance')] class extends Component
     #[Computed]
     public function markable(): bool
     {
-        return ! Carbon::parse($this->date)->startOfDay()->isBefore(Carbon::today());
+        return !Carbon::parse($this->date)->startOfDay()->isBefore(Carbon::today());
     }
 
     #[Computed]
@@ -170,14 +165,11 @@ new #[Title('Lesson Attendance')] class extends Component
     {
         $class = $this->selectedClass;
 
-        if (! $class) {
+        if (!$class) {
             return collect();
         }
 
-        return Lesson::where('class_id', $class->id)
-            ->whereDate('lesson_date', $this->date)
-            ->get()
-            ->keyBy('timetable_entry_id');
+        return Lesson::where('class_id', $class->id)->whereDate('lesson_date', $this->date)->get()->keyBy('timetable_entry_id');
     }
 
     /**
@@ -191,21 +183,18 @@ new #[Title('Lesson Attendance')] class extends Component
     {
         $class = $this->selectedClass;
 
-        if (! $class) {
+        if (!$class) {
             return collect();
         }
 
         $weekday = Carbon::parse($this->date)->format('l');
 
-        return TimetableEntry::with('teacher')
-            ->where('class_id', $class->id)
-            ->where('day_of_week', $weekday)
-            ->orderBy('start_time')
-            ->get()
-            ->map(fn (TimetableEntry $entry) => [
+        return TimetableEntry::with('teacher')->where('class_id', $class->id)->where('day_of_week', $weekday)->orderBy('start_time')->get()->map(
+            fn(TimetableEntry $entry) => [
                 'entry' => $entry,
                 'lesson' => $this->lessons->get($entry->id),
-            ]);
+            ],
+        );
     }
 
     /**
@@ -216,15 +205,11 @@ new #[Title('Lesson Attendance')] class extends Component
     {
         $class = $this->selectedClass;
 
-        if (! $class) {
+        if (!$class) {
             return collect();
         }
 
-        return Lesson::with('timetableEntry')
-            ->where('class_id', $class->id)
-            ->orderByDesc('lesson_date')
-            ->limit(10)
-            ->get();
+        return Lesson::with('timetableEntry')->where('class_id', $class->id)->orderByDesc('lesson_date')->limit(10)->get();
     }
 
     /**
@@ -263,7 +248,7 @@ new #[Title('Lesson Attendance')] class extends Component
         @endcan
     </div>
 
-    @if (! $this->selectedClass)
+    @if (!$this->selectedClass)
         <flux:card class="py-10 text-center">
             <flux:text class="text-zinc-500">Select a class above to mark its lessons.</flux:text>
         </flux:card>
@@ -288,7 +273,7 @@ new #[Title('Lesson Attendance')] class extends Component
                 </flux:text>
             @else
                 <form wire:submit="save">
-                    <flux:table>
+                    <flux:table class="p-2">
                         <flux:table.columns>
                             <flux:table.column>Time</flux:table.column>
                             <flux:table.column>Subject</flux:table.column>
@@ -347,7 +332,7 @@ new #[Title('Lesson Attendance')] class extends Component
             @if ($this->recent->isEmpty())
                 <flux:text class="text-zinc-500">Nothing marked for this class yet.</flux:text>
             @else
-                <flux:table>
+                <flux:table class="p-2">
                     <flux:table.columns>
                         <flux:table.column>Date</flux:table.column>
                         <flux:table.column>Subject</flux:table.column>
@@ -363,17 +348,17 @@ new #[Title('Lesson Attendance')] class extends Component
                                 <flux:table.cell>
                                     <flux:badge
                                         :color="match ($lesson->status) {
-                                            'attended' => 'emerald',
-                                            'not_attended' => 'red',
-                                            default => 'amber',
-                                        }">
+                                                                                    'attended' => 'emerald',
+                                                                                    'not_attended' => 'red',
+                                                                                    default => 'amber',
+                                                                                }">
                                         {{ ucfirst(str_replace('_', ' ', $lesson->status)) }}
                                     </flux:badge>
                                 </flux:table.cell>
                                 <flux:table.cell>{{ $lesson->remarks ?? '—' }}</flux:table.cell>
                                 <flux:table.cell>
-                                    <flux:button href="{{ route('lesson.show', $lesson->id) }}" icon="eye" size="sm"
-                                        variant="ghost" wire:navigate.hover>view</flux:button>
+                                    <flux:button href="{{ route('lesson.show', $lesson->id) }}" icon="eye"
+                                        size="sm" variant="ghost" wire:navigate.hover>view</flux:button>
                                 </flux:table.cell>
                             </flux:table.row>
                         @endforeach

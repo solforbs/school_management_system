@@ -1,10 +1,14 @@
 {{-- Student KPI Tiles --}}
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <x-kpi-card title="Attendance Today" icon="clock" color="violet" :count="$stats['attendance_today_count']" href="{{ route('attendance.index') }}" subtext="today's check-ins" />
+    <x-kpi-card title="Attendance Today" icon="clock" color="violet" :count="$stats['attendance_today_count']"
+        href="{{ route('attendance.index') }}" subtext="today's check-ins" />
 
-    <x-kpi-card title="This Month" icon="calendar-days" color="indigo" :count="$stats['attendance_this_month_count']" href="{{ route('attendance.index') }}" subtext="days attended this month" />
+    <x-kpi-card title="This Month" icon="calendar-days" color="indigo" :count="$stats['attendance_this_month_count']"
+        href="{{ route('attendance.index') }}" subtext="days attended this month" />
 
-    <x-kpi-card title="Fees Outstanding" icon="exclamation-triangle" color="red" count="KES {{ $currency($stats['fees_outstanding']) }}" href="{{ route('feemanagement.index') }}" subtext="pending fee balance" />
+    <x-kpi-card title="Fees Outstanding" icon="exclamation-triangle" color="red"
+        count="KES {{ $currency($stats['fees_outstanding']) }}" href="{{ route('feemanagement.index') }}"
+        subtext="pending fee balance" />
 </div>
 
 {{-- Recent Fees Card --}}
@@ -12,12 +16,13 @@
     <div class="flex items-center justify-between mb-4">
         <flux:heading size="lg" class="font-semibold">My Fee Statements</flux:heading>
         @can('view feemanagement')
-            <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm" icon-trailing="chevron-right" class="text-xs">
+            <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm"
+                icon-trailing="chevron-right" class="text-xs">
                 View All
             </flux:button>
         @endcan
     </div>
-    <flux:table>
+    <flux:table class="p-2">
         <flux:table.columns>
             <flux:table.column>Title</flux:table.column>
             <flux:table.column>Amount</flux:table.column>
@@ -31,12 +36,14 @@
                     <flux:table.cell class="text-xs">{{ $currency($fee->amount) }}</flux:table.cell>
                     <flux:table.cell class="text-zinc-500 text-xs">{{ $currency($fee->balance) }}</flux:table.cell>
                     <flux:table.cell>
-                        <flux:badge size="sm" :color="match ($fee->status) {
-                            'paid' => 'emerald',
-                            'partial' => 'amber',
-                            'overdue' => 'red',
-                            default => 'zinc',
-                        }" class="font-semibold">{{ ucfirst($fee->status) }}</flux:badge>
+                        <flux:badge size="sm"
+                            :color="match ($fee->status) {
+                                                        'paid' => 'emerald',
+                                                        'partial' => 'amber',
+                                                        'overdue' => 'red',
+                                                        default => 'zinc',
+                                                    }"
+                            class="font-semibold">{{ ucfirst($fee->status) }}</flux:badge>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
@@ -47,7 +54,8 @@
                                 <flux:icon icon="banknotes" class="size-5 text-zinc-400" />
                             </div>
                             <p class="text-xs font-medium text-zinc-900 dark:text-zinc-100">No fee records</p>
-                            <p class="text-[11px] text-zinc-500 dark:text-zinc-400">You do not have any fee statements currently.</p>
+                            <p class="text-[11px] text-zinc-500 dark:text-zinc-400">You do not have any fee statements
+                                currently.</p>
                         </div>
                     </flux:table.cell>
                 </flux:table.row>

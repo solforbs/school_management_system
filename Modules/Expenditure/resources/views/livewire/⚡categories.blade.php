@@ -8,8 +8,7 @@ use Livewire\Component;
 use Modules\Expenditure\Models\Expenditure;
 use Modules\Expenditure\Models\ExpenditureCategory;
 
-new #[Title('Expenditure Categories')] class extends Component
-{
+new #[Title('Expenditure Categories')] class extends Component {
     /**
      * The row being edited, and the values being typed into it. Only one
      * row is ever open, so the form state is a single set of fields rather
@@ -62,7 +61,7 @@ new #[Title('Expenditure Categories')] class extends Component
         ]);
 
         if ($this->nameTaken($category->institution_id, $this->editName, $category->id)) {
-            $this->addError('editName', 'A category called "'.$this->editName.'" already exists.');
+            $this->addError('editName', 'A category called "' . $this->editName . '" already exists.');
 
             return;
         }
@@ -90,7 +89,7 @@ new #[Title('Expenditure Categories')] class extends Component
         $institutionId = $this->institutionId();
 
         if ($this->nameTaken($institutionId, $this->newName)) {
-            $this->addError('newName', 'A category called "'.$this->newName.'" already exists.');
+            $this->addError('newName', 'A category called "' . $this->newName . '" already exists.');
 
             return;
         }
@@ -118,9 +117,7 @@ new #[Title('Expenditure Categories')] class extends Component
 
         $institutionId = $this->institutionId();
 
-        $existing = ExpenditureCategory::where('institution_id', $institutionId)
-            ->pluck('name')
-            ->map(fn ($name) => mb_strtolower($name));
+        $existing = ExpenditureCategory::where('institution_id', $institutionId)->pluck('name')->map(fn($name) => mb_strtolower($name));
 
         $added = 0;
 
@@ -139,10 +136,7 @@ new #[Title('Expenditure Categories')] class extends Component
             $added++;
         }
 
-        Flux::toast(
-            text: $added > 0 ? $added.' categories added.' : 'Every standard category is already set up.',
-            variant: $added > 0 ? 'success' : 'warning',
-        );
+        Flux::toast(text: $added > 0 ? $added . ' categories added.' : 'Every standard category is already set up.', variant: $added > 0 ? 'success' : 'warning');
     }
 
     public function delete(int $id): void
@@ -186,7 +180,7 @@ new #[Title('Expenditure Categories')] class extends Component
     {
         return ExpenditureCategory::where('institution_id', $institutionId)
             ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-            ->when($ignoring, fn ($query) => $query->whereKeyNot($ignoring))
+            ->when($ignoring, fn($query) => $query->whereKeyNot($ignoring))
             ->exists();
     }
 
@@ -194,7 +188,7 @@ new #[Title('Expenditure Categories')] class extends Component
     {
         $query = ExpenditureCategory::query();
 
-        if (! isAdmin()) {
+        if (!isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
@@ -209,8 +203,8 @@ new #[Title('Expenditure Categories')] class extends Component
         </flux:button>
 
         @can('create expenditure')
-            <flux:button type="button" icon="sparkles"
-                :variant="$this->categories->isEmpty() ? 'primary' : 'ghost'" wire:click="loadDefaults">
+            <flux:button type="button" icon="sparkles" :variant="$this->categories->isEmpty() ? 'primary' : 'ghost'"
+                wire:click="loadDefaults">
                 {{ $this->categories->isEmpty() ? 'Load the standard categories' : 'Add any missing standard categories' }}
             </flux:button>
         @endcan
@@ -225,7 +219,7 @@ new #[Title('Expenditure Categories')] class extends Component
                 recorded without one and filed later.
             </flux:text>
         @else
-            <flux:table>
+            <flux:table class="p-2">
                 <flux:table.columns>
                     <flux:table.column>Name</flux:table.column>
                     <flux:table.column>Description</flux:table.column>
@@ -293,8 +287,7 @@ new #[Title('Expenditure Categories')] class extends Component
 
             <form wire:submit="add" class="grid grid-cols-1 items-end gap-3 md:grid-cols-3">
                 <flux:input label="Name" wire:model="newName" placeholder="e.g. Boarding Supplies" />
-                <flux:input label="Description" wire:model="newDescription"
-                    placeholder="What belongs under this heading" />
+                <flux:input label="Description" wire:model="newDescription" placeholder="What belongs under this heading" />
                 <flux:button type="submit" variant="primary" icon="plus">Add Category</flux:button>
             </form>
         </flux:card>

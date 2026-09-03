@@ -21,7 +21,7 @@
                     </flux:text>
                 </div>
             @else
-                <flux:table>
+                <flux:table class="p-2">
                     <flux:table.columns>
                         <x-sortable-column column="name">{{ __('From') }}</x-sortable-column>
                         <x-sortable-column column="topic">{{ __('Topic') }}</x-sortable-column>

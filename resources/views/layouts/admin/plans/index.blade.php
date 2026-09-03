@@ -6,7 +6,7 @@
         </div>
 
         <flux:card>
-            <flux:table>
+            <flux:table class="p-2">
                 <flux:table.columns>
                     <flux:table.column>Name</flux:table.column>
                     <flux:table.column>Price</flux:table.column>
@@ -30,7 +30,8 @@
                             </flux:table.cell>
                             <flux:table.cell>
                                 <div class="flex gap-2">
-                                    <flux:button size="sm" href="{{ route('admin.plans.edit', $plan) }}" wire:navigate>Edit</flux:button>
+                                    <flux:button size="sm" href="{{ route('admin.plans.edit', $plan) }}"
+                                        wire:navigate>Edit</flux:button>
                                     <form action="{{ route('admin.plans.destroy', $plan) }}" method="POST"
                                         onsubmit="return confirm('Delete this plan? Institutions on it will lose access to its modules.');">
                                         @csrf

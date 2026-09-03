@@ -22,8 +22,7 @@ use Modules\Student\Models\StudentDetails;
  * uses the same screen for any subject in their own class. Saving happens
  * in place: the sheet stays open with the new grades filled in.
  */
-new #[Title('Enter Marks')] class extends Component
-{
+new #[Title('Enter Marks')] class extends Component {
     #[Url(as: 'examination_id')]
     public string $examinationId = '';
 
@@ -79,9 +78,7 @@ new #[Title('Enter Marks')] class extends Component
         $institution = Institution::find($examination->institution_id);
         abort_unless($institution, 422, 'This examination has no institution.');
 
-        $entered = collect($this->marks)
-            ->reject(fn ($value) => $value === null || $value === '')
-            ->mapWithKeys(fn ($value, $studentId) => [(int) $studentId => (float) $value]);
+        $entered = collect($this->marks)->reject(fn($value) => $value === null || $value === '')->mapWithKeys(fn($value, $studentId) => [(int) $studentId => (float) $value]);
 
         if ($entered->isEmpty()) {
             Flux::toast(text: 'No marks were entered, so nothing was saved.', variant: 'warning');
@@ -90,63 +87,45 @@ new #[Title('Enter Marks')] class extends Component
         }
 
         $ceiling = (float) $examination->total_marks;
-        $overMax = $entered->filter(fn ($value) => $ceiling > 0 && $value > $ceiling);
+        $overMax = $entered->filter(fn($value) => $ceiling > 0 && $value > $ceiling);
 
         if ($overMax->isNotEmpty()) {
             foreach ($overMax->keys() as $studentId) {
-                $this->addError('marks.'.$studentId, "Over the paper's total of {$ceiling}.");
+                $this->addError('marks.' . $studentId, "Over the paper's total of {$ceiling}.");
             }
 
-            Flux::toast(
-                text: $overMax->count().' mark(s) are over the total of '.$ceiling.', so nothing was saved.',
-                variant: 'danger',
-            );
+            Flux::toast(text: $overMax->count() . ' mark(s) are over the total of ' . $ceiling . ', so nothing was saved.', variant: 'danger');
 
             return;
         }
 
         // Every id must belong to the class being marked - a hand-crafted
         // request could otherwise carry a student from another class.
-        $roll = $this->students->pluck('student_id')->map(fn ($id) => (int) $id);
-        abort_unless($entered->keys()->every(fn ($id) => $roll->contains($id)), 403);
+        $roll = $this->students->pluck('student_id')->map(fn($id) => (int) $id);
+        abort_unless($entered->keys()->every(fn($id) => $roll->contains($id)), 403);
 
         // Amending a mark that's already recorded is an edit, not a
         // creation, and is gated as one.
-        $amending = Result::where('examination_id', $examination->id)
-            ->whereIn('student_id', $entered->keys())
-            ->exists();
+        $amending = Result::where('examination_id', $examination->id)->whereIn('student_id', $entered->keys())->exists();
 
         if ($amending) {
-            abort_unless(
-                auth()->user()->can('edit result') || auth()->user()->can('update result'),
-                403,
-                'Some of these students already have a mark for this examination, and you may not amend recorded results.'
-            );
+            abort_unless(auth()->user()->can('edit result') || auth()->user()->can('update result'), 403, 'Some of these students already have a mark for this examination, and you may not amend recorded results.');
         }
 
-        $saved = SaveResult::saveSheet(
-            $examination,
-            $institution,
-            $entered,
-            collect($this->remarks)->map(fn ($value) => (string) $value)->all(),
-            recordedBy: auth()->id(),
-        );
+        $saved = SaveResult::saveSheet($examination, $institution, $entered, collect($this->remarks)->map(fn($value) => (string) $value)->all(), recordedBy: auth()->id());
 
         // Re-read so every row shows the grade the scale just worked out.
         unset($this->recorded);
         $this->loadSheet();
 
-        Flux::toast(
-            text: $saved.' result(s) saved for '.($examination->subject?->name ?? $examination->title).'.',
-            variant: 'success',
-        );
+        Flux::toast(text: $saved . ' result(s) saved for ' . ($examination->subject?->name ?? $examination->title) . '.', variant: 'success');
     }
 
     #[Computed]
     public function examinations(): Collection
     {
         return ResultAccessService::selectableExaminations(auth()->user())
-            ->filter(fn (Examination $examination) => $examination->class_id !== null)
+            ->filter(fn(Examination $examination) => $examination->class_id !== null)
             ->values();
     }
 
@@ -170,15 +149,11 @@ new #[Title('Enter Marks')] class extends Component
     {
         $examination = $this->examination;
 
-        if (! $examination?->class_id) {
+        if (!$examination?->class_id) {
             return collect();
         }
 
-        return StudentDetails::with('student')
-            ->where('class_id', $examination->class_id)
-            ->get()
-            ->sortBy(fn (StudentDetails $details) => [$details->admission_number, $details->student?->name])
-            ->values();
+        return StudentDetails::with('student')->where('class_id', $examination->class_id)->get()->sortBy(fn(StudentDetails $details) => [$details->admission_number, $details->student?->name])->values();
     }
 
     /**
@@ -191,7 +166,7 @@ new #[Title('Enter Marks')] class extends Component
     {
         $examination = $this->examination;
 
-        if (! $examination) {
+        if (!$examination) {
             return collect();
         }
 
@@ -263,7 +238,7 @@ new #[Title('Enter Marks')] class extends Component
                 </flux:text>
             @else
                 <form wire:submit="save">
-                    <flux:table>
+                    <flux:table class="p-2">
                         <flux:table.columns>
                             <flux:table.column>#</flux:table.column>
                             <flux:table.column>Admission No.</flux:table.column>

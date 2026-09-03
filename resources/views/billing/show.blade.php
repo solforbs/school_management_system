@@ -54,7 +54,7 @@
 
         <flux:card>
             <flux:heading size="md" class="mb-4">Payment History</flux:heading>
-            <flux:table>
+            <flux:table class="p-2">
                 <flux:table.columns>
                     <flux:table.column>Date</flux:table.column>
                     <flux:table.column>Plan</flux:table.column>
@@ -76,11 +76,12 @@
                             </flux:table.cell>
                             <flux:table.cell>KES {{ number_format($payment->amount, 2) }}</flux:table.cell>
                             <flux:table.cell>
-                                <flux:badge :color="match ($payment->status) {
-                                    'successful' => 'emerald',
-                                    'pending' => 'amber',
-                                    default => 'red',
-                                }">
+                                <flux:badge
+                                    :color="match ($payment->status) {
+                                                                        'successful' => 'emerald',
+                                                                        'pending' => 'amber',
+                                                                        default => 'red',
+                                                                    }">
                                     {{ ucfirst($payment->status) }}
                                 </flux:badge>
                             </flux:table.cell>

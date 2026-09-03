@@ -16,8 +16,7 @@ use Modules\Subject\Models\SubjectTeacher;
  * class here, and that assignment is what lets the teacher enter results
  * for it.
  */
-new #[Title('Subject Teachers')] class extends Component
-{
+new #[Title('Subject Teachers')] class extends Component {
     /** Fields of the assignment being built. */
     public string $classId = '';
 
@@ -41,19 +40,12 @@ new #[Title('Subject Teachers')] class extends Component
 
     public function toggle(string $teacherId): void
     {
-        $this->selected = in_array($teacherId, $this->selected, true)
-            ? array_values(array_diff($this->selected, [$teacherId]))
-            : [...$this->selected, $teacherId];
+        $this->selected = in_array($teacherId, $this->selected, true) ? array_values(array_diff($this->selected, [$teacherId])) : [...$this->selected, $teacherId];
     }
 
     public function selectVisible(): void
     {
-        $this->selected = $this->visibleTeachers->pluck('id')
-            ->map(fn ($id) => (string) $id)
-            ->merge($this->selected)
-            ->unique()
-            ->values()
-            ->all();
+        $this->selected = $this->visibleTeachers->pluck('id')->map(fn($id) => (string) $id)->merge($this->selected)->unique()->values()->all();
     }
 
     public function clearSelection(): void
@@ -65,18 +57,21 @@ new #[Title('Subject Teachers')] class extends Component
     {
         abort_unless(auth()->user()->can('edit subject'), 403);
 
-        $this->validate([
-            'classId' => 'required|exists:classes,id',
-            'subjectId' => 'required|exists:subjects,id',
-            // Several teachers can be handed the same subject in one go -
-            // co-teaching a class is normal, and doing it one row at a time
-            // is not.
-            'selected' => 'required|array|min:1',
-        ], attributes: [
-            'classId' => 'class',
-            'subjectId' => 'subject',
-            'selected' => 'teachers',
-        ]);
+        $this->validate(
+            [
+                'classId' => 'required|exists:classes,id',
+                'subjectId' => 'required|exists:subjects,id',
+                // Several teachers can be handed the same subject in one go -
+                // co-teaching a class is normal, and doing it one row at a time
+                // is not.
+                'selected' => 'required|array|min:1',
+            ],
+            attributes: [
+                'classId' => 'class',
+                'subjectId' => 'subject',
+                'selected' => 'teachers',
+            ],
+        );
 
         $institutionId = $this->institutionId();
 
@@ -94,14 +89,17 @@ new #[Title('Subject Teachers')] class extends Component
         foreach ($this->selected as $teacherId) {
             abort_unless($eligible->contains((int) $teacherId), 403);
 
-            $assignment = SubjectTeacher::firstOrCreate([
-                'class_id' => $schoolClass->id,
-                'subject_id' => $subject->id,
-                'teacher_id' => (int) $teacherId,
-            ], [
-                'institution_id' => $institutionId,
-                'assigned_by' => auth()->id(),
-            ]);
+            $assignment = SubjectTeacher::firstOrCreate(
+                [
+                    'class_id' => $schoolClass->id,
+                    'subject_id' => $subject->id,
+                    'teacher_id' => (int) $teacherId,
+                ],
+                [
+                    'institution_id' => $institutionId,
+                    'assigned_by' => auth()->id(),
+                ],
+            );
 
             if ($assignment->wasRecentlyCreated) {
                 $assigned++;
@@ -111,12 +109,7 @@ new #[Title('Subject Teachers')] class extends Component
         $this->reset(['selected', 'teacherSearch']);
         unset($this->assignments, $this->alreadyAssigned, $this->teacherLoad);
 
-        Flux::toast(
-            text: $assigned > 0
-                ? $assigned.' teacher(s) assigned to '.$subject->name.' for '.$schoolClass->name.'.'
-                : 'Those teachers already teach '.$subject->name.' in '.$schoolClass->name.'.',
-            variant: $assigned > 0 ? 'success' : 'warning',
-        );
+        Flux::toast(text: $assigned > 0 ? $assigned . ' teacher(s) assigned to ' . $subject->name . ' for ' . $schoolClass->name . '.' : 'Those teachers already teach ' . $subject->name . ' in ' . $schoolClass->name . '.', variant: $assigned > 0 ? 'success' : 'warning');
     }
 
     public function remove(int $id): void
@@ -141,7 +134,7 @@ new #[Title('Subject Teachers')] class extends Component
             return false;
         }
 
-        return in_array($teacherId, $this->alreadyAssigned[$this->classId.'-'.$this->subjectId] ?? [], true);
+        return in_array($teacherId, $this->alreadyAssigned[$this->classId . '-' . $this->subjectId] ?? [], true);
     }
 
     #[Computed]
@@ -151,17 +144,17 @@ new #[Title('Subject Teachers')] class extends Component
         $this->scopeToViewer($query);
 
         return $query
-            ->when($this->filterClassId !== '', fn ($q) => $q->where('class_id', $this->filterClassId))
-            ->when($this->filterTeacherId !== '', fn ($q) => $q->where('teacher_id', $this->filterTeacherId))
+            ->when($this->filterClassId !== '', fn($q) => $q->where('class_id', $this->filterClassId))
+            ->when($this->filterTeacherId !== '', fn($q) => $q->where('teacher_id', $this->filterTeacherId))
             ->get()
-            ->sortBy(fn ($assignment) => [$assignment->schoolClass?->name, $assignment->subject?->name])
+            ->sortBy(fn($assignment) => [$assignment->schoolClass?->name, $assignment->subject?->name])
             ->values();
     }
 
     #[Computed]
     public function grouped(): Collection
     {
-        return $this->assignments->groupBy(fn ($assignment) => $assignment->schoolClass?->name ?? 'Unassigned class');
+        return $this->assignments->groupBy(fn($assignment) => $assignment->schoolClass?->name ?? 'Unassigned class');
     }
 
     #[Computed]
@@ -169,7 +162,7 @@ new #[Title('Subject Teachers')] class extends Component
     {
         $query = SchoolClass::query();
 
-        if (! isAdmin()) {
+        if (!isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
@@ -181,7 +174,7 @@ new #[Title('Subject Teachers')] class extends Component
     {
         $query = Subject::where('is_active', true);
 
-        if (! isAdmin()) {
+        if (!isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
@@ -193,9 +186,9 @@ new #[Title('Subject Teachers')] class extends Component
     {
         $query = User::role('Teacher')->with('teacherUserDetails');
 
-        if (! isAdmin()) {
+        if (!isAdmin()) {
             $institutionId = currentInstitution()?->id ?? 0;
-            $query->whereHas('teacherUserDetails', fn ($q) => $q->where('institution_id', $institutionId));
+            $query->whereHas('teacherUserDetails', fn($q) => $q->where('institution_id', $institutionId));
         }
 
         return $query->orderBy('name')->get();
@@ -214,15 +207,13 @@ new #[Title('Subject Teachers')] class extends Component
             return $this->teachers;
         }
 
-        return $this->teachers->filter(function (User $teacher) use ($needle) {
-            $haystack = mb_strtolower(implode(' ', [
-                $teacher->name,
-                $teacher->teacherUserDetails?->department,
-                $teacher->teacherUserDetails?->employee_number,
-            ]));
+        return $this->teachers
+            ->filter(function (User $teacher) use ($needle) {
+                $haystack = mb_strtolower(implode(' ', [$teacher->name, $teacher->teacherUserDetails?->department, $teacher->teacherUserDetails?->employee_number]));
 
-            return str_contains($haystack, $needle);
-        })->values();
+                return str_contains($haystack, $needle);
+            })
+            ->values();
     }
 
     /**
@@ -234,7 +225,7 @@ new #[Title('Subject Teachers')] class extends Component
     public function teacherLoad(): Collection
     {
         return SubjectTeacher::query()
-            ->when(! isAdmin(), fn ($query) => $query->where('institution_id', currentInstitution()?->id ?? 0))
+            ->when(!isAdmin(), fn($query) => $query->where('institution_id', currentInstitution()?->id ?? 0))
             ->get(['teacher_id'])
             ->countBy('teacher_id');
     }
@@ -247,15 +238,15 @@ new #[Title('Subject Teachers')] class extends Component
     #[Computed]
     public function alreadyAssigned(): array
     {
-        if (! auth()->user()->can('edit subject')) {
+        if (!auth()->user()->can('edit subject')) {
             return [];
         }
 
         return SubjectTeacher::query()
-            ->when(! isAdmin(), fn ($query) => $query->where('institution_id', currentInstitution()?->id ?? 0))
+            ->when(!isAdmin(), fn($query) => $query->where('institution_id', currentInstitution()?->id ?? 0))
             ->get(['class_id', 'subject_id', 'teacher_id'])
-            ->groupBy(fn ($assignment) => $assignment->class_id.'-'.$assignment->subject_id)
-            ->map(fn ($group) => $group->pluck('teacher_id')->map(fn ($id) => (string) $id)->values()->all())
+            ->groupBy(fn($assignment) => $assignment->class_id . '-' . $assignment->subject_id)
+            ->map(fn($group) => $group->pluck('teacher_id')->map(fn($id) => (string) $id)->values()->all())
             ->all();
     }
 
@@ -279,8 +270,7 @@ new #[Title('Subject Teachers')] class extends Component
         if ($user->hasRole('Teacher')) {
             // A teacher sees their own assignments - what they've been put
             // down to teach - and not the whole staff's.
-            $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0)
-                ->where('teacher_id', $user->id);
+            $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0)->where('teacher_id', $user->id);
 
             return;
         }
@@ -332,14 +322,13 @@ new #[Title('Subject Teachers')] class extends Component
                         <div class="flex items-center gap-2">
                             <flux:heading>Teachers</flux:heading>
                             <flux:badge size="sm" :color="count($selected) > 0 ? 'emerald' : 'zinc'">
-                                {{ count($selected) > 0 ? count($selected).' selected' : 'None selected' }}
+                                {{ count($selected) > 0 ? count($selected) . ' selected' : 'None selected' }}
                             </flux:badge>
                         </div>
 
                         <div class="flex flex-wrap items-center gap-2">
-                            <flux:input type="search" size="sm" icon="magnifying-glass"
-                                placeholder="Search teachers" wire:model.live.debounce.300ms="teacherSearch"
-                                class="w-56" />
+                            <flux:input type="search" size="sm" icon="magnifying-glass" placeholder="Search teachers"
+                                wire:model.live.debounce.300ms="teacherSearch" class="w-56" />
                             <flux:button type="button" size="sm" variant="ghost" wire:click="selectVisible">
                                 Select all
                             </flux:button>
@@ -384,18 +373,16 @@ new #[Title('Subject Teachers')] class extends Component
                                     @php($teacherId = (string) $teacher->id)
                                     @php($isSelected = in_array($teacherId, $selected, true))
                                     <button type="button" wire:click="toggle('{{ $teacherId }}')"
-                                        wire:key="teacher-{{ $teacher->id }}"
-                                        @class([
+                                        wire:key="teacher-{{ $teacher->id }}" @class([
                                             'flex items-start gap-3 rounded-lg border p-3 text-start transition',
                                             'border-emerald-500 bg-emerald-50/60 ring-1 ring-emerald-500 dark:border-emerald-500 dark:bg-emerald-500/10' => $isSelected,
-                                            'border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600' => ! $isSelected,
+                                            'border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600' => !$isSelected,
                                         ])>
-                                        <span
-                                            @class([
-                                                'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                                                'bg-emerald-500 text-white' => $isSelected,
-                                                'bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' => ! $isSelected,
-                                            ])>
+                                        <span @class([
+                                            'flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                                            'bg-emerald-500 text-white' => $isSelected,
+                                            'bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' => !$isSelected,
+                                        ])>
                                             {{ $teacher->initials() }}
                                         </span>
 
@@ -404,10 +391,9 @@ new #[Title('Subject Teachers')] class extends Component
                                                 {{ $teacher->name }}
                                             </span>
                                             <span class="block truncate text-xs text-zinc-500">
-                                                @php($meta = collect([
-                                                    $teacher->teacherUserDetails?->department,
-                                                    $teacher->teacherUserDetails?->employee_number,
-                                                ])->filter()->implode(' · '))
+                                                @php(
+    $meta = collect([$teacher->teacherUserDetails?->department, $teacher->teacherUserDetails?->employee_number])->filter()->implode(' · ')
+)
                                                 {{ $meta ?: 'Teacher' }}
                                                 @php($load = (int) ($this->teacherLoad[$teacher->id] ?? 0))
                                                 @if ($load > 0)
@@ -422,15 +408,13 @@ new #[Title('Subject Teachers')] class extends Component
                                             @endif
                                         </span>
 
-                                        <span
-                                            @class([
-                                                'flex size-5 shrink-0 items-center justify-center rounded-md border',
-                                                'border-emerald-500 bg-emerald-500 text-white' => $isSelected,
-                                                'border-zinc-300 text-transparent dark:border-zinc-600' => ! $isSelected,
-                                            ])>
-                                            <svg class="size-3.5" viewBox="0 0 20 20" fill="none"
-                                                stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                                                stroke-linejoin="round">
+                                        <span @class([
+                                            'flex size-5 shrink-0 items-center justify-center rounded-md border',
+                                            'border-emerald-500 bg-emerald-500 text-white' => $isSelected,
+                                            'border-zinc-300 text-transparent dark:border-zinc-600' => !$isSelected,
+                                        ])>
+                                            <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                                stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M4 10.5 8 14.5 16 6" />
                                             </svg>
                                         </span>
@@ -488,7 +472,7 @@ new #[Title('Subject Teachers')] class extends Component
                     </flux:badge>
                 </div>
 
-                <flux:table>
+                <flux:table class="p-2">
                     <flux:table.columns>
                         <flux:table.column>Subject</flux:table.column>
                         <flux:table.column>Teacher</flux:table.column>
