@@ -2,9 +2,11 @@
 
 use App\Models\Plan;
 use App\Models\Setting;
+use App\Models\TeacherSubjects;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Modules\Institution\Models\Institution;
+use Modules\Subject\Models\Subject;
 
 if (! function_exists('institutionOwner')) {
     function institutionOwner(int $institution): bool
@@ -17,7 +19,7 @@ if (! function_exists('progress')) {
     {
         $institutionColumns = $institution->toArray();
         $columns = count($institutionColumns);
-        $filled = Arr::where($institutionColumns, fn ($value) => filled($value));
+        $filled = Arr::where($institutionColumns, fn($value) => filled($value));
 
         return round((count($filled) / $columns) * 100, 0);
     }
@@ -253,5 +255,28 @@ if (! function_exists('institutionCanUpgrade')) {
         $currentPrice = $institution->hasActiveSubscription() ? (float) $institution->plan->price : -1;
 
         return Plan::whereIsActive(true)->where('price', '>', $currentPrice)->exists();
+    }
+}
+if (!function_exists('institutionSubjects')) {
+    function institutionSubjects()
+    {
+        $institution = currentInstitution();
+        if (! $institution) {
+            return collect();
+        }
+        return $institution->subjects()->get();
+    }
+}
+if (!function_exists('teacherSubjects')) {
+    function teacherSubjects($teacherId)
+    {
+        return TeacherSubjects::where('teacher_id', $teacherId)->get();
+    }
+}
+if (!function_exists('getSubjectName')) {
+    function getSubjectName(int $subjectId)
+    {
+        $subject = Subject::find($subjectId);
+        return $subject ? $subject->name : 'Unknown Subject';
     }
 }

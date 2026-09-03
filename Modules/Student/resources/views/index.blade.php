@@ -29,9 +29,9 @@
 
             <div class="flex items-center gap-3">
                 @can('create student')
-                    <flux:button href="{{ route('student.create') }}" icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
+                    {{-- <flux:button href="{{ route('student.create') }}" icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Enroll Student
-                    </flux:button>
+                    </flux:button> --}}
                 @endcan
             </div>
         </div>
@@ -298,9 +298,9 @@
                         There are no student enrollments matching your active filter criteria.
                     </p>
                     @can('create student')
-                        <flux:button href="{{ route('student.create') }}" variant="primary" icon="plus" size="sm">
+                        {{-- <flux:button href="{{ route('student.create') }}" variant="primary" icon="plus" size="sm">
                             Enroll Student
-                        </flux:button>
+                        </flux:button> --}}
                     @endcan
                 </div>
             @endif

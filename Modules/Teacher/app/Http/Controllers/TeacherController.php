@@ -4,6 +4,7 @@ namespace Modules\Teacher\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Models\TeacherSubjects;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,14 +37,21 @@ class TeacherController extends Controller
         abort_unless($institutionId, 422, 'No institution selected.');
 
         try {
-            SaveTeacher::create($validated, $institutionId);
+            $teacher = SaveTeacher::create($validated, $institutionId);
 
+            // create the teacher subjects in the teacher_subjects table
+            foreach ($request->subjects as $subjectId) {
+                TeacherSubjects::create([
+                    'teacher_id' => $teacher->id,
+                    'subject_id' => $subjectId,
+                ]);
+            }
             return redirect()->route('teacher.index')->with('success', 'Teacher created successfully!');
         } catch (\Exception $e) {
-            Log::error('Teacher creation failed: '.$e->getMessage());
+            Log::error('Teacher creation failed: ' . $e->getMessage());
 
             return redirect()->back()->withInput()
-                ->with('error', 'Failed to create teacher: '.$e->getMessage());
+                ->with('error', 'Failed to create teacher: ' . $e->getMessage());
         }
     }
 
@@ -80,14 +88,47 @@ class TeacherController extends Controller
         abort_unless($institutionId, 422, 'No institution selected.');
 
         try {
-            SaveTeacher::update($teacherDetails, $validated, $institutionId);
+            $teacherDetails = SaveTeacher::update(
+                $teacherDetails,
+                $validated,
+                $institutionId
+            );
 
+            $teacherId = $teacherDetails->teacher?->id;
+
+            if (!$teacherId) {
+                throw new \RuntimeException('Teacher user account not found.');
+            }
+
+            $newSubjects = $request->input('subjects', []);
+
+            $existingSubjects = TeacherSubjects::where('teacher_id', $teacherId)
+                ->pluck('subject_id')
+                ->toArray();
+
+            $subjectsToAdd = array_diff($newSubjects, $existingSubjects);
+            $subjectsToRemove = array_diff($existingSubjects, $newSubjects);
+
+            // Add new subjects
+            foreach ($subjectsToAdd as $subjectId) {
+                TeacherSubjects::create([
+                    'teacher_id' => $teacherId,
+                    'subject_id' => $subjectId,
+                ]);
+            }
+
+            // Remove subjects no longer assigned
+            if (!empty($subjectsToRemove)) {
+                TeacherSubjects::where('teacher_id', $teacherId)
+                    ->whereIn('subject_id', $subjectsToRemove)
+                    ->delete();
+            }
             return redirect()->route('teacher.show', $id)->with('success', 'Teacher updated successfully!');
         } catch (\Exception $e) {
-            Log::error('Teacher update failed: '.$e->getMessage());
+            Log::error('Teacher update failed: ' . $e->getMessage());
 
             return redirect()->back()->withInput()
-                ->with('error', 'Failed to update teacher: '.$e->getMessage());
+                ->with('error', 'Failed to update teacher: ' . $e->getMessage());
         }
     }
 

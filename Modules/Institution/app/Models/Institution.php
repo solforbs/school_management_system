@@ -22,6 +22,7 @@ use Modules\Teacher\Models\TeacherDetails;
 use Modules\Timetable\Models\TimetableEntry;
 
 // use Modules\Institution\Database\Factories\InstitutionFactory;
+
 /**
  * @property int $id
  * @property string|null $logo
@@ -313,5 +314,9 @@ class Institution extends Model
     public function subjects()
     {
         return $this->hasMany(Subject::class);
+    }
+    public function isApproved(): bool
+    {
+        return (bool) $this->is_approved;
     }
 }
