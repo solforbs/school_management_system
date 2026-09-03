@@ -58,7 +58,7 @@
         {{-- Device Table Card --}}
         <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
             <div class="overflow-x-auto">
-                <flux:table>
+                <flux:table class="p-2">
                     <flux:table.columns>
                         <x-sortable-column column="device_name">Device Details</x-sortable-column>
                         <x-sortable-column column="institution">Campus / Institution</x-sortable-column>
