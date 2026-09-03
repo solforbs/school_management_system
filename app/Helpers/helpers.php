@@ -64,6 +64,12 @@ if (! function_exists('syncClientMode')) {
         return (bool) config('sync.client_mode', false);
     }
 }
+if (! function_exists('isTeacher')) {
+    function isTeacher(): bool
+    {
+        return Auth::user()->hasRole('Teacher');
+    }
+}
 if (! function_exists('isAdmin')) {
     function isAdmin(): bool
     {

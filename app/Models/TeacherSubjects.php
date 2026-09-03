@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Subject\Models\Subject;
@@ -16,6 +15,6 @@ class TeacherSubjects extends Model
 
     public function subjects(): HasMany
     {
-        return $this->hasMany(Subject::class, 'teacher_id');
+        return $this->hasMany(Subject::class);
     }
 }
