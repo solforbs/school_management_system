@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Services\GitDeploy;
 use Database\Seeders\PermissionSeeder;
+use Database\Seeders\SettingSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
 
@@ -222,10 +223,12 @@ it('flags a release that changes dependencies instead of running composer', func
 /*
  * A stale route cache is what breaks a deploy that otherwise looked fine:
  * a newly added route resolves to nothing and every page referencing it
- * throws instead of rendering. Artisan is called in-process, so this spies
- * on the facade rather than looking for a subprocess.
+ * throws instead of rendering. Those clears run in-process, so this spies
+ * on the facade rather than looking for a subprocess. view:clear is
+ * deliberately not here - it is deferred past the response so it cannot
+ * delete the compiled view this request is still rendering from.
  */
-it('rebuilds the route cache, which a new route depends on', function () {
+it('rebuilds the config and route caches, which a new route depends on', function () {
     Process::fake([
         '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
@@ -242,7 +245,6 @@ it('rebuilds the route cache, which a new route depends on', function () {
 
     Artisan::shouldHaveReceived('call')->with('route:clear');
     Artisan::shouldHaveReceived('call')->with('config:clear');
-    Artisan::shouldHaveReceived('call')->with('view:clear');
 });
 
 it('rolls back when a cache rebuild fails', function () {
@@ -430,7 +432,7 @@ it('lists the seeder classes a release changed without running them', function (
     $result = app(GitDeploy::class)->pull();
 
     expect($result->status)->toBe('deployed')
-        ->and($result->pendingSeeders)->toContain(\Database\Seeders\SettingSeeder::class);
+        ->and($result->pendingSeeders)->toContain(SettingSeeder::class);
 
     Process::assertDidntRun(commandContains('db:seed'));
 });
@@ -443,11 +445,11 @@ it('runs a listed seeder only on explicit request', function () {
         return 0;
     });
 
-    $result = app(GitDeploy::class)->runSeeders([\Database\Seeders\SettingSeeder::class]);
+    $result = app(GitDeploy::class)->runSeeders([SettingSeeder::class]);
 
     expect($result->ok())->toBeTrue()
         ->and($result->message)->toContain('SettingSeeder')
-        ->and($calls)->toContain(['db:seed', ['--class' => \Database\Seeders\SettingSeeder::class, '--force' => true]]);
+        ->and($calls)->toContain(['db:seed', ['--class' => SettingSeeder::class, '--force' => true]]);
 });
 
 it('refuses to run anything that is not a real seeder', function () {

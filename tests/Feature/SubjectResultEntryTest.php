@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\TeacherClasses;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Collection;
@@ -861,7 +862,7 @@ test('the results landing page lists a card per class', function () {
     $mine = makeGradedClass($institution);
     $other = makeGradedClass($institution);
 
-    \App\Models\TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $mine->id]);
+    TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $mine->id]);
 
     // The Director sees every class; the teacher only the one assigned.
     Livewire::actingAs($director)->test('result::index')
@@ -907,7 +908,7 @@ test('a teacher cannot open the results of a class they do not teach', function 
     $teacher = makeSchoolTeacher($institution);
 
     $theirs = makeGradedClass($institution);
-    \App\Models\TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $theirs->id]);
+    TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $theirs->id]);
 
     $other = makeGradedClass($institution);
 

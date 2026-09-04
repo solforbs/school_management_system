@@ -3,6 +3,7 @@
 namespace Modules\ReportCard\Services;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Support\TermParser;
 use Modules\Result\Models\Result;
@@ -79,7 +80,7 @@ class ReportCardCompletionService
      * given term. The subject now lives on the result itself; rows from
      * before that column fall back to their examination's subject.
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
     private function coveredSubjectIds(User $student, string $term, int $academicYear)
     {

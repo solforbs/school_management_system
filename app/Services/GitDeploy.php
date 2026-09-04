@@ -273,7 +273,11 @@ class GitDeploy
      */
     private function refreshCaches(): ?string
     {
-        foreach (['config:clear', 'route:clear', 'view:clear'] as $command) {
+        // config and route caches, if stale, break the very next request -
+        // a new route resolves to nothing. Clearing them is safe now: this
+        // request already read them into memory at boot, and deleting the
+        // cache file only affects the requests that follow.
+        foreach (['config:clear', 'route:clear'] as $command) {
             try {
                 $code = Artisan::call($command);
             } catch (Throwable $e) {
@@ -284,6 +288,19 @@ class GitDeploy
                 return "could not run {$command} (exit {$code}).";
             }
         }
+
+        // Compiled Blade views recompile themselves the moment their source
+        // is newer, so clearing them is housekeeping, not correctness - and
+        // doing it now would delete the compiled view this request (the
+        // Livewire component that pressed the button) is still rendering
+        // from. Run it once the response has gone out.
+        app()->terminating(function () {
+            try {
+                Artisan::call('view:clear');
+            } catch (Throwable $e) {
+                Log::warning('Deploy deferred view:clear failed', ['error' => $e->getMessage()]);
+            }
+        });
 
         return null;
     }

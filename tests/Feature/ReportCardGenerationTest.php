@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\TeacherClasses;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\DB;
@@ -251,7 +252,7 @@ test('generating nothing happens for a class with no marks recorded', function (
 
     // A fresh class with students but no results at all - no term can be
     // resolved, so nothing is generated.
-    $emptyClass = \Modules\Classes\Models\SchoolClass::create([
+    $emptyClass = SchoolClass::create([
         'institution_id' => $institution->id,
         'name' => 'Empty Class '.uniqid(),
     ]);
@@ -275,7 +276,7 @@ test('a teacher without report card rights cannot generate them', function () {
     $teacher = User::factory()->create();
     $teacher->assignRole('Teacher');
     TeacherDetails::create(['teacher_id' => $teacher->id, 'institution_id' => $institution->id, 'is_active' => true]);
-    \App\Models\TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $class->id]);
+    TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $class->id]);
 
     Livewire::actingAs($teacher)
         ->test('result::class-results', ['classId' => $class->id])

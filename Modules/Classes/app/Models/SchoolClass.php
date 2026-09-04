@@ -5,6 +5,7 @@ namespace Modules\Classes\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Modules\Curriculum\Models\Curriculum;
 use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
@@ -22,8 +23,8 @@ use Modules\Timetable\Models\TimetableEntry;
  * @property int|null $curriculum_id
  * @property int|null $class_teacher_id
  * @property int|null $capacity
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class SchoolClass extends Model
 {

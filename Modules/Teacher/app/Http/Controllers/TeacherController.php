@@ -55,12 +55,13 @@ class TeacherController extends Controller
                     'class_id' => $classId,
                 ]);
             }
+
             return redirect()->route('teacher.index')->with('success', 'Teacher created successfully!');
         } catch (\Exception $e) {
-            Log::error('Teacher creation failed: ' . $e->getMessage());
+            Log::error('Teacher creation failed: '.$e->getMessage());
 
             return redirect()->back()->withInput()
-                ->with('error', 'Failed to create teacher: ' . $e->getMessage());
+                ->with('error', 'Failed to create teacher: '.$e->getMessage());
         }
     }
 
@@ -105,7 +106,7 @@ class TeacherController extends Controller
 
             $teacherId = $teacherDetails->teacher?->id;
 
-            if (!$teacherId) {
+            if (! $teacherId) {
                 throw new \RuntimeException('Teacher user account not found.');
             }
 
@@ -127,7 +128,7 @@ class TeacherController extends Controller
             }
 
             // Remove subjects no longer assigned
-            if (!empty($subjectsToRemove)) {
+            if (! empty($subjectsToRemove)) {
                 TeacherSubjects::where('teacher_id', $teacherId)
                     ->whereIn('subject_id', $subjectsToRemove)
                     ->delete();
@@ -149,17 +150,18 @@ class TeacherController extends Controller
                 ]);
             }
 
-            if (!empty($classesToRemove)) {
+            if (! empty($classesToRemove)) {
                 TeacherClasses::where('teacher_id', $teacherId)
                     ->whereIn('class_id', $classesToRemove)
                     ->delete();
             }
+
             return redirect()->route('teacher.show', $id)->with('success', 'Teacher updated successfully!');
         } catch (\Exception $e) {
-            Log::error('Teacher update failed: ' . $e->getMessage());
+            Log::error('Teacher update failed: '.$e->getMessage());
 
             return redirect()->back()->withInput()
-                ->with('error', 'Failed to update teacher: ' . $e->getMessage());
+                ->with('error', 'Failed to update teacher: '.$e->getMessage());
         }
     }
 

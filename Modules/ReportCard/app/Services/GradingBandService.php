@@ -100,7 +100,7 @@ class GradingBandService
             return null;
         }
 
-        $haystack = strtolower(trim(($schoolClass->name ?? '') . ' ' . ($schoolClass->level ?? '')));
+        $haystack = strtolower(trim(($schoolClass->name ?? '').' '.($schoolClass->level ?? '')));
 
         if ($haystack === '') {
             return null;
