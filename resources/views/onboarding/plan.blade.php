@@ -1,6 +1,6 @@
 <x-layouts::app :title="__('Choose your plan')">
     <div class="p-4">
-        <div class="mx-auto max-w-5xl">
+        <div class="mx-auto max-w-full">
             <flux:heading size="xl">Choose your plan</flux:heading>
             <flux:text class="mt-1 mb-6">
                 @if ($setupFee > 0)
@@ -43,9 +43,13 @@
             @else
                 <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     @foreach ($plans as $plan)
-                        <flux:card @class(['flex flex-col', 'ring-2 ring-indigo-500' => $plan->is_featured])>
+                        <flux:card @class([
+                            'flex flex-col',
+                            'ring-2 ring-indigo-500' => $plan->is_featured,
+                        ])>
                             @if ($plan->is_featured)
-                                <flux:badge color="indigo" size="sm" class="mb-2 self-start">Most popular</flux:badge>
+                                <flux:badge color="indigo" size="sm" class="mb-2 self-start">Most popular
+                                </flux:badge>
                             @endif
 
                             <flux:heading size="lg">{{ $plan->name }}</flux:heading>
@@ -58,7 +62,8 @@
                                 @endif
                             </div>
 
-                            <ul class="mt-4 mb-6 grid flex-1 gap-x-4 gap-y-1.5 text-sm text-zinc-600 sm:grid-cols-2 dark:text-zinc-400">
+                            <ul
+                                class="mt-4 mb-6 grid flex-1 gap-x-4 gap-y-1.5 text-sm text-zinc-600 sm:grid-cols-2 dark:text-zinc-400">
                                 @foreach ($plan->inclusions() as $inclusion)
                                     <li>{{ $inclusion }}</li>
                                 @endforeach
