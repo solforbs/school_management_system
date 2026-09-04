@@ -4,6 +4,7 @@ namespace Modules\Teacher\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Models\TeacherClasses;
 use App\Models\TeacherSubjects;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -40,10 +41,18 @@ class TeacherController extends Controller
             $teacher = SaveTeacher::create($validated, $institutionId);
 
             // create the teacher subjects in the teacher_subjects table
-            foreach ($request->subjects as $subjectId) {
+            foreach ((array) $request->input('subjects', []) as $subjectId) {
                 TeacherSubjects::create([
                     'teacher_id' => $teacher->id,
                     'subject_id' => $subjectId,
+                ]);
+            }
+
+            // create the teacher classes in the teacher_classes table
+            foreach ((array) $request->input('classes', []) as $classId) {
+                TeacherClasses::create([
+                    'teacher_id' => $teacher->id,
+                    'class_id' => $classId,
                 ]);
             }
             return redirect()->route('teacher.index')->with('success', 'Teacher created successfully!');
@@ -121,6 +130,28 @@ class TeacherController extends Controller
             if (!empty($subjectsToRemove)) {
                 TeacherSubjects::where('teacher_id', $teacherId)
                     ->whereIn('subject_id', $subjectsToRemove)
+                    ->delete();
+            }
+
+            $newClasses = $request->input('classes', []);
+
+            $existingClasses = TeacherClasses::where('teacher_id', $teacherId)
+                ->pluck('class_id')
+                ->toArray();
+
+            $classesToAdd = array_diff($newClasses, $existingClasses);
+            $classesToRemove = array_diff($existingClasses, $newClasses);
+
+            foreach ($classesToAdd as $classId) {
+                TeacherClasses::create([
+                    'teacher_id' => $teacherId,
+                    'class_id' => $classId,
+                ]);
+            }
+
+            if (!empty($classesToRemove)) {
+                TeacherClasses::where('teacher_id', $teacherId)
+                    ->whereIn('class_id', $classesToRemove)
                     ->delete();
             }
             return redirect()->route('teacher.show', $id)->with('success', 'Teacher updated successfully!');

@@ -2,11 +2,14 @@
 
 namespace Modules\Result\Services;
 
+use App\Models\TeacherClasses;
+use App\Models\TeacherSubjects;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
 use Modules\Student\Models\StudentDetails;
+use Modules\Subject\Models\Subject;
 use Modules\Subject\Models\SubjectTeacher;
 use Modules\Timetable\Models\TimetableEntry;
 
@@ -42,8 +45,18 @@ class ResultAccessService
             ->whereNotNull('class_id')
             ->get(['class_id', 'subject_id']);
 
+        // The simple pivots say "these are my classes" and "these are my
+        // subjects" separately; every combination of the two is a pair the
+        // teacher owns - pick the class, then one of your subjects.
+        $pivotClassIds = TeacherClasses::where('teacher_id', $teacher->id)->pluck('class_id');
+        $pivotSubjectIds = TeacherSubjects::where('teacher_id', $teacher->id)->pluck('subject_id');
+
+        $pivotPairs = $pivotClassIds->crossJoin($pivotSubjectIds)
+            ->map(fn ($combo) => (object) ['class_id' => (int) $combo[0], 'subject_id' => (int) $combo[1]]);
+
         return $assigned->concat($timetabled)
             ->map(fn ($entry) => (object) ['class_id' => (int) $entry->class_id, 'subject_id' => (int) $entry->subject_id])
+            ->concat($pivotPairs)
             ->unique(fn ($pair) => $pair->class_id.'-'.$pair->subject_id)
             ->values();
     }
@@ -205,12 +218,51 @@ class ResultAccessService
     }
 
     /**
+     * Subjects selectable on a result screen, optionally narrowed to a
+     * single class. For a Teacher these are the subjects they own marks
+     * for (in that class, if one is given); for anyone else, the school's.
+     *
+     * @return Collection<int, Subject>
+     */
+    public static function selectableSubjects(User $user, ?int $classId = null): Collection
+    {
+        if ($user->hasRole('Teacher')) {
+            $institutionId = $user->teacherUserDetails?->institution_id ?? 0;
+
+            // A class teacher owns every subject in their own class; for
+            // that class, don't narrow the list down to assigned pairs.
+            $isClassTeacherHere = $classId !== null
+                && self::classTeacherClassIds($user)->contains($classId);
+
+            if ($isClassTeacherHere) {
+                return Subject::where('institution_id', $institutionId)->orderBy('name')->get();
+            }
+
+            $subjectIds = self::subjectPairs($user)
+                ->when($classId !== null, fn ($pairs) => $pairs->where('class_id', $classId))
+                ->pluck('subject_id')
+                ->unique()
+                ->values();
+
+            return Subject::whereIn('id', $subjectIds)->orderBy('name')->get();
+        }
+
+        $query = Subject::query();
+
+        if (! isAdmin()) {
+            $query->where('institution_id', currentInstitution()?->id ?? 0);
+        }
+
+        return $query->orderBy('name')->get();
+    }
+
+    /**
      * Examinations selectable on a result screen, optionally narrowed to a
-     * single class.
+     * single class and/or subject.
      *
      * @return Collection<int, Examination>
      */
-    public static function selectableExaminations(User $user, ?int $classId = null): Collection
+    public static function selectableExaminations(User $user, ?int $classId = null, ?int $subjectId = null): Collection
     {
         $query = Examination::with(['subject', 'schoolClass']);
 
@@ -222,6 +274,7 @@ class ResultAccessService
         }
 
         return $query->when($classId, fn ($q) => $q->where('class_id', $classId))
+            ->when($subjectId, fn ($q) => $q->where('subject_id', $subjectId))
             ->orderByDesc('exam_date')
             ->get();
     }

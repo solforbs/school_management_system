@@ -7,6 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
 
+/**
+ * @property int $id
+ * @property int $institution_id
+ * @property string $name
+ * @property string|null $code
+ * @property bool $is_compulsory
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class Subject extends Model
 {
     use HasFactory;

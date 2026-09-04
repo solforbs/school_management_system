@@ -2,9 +2,11 @@
 
 use App\Models\Plan;
 use App\Models\Setting;
+use App\Models\TeacherClasses;
 use App\Models\TeacherSubjects;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 use Modules\Subject\Models\Subject;
 
@@ -264,6 +266,9 @@ if (! function_exists('institutionCanUpgrade')) {
     }
 }
 if (!function_exists('institutionSubjects')) {
+    /**
+     * @return \Illuminate\Support\Collection<int, Subject>
+     */
     function institutionSubjects(): \Illuminate\Support\Collection
     {
         $institution = currentInstitution();
@@ -273,10 +278,35 @@ if (!function_exists('institutionSubjects')) {
         return $institution->subjects()->get();
     }
 }
+if (!function_exists('institutionClasses')) {
+    /**
+     * @return \Illuminate\Support\Collection<int, SchoolClass>
+     */
+    function institutionClasses(): \Illuminate\Support\Collection
+    {
+        $institution = currentInstitution();
+        if (! $institution) {
+            return collect();
+        }
+        return $institution->classes()->orderBy('name')->get();
+    }
+}
 if (!function_exists('teacherSubjects')) {
+    /**
+     * @return \Illuminate\Support\Collection<int, TeacherSubjects>
+     */
     function teacherSubjects(int $teacherId): \Illuminate\Support\Collection
     {
         return TeacherSubjects::where('teacher_id', $teacherId)->get();
+    }
+}
+if (!function_exists('teacherClasses')) {
+    /**
+     * @return \Illuminate\Support\Collection<int, TeacherClasses>
+     */
+    function teacherClasses(int $teacherId): \Illuminate\Support\Collection
+    {
+        return TeacherClasses::where('teacher_id', $teacherId)->get();
     }
 }
 if (!function_exists('getSubjectName')) {
@@ -284,5 +314,12 @@ if (!function_exists('getSubjectName')) {
     {
         $subject = Subject::find($subjectId);
         return $subject ? $subject->name : 'Unknown Subject';
+    }
+}
+if (!function_exists('getClassName')) {
+    function getClassName(int $classId): string
+    {
+        $schoolClass = SchoolClass::find($classId);
+        return $schoolClass ? $schoolClass->name : 'Unknown Class';
     }
 }

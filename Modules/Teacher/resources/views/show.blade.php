@@ -2,6 +2,7 @@
     $teacherUser = $teacherDetails->teacher;
     $teacherName = $teacherUser?->name ?? 'Faculty Member';
     $teacherSubjects = teacherSubjects($teacherDetails->teacher_id);
+    $teacherClasses = teacherClasses($teacherDetails->teacher_id);
     // Clean initials calculation
     $clean = trim(preg_replace('/^(mr\.|mrs\.|ms\.|dr\.|prof\.)\s+/i', '', $teacherName));
     $parts = array_filter(explode(' ', $clean));
@@ -195,7 +196,7 @@
                         <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-700">Subjects</h3>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                        @foreach ($teacherSubjects as $subject)
+                        @forelse ($teacherSubjects as $subject)
                             <flux:text
                                 class="bg-white dark:bg-zinc-800/30 border border-zinc-200/50 dark:border-zinc-700/30 rounded-lg p-3 flex items-center gap-3">
                                 <flux:icon icon="book-open" class="size-4 text-zinc-500 dark:text-zinc-300" />
@@ -203,7 +204,30 @@
                                     {{ getSubjectName($subject->subject_id) }}
                                 </span>
                             </flux:text>
-                        @endforeach
+                        @empty
+                            <flux:text class="text-sm text-zinc-500">No subjects assigned.</flux:text>
+                        @endforelse
+                    </div>
+                </flux:card>
+                {{-- Teacher Classes Card --}}
+                <flux:card
+                    class="md:col-span-2 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center gap-2 pb-3 border-b border-zinc-100">
+                        <flux:icon icon="academic-cap" class="size-4 text-zinc-500" />
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-700">Classes</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                        @forelse ($teacherClasses as $teacherClass)
+                            <flux:text
+                                class="bg-white dark:bg-zinc-800/30 border border-zinc-200/50 dark:border-zinc-700/30 rounded-lg p-3 flex items-center gap-3">
+                                <flux:icon icon="academic-cap" class="size-4 text-zinc-500 dark:text-zinc-300" />
+                                <span class="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                    {{ getClassName($teacherClass->class_id) }}
+                                </span>
+                            </flux:text>
+                        @empty
+                            <flux:text class="text-sm text-zinc-500">No classes assigned.</flux:text>
+                        @endforelse
                     </div>
                 </flux:card>
             </div>

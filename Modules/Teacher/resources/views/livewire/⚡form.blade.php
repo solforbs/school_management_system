@@ -42,6 +42,11 @@ new #[Title('Teacher')] class extends Component {
     {
         return teacherSubjects($this->teacherId)->pluck('subject_id')->toArray();
     }
+
+    public function teacherClassIds(): array
+    {
+        return teacherClasses($this->teacherId)->pluck('class_id')->toArray();
+    }
 }; ?>
 <div>
     @if ($teacher)
@@ -154,6 +159,25 @@ new #[Title('Teacher')] class extends Component {
                                         <flux:checkbox name="subjects[]" value="{{ $subject->id }}"
                                             label="{{ $subject->name }}"
                                             :checked="in_array($subject->id, $this->teacherSubjectIds())" />
+                                    @endforeach
+                                </div>
+
+                            </flux:card>
+                            <flux:card
+                                class="md:col-span-2 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-4 flex flex-col gap-3">
+
+                                <flux:icon icon="academic-cap" class="size-5 text-emerald-500 mt-0.5 shrink-0" />
+
+                                <div class="text-sm text-emerald-800 dark:text-emerald-300">
+                                    Select the classes this teacher takes. When entering results they'll
+                                    pick one of these classes first, then one of their subjects.
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                    @foreach (institutionClasses() as $schoolClass)
+                                        <flux:checkbox name="classes[]" value="{{ $schoolClass->id }}"
+                                            label="{{ $schoolClass->name }}"
+                                            :checked="in_array($schoolClass->id, $this->teacherClassIds())" />
                                     @endforeach
                                 </div>
 
@@ -331,6 +355,22 @@ new #[Title('Teacher')] class extends Component {
                                         <flux:checkbox name="subjects[]" value="{{ $subject->id }}"
                                             label="{{ $subject->name }}"
                                             :checked="in_array($subject->id, old('subjects', []))" />
+                                    @endforeach
+                                </div>
+                            </flux:card>
+                            <flux:card
+                                class="md:col-span-2 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-4 flex flex-col gap-3">
+                                <flux:icon icon="academic-cap" class="size-5 text-emerald-500 mt-0.5 shrink-0" />
+                                <div class="text-sm text-emerald-800 dark:text-emerald-300">
+                                    Select the classes this teacher takes. When entering results they'll
+                                    pick one of these classes first, then one of their subjects.
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                                    @foreach (institutionClasses() as $schoolClass)
+                                        {{-- create a checkbox for each class that the teacher teaches --}}
+                                        <flux:checkbox name="classes[]" value="{{ $schoolClass->id }}"
+                                            label="{{ $schoolClass->name }}"
+                                            :checked="in_array($schoolClass->id, old('classes', []))" />
                                     @endforeach
                                 </div>
                             </flux:card>

@@ -14,6 +14,17 @@ use Modules\Student\Models\StudentDetails;
 use Modules\Subject\Models\SubjectTeacher;
 use Modules\Timetable\Models\TimetableEntry;
 
+/**
+ * @property int $id
+ * @property int $institution_id
+ * @property string $name
+ * @property string|null $level
+ * @property int|null $curriculum_id
+ * @property int|null $class_teacher_id
+ * @property int|null $capacity
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class SchoolClass extends Model
 {
     use HasFactory;
