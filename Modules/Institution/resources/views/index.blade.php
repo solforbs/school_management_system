@@ -107,7 +107,7 @@
             </a>
 
             {{-- Card 3: Total Combined Learners --}}
-            @if (currentInstitution()->isApproved())
+            @if (currentInstitution()?->isApproved())
                 <a href="{{ route('student.index') }}"
                     class="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-sm hover:border-zinc-300 hover:shadow-md transition duration-150 block group">
                     <div class="flex items-center justify-between mb-2">

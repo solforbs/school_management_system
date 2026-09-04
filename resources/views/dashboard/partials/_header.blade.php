@@ -57,7 +57,7 @@
             @if ($roleName)
                 Role: <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $roleName }}</span>
             @endif
-            @if (currentInstitution()->isApproved())
+            @if (currentInstitution()?->isApproved())
                 @can('view report')
                     <span class="text-zinc-300 mx-1">&bull;</span>
                     <a href="{{ route('report.index') }}" wire:navigate.hover
