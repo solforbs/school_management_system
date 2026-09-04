@@ -239,6 +239,10 @@
         <flux:spacer />
 
         <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
+
+        <flux:text size="xs" class="text-center text-zinc-400 dark:text-zinc-600 pb-1">
+            {{ config('app.version') }}
+        </flux:text>
     </flux:sidebar>
 
     <!-- Mobile User Menu -->

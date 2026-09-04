@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Shown in the dashboard sidebar so it's obvious at a glance which
+    | release a school is running. Bump this (and tag the release on
+    | GitHub) whenever a new version ships - v1.0.0 is the current tag.
+    |
+    */
+
+    'version' => env('APP_VERSION', 'v1.0.0'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
