@@ -314,11 +314,13 @@ new #[Title('Staff Directory')] class extends Component
                                                     <flux:button href="{{ route('staff.edit', $member->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" title="Edit Staff" />
                                                 @endcan
                                                 @can('delete staff')
-                                                    <form action="{{ route('staff.destroy', $member->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this staff record?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <flux:button type="submit" size="sm" icon="trash" variant="subtle" class="text-rose-600 hover:text-rose-700" title="Delete Staff" />
-                                                    </form>
+                                                    <x-confirm-form
+                                                        :action="route('staff.destroy', $member->id)"
+                                                        title="Delete this staff record?"
+                                                        message="This removes their staff record and system access."
+                                                        confirm="Delete Staff"
+                                                        trigger-class="text-rose-600 hover:text-rose-700"
+                                                        tooltip="Delete Staff" />
                                                 @endcan
                                             </div>
                                         </div>

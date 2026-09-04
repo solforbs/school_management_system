@@ -208,17 +208,15 @@
                                 <flux:table.cell>
                                     @can('delete syncdevice')
                                         @if ($isActive)
-                                            <form action="{{ route('sync-devices.destroy', $device) }}" method="POST"
-                                                class="inline"
-                                                onsubmit="return confirm('Revoke {{ $device->name }}? It will immediately stop syncing and any unsynced offline data will be rejected.');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <flux:button type="submit" icon="no-symbol" size="sm" variant="subtle"
-                                                    class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                                                    tooltip="Revoke Sync Access">
-                                                    Revoke
-                                                </flux:button>
-                                            </form>
+                                            <x-confirm-form
+                                                :action="route('sync-devices.destroy', $device)"
+                                                title="Revoke {{ $device->name }}?"
+                                                message="It immediately stops syncing, and any unsynced offline data will be rejected."
+                                                confirm="Revoke Access"
+                                                cancel="Keep Active"
+                                                label="Revoke"
+                                                icon="no-symbol"
+                                                tooltip="Revoke Sync Access" />
                                         @else
                                             <span class="text-xs text-zinc-400 italic">
                                                 Revoked {{ $device->revoked_at?->diffForHumans() }}

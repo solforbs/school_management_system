@@ -162,15 +162,12 @@ new #[Title('Curricula & Frameworks')] class extends Component {
                                     @endcan
 
                                     @can('delete curriculum')
-                                        <form action="{{ route('curriculum.destroy', $curriculum->id) }}" method="POST"
-                                            class="inline"
-                                            onsubmit="return confirm('Remove {{ $curriculum->name }} permanently?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <flux:button type="submit" icon="trash" size="sm" variant="subtle"
-                                                class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                                                tooltip="Delete Curriculum" />
-                                        </form>
+                                        <x-confirm-form
+                                            :action="route('curriculum.destroy', $curriculum->id)"
+                                            title="Remove {{ $curriculum->name }}?"
+                                            message="Classes on this curriculum fall back to the school-wide grading scale."
+                                            confirm="Remove Curriculum"
+                                            tooltip="Delete Curriculum" />
                                     @endcan
                                 </div>
                             </flux:table.cell>

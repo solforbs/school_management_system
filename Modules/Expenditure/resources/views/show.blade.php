@@ -79,15 +79,13 @@
                     </a>
                 @endcan
                 @can('delete expenditure')
-                    <form action="{{ route('expenditure.destroy', $expenditure->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this expenditure?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                            class="rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-                            Delete
-                        </button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('expenditure.destroy', $expenditure->id)"
+                        title="Remove this expenditure?"
+                        message="This permanently deletes the expenditure record."
+                        confirm="Delete Expenditure"
+                        label="Delete"
+                        size="base" />
                 @endcan
             </div>
         </div>

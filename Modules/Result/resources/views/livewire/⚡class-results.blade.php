@@ -50,9 +50,18 @@ new #[Title('Class Results')] class extends Component {
         }
     }
 
-    public function delete(int $id): void
+    /** The result the delete dialog is confirming. */
+    public ?int $confirmingId = null;
+
+    public function delete(?int $id = null): void
     {
         abort_unless(auth()->user()->can('delete result'), 403);
+
+        $id ??= $this->confirmingId;
+        abort_unless($id, 404);
+
+        $this->confirmingId = null;
+        \Flux\Flux::modal('confirm-delete-result')->close();
 
         $query = Result::where('class_id', $this->classId);
         ResultAccessService::scopeVisibleResults($query, auth()->user());
@@ -281,9 +290,11 @@ new #[Title('Class Results')] class extends Component {
                                             size="sm" icon="pencil-square" variant="subtle" tooltip="Edit" />
                                     @endcan
                                     @can('delete result')
-                                        <flux:button wire:click="delete({{ $result->id }})"
-                                            wire:confirm="Remove this exam score?" size="sm" icon="trash" variant="subtle"
-                                            class="text-rose-500 hover:bg-rose-50" tooltip="Delete" />
+                                        <flux:modal.trigger name="confirm-delete-result">
+                                            <flux:button type="button" wire:click="$set('confirmingId', {{ $result->id }})"
+                                                size="sm" icon="trash" variant="subtle"
+                                                class="text-rose-500 hover:bg-rose-50" tooltip="Delete" />
+                                        </flux:modal.trigger>
                                     @endcan
                                 </div>
                             </td>
@@ -310,4 +321,19 @@ new #[Title('Class Results')] class extends Component {
             </div>
         @endif
     </div>
+
+    <flux:modal name="confirm-delete-result" class="max-w-md" wire:close="$set('confirmingId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Remove this exam score?</flux:heading>
+                <flux:subheading>This permanently deletes the recorded mark for this student.</flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="delete">Delete Score</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

@@ -161,9 +161,18 @@ new #[Title('Report Card Settings')] class extends Component
         );
     }
 
-    public function removeBand(int $id): void
+    /** The band the delete dialog is confirming. */
+    public ?int $confirmingBandId = null;
+
+    public function removeBand(?int $id = null): void
     {
         abort_unless(auth()->user()->can('edit reportcard'), 403);
+
+        $id ??= $this->confirmingBandId;
+        abort_unless($id, 404);
+
+        $this->confirmingBandId = null;
+        Flux::modal('confirm-remove-band')->close();
 
         $band = GradingBand::findOrFail($id);
 
@@ -387,9 +396,10 @@ new #[Title('Report Card Settings')] class extends Component
                                 <flux:table.cell>{{ $band->points ?? '—' }}</flux:table.cell>
                                 <flux:table.cell>{{ $band->remark ?? '—' }}</flux:table.cell>
                                 <flux:table.cell>
-                                    <flux:button type="button" size="sm" icon="trash" variant="ghost"
-                                        wire:click="removeBand({{ $band->id }})"
-                                        wire:confirm="Remove this grading band?">delete</flux:button>
+                                    <flux:modal.trigger name="confirm-remove-band">
+                                        <flux:button type="button" size="sm" icon="trash" variant="ghost"
+                                            wire:click="$set('confirmingBandId', {{ $band->id }})">delete</flux:button>
+                                    </flux:modal.trigger>
                                 </flux:table.cell>
                             </flux:table.row>
                         @endforeach
@@ -467,4 +477,19 @@ new #[Title('Report Card Settings')] class extends Component
             </form>
         </flux:card>
     @endif
+
+    <flux:modal name="confirm-remove-band" class="max-w-md" wire:close="$set('confirmingBandId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Remove this grading band?</flux:heading>
+                <flux:subheading>Scores in this band's range will go ungraded until the scale covers them again.</flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="removeBand">Remove Band</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

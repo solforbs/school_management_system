@@ -413,16 +413,13 @@ new #[Title('Student Directory')] class extends Component {
                                                         variant="subtle" tooltip="Edit Profile" />
                                                 @endcan
                                                 @can('delete student')
-                                                    <form action="{{ route('student.destroy', $user->id) }}"
-                                                        method="POST" class="inline"
-                                                        onsubmit="return confirm('Remove student {{ addslashes($user->name) }} from the directory?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <flux:button type="submit" size="sm" icon="trash"
-                                                            variant="subtle"
-                                                            class="text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                                                            tooltip="Delete" />
-                                                    </form>
+                                                    <x-confirm-form
+                                                        :action="route('student.destroy', $user->id)"
+                                                        title="Remove {{ $user->name }} from the directory?"
+                                                        message="This deletes the student's record and login. Recorded results are kept."
+                                                        confirm="Remove Student"
+                                                        trigger-class="text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                                        tooltip="Delete" />
                                                 @endcan
                                             </div>
                                         @endif

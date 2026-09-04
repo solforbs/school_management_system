@@ -112,9 +112,18 @@ new #[Title('Subject Teachers')] class extends Component {
         Flux::toast(text: $assigned > 0 ? $assigned . ' teacher(s) assigned to ' . $subject->name . ' for ' . $schoolClass->name . '.' : 'Those teachers already teach ' . $subject->name . ' in ' . $schoolClass->name . '.', variant: $assigned > 0 ? 'success' : 'warning');
     }
 
-    public function remove(int $id): void
+    /** The assignment the remove dialog is confirming. */
+    public ?int $confirmingId = null;
+
+    public function remove(?int $id = null): void
     {
         abort_unless(auth()->user()->can('edit subject'), 403);
+
+        $id ??= $this->confirmingId;
+        abort_unless($id, 404);
+
+        $this->confirmingId = null;
+        Flux::modal('confirm-remove-assignment')->close();
 
         $this->scoped()->findOrFail($id)->delete();
 
@@ -485,9 +494,10 @@ new #[Title('Subject Teachers')] class extends Component {
                                 <flux:table.cell>{{ $assignment->teacher?->name ?? '—' }}</flux:table.cell>
                                 <flux:table.cell>
                                     @can('edit subject')
-                                        <flux:button type="button" size="sm" icon="trash" variant="ghost"
-                                            wire:click="remove({{ $assignment->id }})"
-                                            wire:confirm="Remove this assignment?">remove</flux:button>
+                                        <flux:modal.trigger name="confirm-remove-assignment">
+                                            <flux:button type="button" size="sm" icon="trash" variant="ghost"
+                                                wire:click="$set('confirmingId', {{ $assignment->id }})">remove</flux:button>
+                                        </flux:modal.trigger>
                                     @endcan
                                 </flux:table.cell>
                             </flux:table.row>
@@ -499,4 +509,19 @@ new #[Title('Subject Teachers')] class extends Component {
             <flux:text class="text-zinc-500">No subject teachers assigned yet.</flux:text>
         @endforelse
     </flux:card>
+
+    <flux:modal name="confirm-remove-assignment" class="max-w-md" wire:close="$set('confirmingId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Remove this assignment?</flux:heading>
+                <flux:subheading>The teacher will no longer be able to enter results for this subject in this class.</flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="remove">Remove Assignment</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

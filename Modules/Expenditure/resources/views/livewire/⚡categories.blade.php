@@ -139,9 +139,18 @@ new #[Title('Expenditure Categories')] class extends Component {
         Flux::toast(text: $added > 0 ? $added . ' categories added.' : 'Every standard category is already set up.', variant: $added > 0 ? 'success' : 'warning');
     }
 
-    public function delete(int $id): void
+    /** The category the delete dialog is confirming. */
+    public ?int $confirmingId = null;
+
+    public function delete(?int $id = null): void
     {
         abort_unless(auth()->user()->can('delete expenditure'), 403);
+
+        $id ??= $this->confirmingId;
+        abort_unless($id, 404);
+
+        $this->confirmingId = null;
+        Flux::modal('confirm-delete-category')->close();
 
         $category = $this->scoped()->findOrFail($id);
 
@@ -265,9 +274,10 @@ new #[Title('Expenditure Categories')] class extends Component {
                                                 wire:click="edit({{ $category->id }})">edit</flux:button>
                                         @endcan
                                         @can('delete expenditure')
-                                            <flux:button type="button" size="sm" icon="trash" variant="ghost"
-                                                wire:click="delete({{ $category->id }})"
-                                                wire:confirm="Remove this category?">delete</flux:button>
+                                            <flux:modal.trigger name="confirm-delete-category">
+                                                <flux:button type="button" size="sm" icon="trash" variant="ghost"
+                                                    wire:click="$set('confirmingId', {{ $category->id }})">delete</flux:button>
+                                            </flux:modal.trigger>
                                         @endcan
                                     </div>
                                 </flux:table.cell>
@@ -292,4 +302,19 @@ new #[Title('Expenditure Categories')] class extends Component {
             </form>
         </flux:card>
     @endcan
+
+    <flux:modal name="confirm-delete-category" class="max-w-md" wire:close="$set('confirmingId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Remove this category?</flux:heading>
+                <flux:subheading>A category with spending filed under it is retired instead, so past records keep their heading.</flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="delete">Remove Category</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

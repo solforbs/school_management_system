@@ -262,14 +262,13 @@ new #[Title('Academic Subjects')] class extends Component {
                                                 title="Edit Subject" />
                                         @endcan
                                         @can('delete subject')
-                                            <form action="{{ route('subject.destroy', $subject->id) }}" method="POST"
-                                                class="inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this subject?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <flux:button type="submit" size="sm" icon="trash" variant="subtle"
-                                                    class="text-rose-600 hover:text-rose-700" title="Delete Subject" />
-                                            </form>
+                                            <x-confirm-form
+                                                :action="route('subject.destroy', $subject->id)"
+                                                title="Delete {{ $subject->name }}?"
+                                                message="This permanently removes the subject. Recorded results are kept."
+                                                confirm="Delete Subject"
+                                                trigger-class="text-rose-600 hover:text-rose-700"
+                                                tooltip="Delete Subject" />
                                         @endcan
                                     </div>
                                 </td>

@@ -5,6 +5,9 @@ use Livewire\Component;
 use Nwidart\Modules\Facades\Module;
 
 new class extends Component {
+    /** The module the delete dialog is confirming. */
+    public ?string $confirmingModule = null;
+
     #[On('loadModules')]
     public function modules()
     {
@@ -23,11 +26,20 @@ new class extends Component {
         $this->dispatch('loadModules');
         Flux::toast(text: $name . ' module disabled!', variant: 'success');
     }
-    public function deleteClickedModule($name)
+    public function deleteClickedModule($name = null)
     {
+        $name ??= $this->confirmingModule;
+
+        if (! $name) {
+            return;
+        }
+
+        $this->confirmingModule = null;
+        Flux::modal('confirm-delete-module')->close();
+
         Module::delete($name);
         $this->dispatch('loadModules');
-        Flux::toast(text: $name . ' module disabled!', variant: 'success');
+        Flux::toast(text: $name . ' module deleted!', variant: 'success');
     }
 };
 ?>
@@ -78,13 +90,32 @@ new class extends Component {
                 @endif
 
 
-                <flux:button variant="danger" icon="trash"
-                    wire:click="deleteClickedModule('{{ $module->getName() }}')"
-                    wire:confirm="This action can't be undone!">
-                    Delete
-                </flux:button>
+                <flux:modal.trigger name="confirm-delete-module">
+                    <flux:button variant="danger" icon="trash"
+                        wire:click="$set('confirmingModule', '{{ $module->getName() }}')">
+                        Delete
+                    </flux:button>
+                </flux:modal.trigger>
             </div>
         </flux:card>
     @empty
     @endforelse
+
+    <flux:modal name="confirm-delete-module" class="max-w-md" wire:close="$set('confirmingModule', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Delete this module?</flux:heading>
+                <flux:subheading>
+                    <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $confirmingModule }}</span>
+                    will be removed from disk. This action can't be undone.
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="deleteClickedModule">Delete Module</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

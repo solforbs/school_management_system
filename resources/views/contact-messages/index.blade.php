@@ -53,15 +53,12 @@
                                         variant="primary" color="emerald" wire:navigate>
                                         {{ __('View') }}
                                     </flux:button>
-                                    <form action="{{ route('messages.destroy', $contactMessage) }}" method="POST"
-                                        class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <flux:button type="submit" icon="trash" variant="primary" color="red"
-                                            onclick="return confirm('{{ __('Are you sure you want to delete this message?') }}')">
-                                            {{ __('Delete') }}
-                                        </flux:button>
-                                    </form>
+                                    <x-confirm-form
+                                        :action="route('messages.destroy', $contactMessage)"
+                                        :title="__('Delete this message?')"
+                                        :message="__('This permanently removes the contact message.')"
+                                        :confirm="__('Delete')"
+                                        :label="__('Delete')" />
                                 </flux:table.cell>
                             </flux:table.row>
                         @endforeach

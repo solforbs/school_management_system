@@ -236,15 +236,15 @@
                 @endcan
 
                 @can('delete staff')
-                    <form action="{{ route('staff.destroy', $staff->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this staff member from employment?');">
-                        @csrf
-                        @method('DELETE')
-                        <flux:button type="submit" variant="subtle" class="text-rose-600 hover:bg-rose-50"
-                            icon="trash">
-                            Delete
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('staff.destroy', $staff->id)"
+                        title="Remove this staff member from employment?"
+                        message="This deletes their staff record and system access."
+                        confirm="Remove Staff"
+                        label="Delete"
+                        variant="subtle"
+                        trigger-class="text-rose-600 hover:bg-rose-50"
+                        size="base" />
                 @endcan
             </div>
         </div>

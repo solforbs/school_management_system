@@ -25,7 +25,7 @@
 
 @php($modalName = 'confirm-'.\Illuminate\Support\Str::random(12))
 
-<flux:modal.trigger :name="$modalName" @class(['inline-flex', $attributes->get('class')])>
+<flux:modal.trigger :name="$modalName" {{ $attributes->merge(['class' => 'contents']) }}>
     <flux:button
         type="button"
         :icon="$icon"

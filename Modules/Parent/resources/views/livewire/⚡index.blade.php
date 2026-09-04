@@ -304,11 +304,13 @@ new #[Title('Parent Management')] class extends Component
                                                 <flux:button href="{{ route('parent.edit', $parent->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" title="Edit Profile" />
                                             @endcan
                                             @can('delete parent')
-                                                <form action="{{ route('parent.destroy', $parent->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this parent account?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <flux:button type="submit" size="sm" icon="trash" variant="subtle" class="text-rose-600 hover:text-rose-700" title="Delete Account" />
-                                                </form>
+                                                <x-confirm-form
+                                                    :action="route('parent.destroy', $parent->id)"
+                                                    title="Delete this parent account?"
+                                                    message="Linked students are unlinked, not deleted."
+                                                    confirm="Delete Account"
+                                                    trigger-class="text-rose-600 hover:text-rose-700"
+                                                    tooltip="Delete Account" />
                                             @endcan
                                         </div>
                                     </td>

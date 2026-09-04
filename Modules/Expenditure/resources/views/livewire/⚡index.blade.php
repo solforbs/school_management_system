@@ -81,9 +81,18 @@ new #[Title('Expenditure')] class extends Component
         $this->resetPage();
     }
 
-    public function delete(int $id): void
+    /** The expenditure the delete dialog is confirming. */
+    public ?int $confirmingId = null;
+
+    public function delete(?int $id = null): void
     {
         abort_unless(auth()->user()->can('delete expenditure'), 403);
+
+        $id ??= $this->confirmingId;
+        abort_unless($id, 404);
+
+        $this->confirmingId = null;
+        Flux::modal('confirm-delete-expenditure')->close();
 
         // Resolved through the scoped query, so an id from another school
         // is a 404 rather than a deletion.
@@ -310,9 +319,10 @@ new #[Title('Expenditure')] class extends Component
                                     variant="primary" color="yellow" wire:navigate.hover>edit</flux:button>
                             @endcan
                             @can('delete expenditure')
-                                <flux:button type="button" icon="trash" variant="primary" color="red"
-                                    wire:click="delete({{ $expenditure->id }})"
-                                    wire:confirm="Remove this expenditure?">delete</flux:button>
+                                <flux:modal.trigger name="confirm-delete-expenditure">
+                                    <flux:button type="button" icon="trash" variant="primary" color="red"
+                                        wire:click="$set('confirmingId', {{ $expenditure->id }})">delete</flux:button>
+                                </flux:modal.trigger>
                             @endcan
                         </flux:table.cell>
                     </flux:table.row>
@@ -330,4 +340,19 @@ new #[Title('Expenditure')] class extends Component
             {{ $this->expenditures->links() }}
         </div>
     </flux:card>
+
+    <flux:modal name="confirm-delete-expenditure" class="max-w-md" wire:close="$set('confirmingId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Remove this expenditure?</flux:heading>
+                <flux:subheading>This permanently deletes the expenditure record.</flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="delete">Remove Expenditure</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

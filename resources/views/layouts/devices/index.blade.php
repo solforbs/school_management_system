@@ -147,13 +147,13 @@
                                                 tooltip="Set this terminal's clock to the server time">Set Time</flux:button>
                                         </form>
                                         <flux:button wire:navigate href="{{ route('devices.edit', $device) }}" icon="pencil" size="sm" variant="subtle" tooltip="Edit Device" />
-                                        <form action="{{ route('devices.destroy', $device) }}" method="POST" class="inline" onsubmit="return confirm('Delete this device permanently?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <input type="hidden" name="device_id" value="{{ $device->id }}">
-                                            <input type="hidden" name="institution_id" value="{{ $device->institution->id }}">
-                                            <flux:button type="submit" icon="trash" size="sm" variant="subtle" class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10" tooltip="Delete Device" />
-                                        </form>
+                                        <x-confirm-form
+                                            :action="route('devices.destroy', $device)"
+                                            title="Delete this device permanently?"
+                                            message="The terminal is removed and stops syncing."
+                                            confirm="Delete Device"
+                                            tooltip="Delete Device"
+                                            :fields="['device_id' => $device->id, 'institution_id' => $device->institution->id]" />
                                     </div>
                                 </flux:table.cell>
                             </flux:table.row>

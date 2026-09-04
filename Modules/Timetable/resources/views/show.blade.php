@@ -54,15 +54,13 @@
                     </a>
                 @endcan
                 @can('delete timetable')
-                    <form action="{{ route('timetable.destroy', $entry->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this timetable entry?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                            class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700">
-                            Delete
-                        </button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('timetable.destroy', $entry->id)"
+                        title="Remove this timetable entry?"
+                        message="This permanently deletes the scheduled slot."
+                        confirm="Delete Entry"
+                        label="Delete"
+                        size="base" />
                 @endcan
             </div>
         </div>

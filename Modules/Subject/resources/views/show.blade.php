@@ -187,14 +187,15 @@
                         </flux:button>
                     @endcan
                     @can('delete subject')
-                        <form action="{{ route('subject.destroy', $subject->id) }}" method="POST"
-                            onsubmit="return confirm('Permanently remove {{ addslashes($subject->name) }} from the curriculum?');" class="w-full">
-                            @csrf
-                            @method('DELETE')
-                            <flux:button type="submit" variant="subtle" class="text-rose-600 hover:bg-rose-50 w-full justify-start" icon="trash">
-                                Remove Subject
-                            </flux:button>
-                        </form>
+                        <x-confirm-form
+                            :action="route('subject.destroy', $subject->id)"
+                            title="Remove {{ $subject->name }} from the curriculum?"
+                            message="This permanently deletes the subject. Recorded results are kept."
+                            confirm="Remove Subject"
+                            label="Remove Subject"
+                            variant="subtle"
+                            trigger-class="text-rose-600 hover:bg-rose-50 w-full justify-start"
+                            class="w-full" />
                     @endcan
                 </div>
 

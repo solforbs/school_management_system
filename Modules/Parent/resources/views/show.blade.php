@@ -226,15 +226,15 @@
                 @endcan
 
                 @can('delete parent')
-                    <form action="{{ route('parent.destroy', $parent->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this parent? Linked students will be unlinked, not deleted.');">
-                        @csrf
-                        @method('DELETE')
-                        <flux:button type="submit" variant="subtle" class="text-rose-600 hover:bg-rose-50"
-                            icon="trash">
-                            Delete
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('parent.destroy', $parent->id)"
+                        title="Remove this parent?"
+                        message="Linked students are unlinked, not deleted."
+                        confirm="Remove Parent"
+                        label="Delete"
+                        variant="subtle"
+                        trigger-class="text-rose-600 hover:bg-rose-50"
+                        size="base" />
                 @endcan
             </div>
         </div>

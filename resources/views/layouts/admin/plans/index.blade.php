@@ -32,12 +32,16 @@
                                 <div class="flex gap-2">
                                     <flux:button size="sm" href="{{ route('admin.plans.edit', $plan) }}"
                                         wire:navigate>Edit</flux:button>
-                                    <form action="{{ route('admin.plans.destroy', $plan) }}" method="POST"
-                                        onsubmit="return confirm('Delete this plan? Institutions on it will lose access to its modules.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <flux:button size="sm" variant="danger" type="submit">Delete</flux:button>
-                                    </form>
+                                    <x-confirm-form
+                                        :action="route('admin.plans.destroy', $plan)"
+                                        title="Delete this plan?"
+                                        message="Institutions on it will lose access to its modules."
+                                        confirm="Delete Plan"
+                                        label="Delete"
+                                        :icon="null"
+                                        variant="danger"
+                                        trigger-class=""
+                                        size="sm" />
                                 </div>
                             </flux:table.cell>
                         </flux:table.row>

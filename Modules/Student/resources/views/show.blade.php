@@ -302,14 +302,15 @@
                         </flux:button>
                     @endcan
                     @can('delete student')
-                        <form action="{{ route('student.destroy', $student->id) }}" method="POST"
-                            onsubmit="return confirm('Remove student {{ addslashes($student->name) }} from the directory?');" class="w-full">
-                            @csrf
-                            @method('DELETE')
-                            <flux:button type="submit" variant="subtle" class="text-rose-600 hover:bg-rose-50 w-full justify-start" icon="trash">
-                                Remove Student
-                            </flux:button>
-                        </form>
+                        <x-confirm-form
+                            :action="route('student.destroy', $student->id)"
+                            title="Remove {{ $student->name }} from the directory?"
+                            message="This deletes the student's record and login. Recorded results are kept."
+                            confirm="Remove Student"
+                            label="Remove Student"
+                            variant="subtle"
+                            trigger-class="text-rose-600 hover:bg-rose-50 w-full justify-start"
+                            class="w-full" />
                     @endcan
                 </div>
 

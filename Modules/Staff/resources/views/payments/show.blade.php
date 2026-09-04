@@ -191,14 +191,15 @@
                 @endcan
 
                 @can('delete payroll')
-                    <form action="{{ route('staff.payments.destroy', $payment->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this payroll disbursement record?');">
-                        @csrf
-                        @method('DELETE')
-                        <flux:button type="submit" variant="subtle" class="text-rose-600 hover:bg-rose-50" icon="trash">
-                            Delete
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('staff.payments.destroy', $payment->id)"
+                        title="Remove this payroll disbursement record?"
+                        message="This permanently deletes the disbursement entry."
+                        confirm="Delete Record"
+                        label="Delete"
+                        variant="subtle"
+                        trigger-class="text-rose-600 hover:bg-rose-50"
+                        size="base" />
                 @endcan
             </div>
         </div>

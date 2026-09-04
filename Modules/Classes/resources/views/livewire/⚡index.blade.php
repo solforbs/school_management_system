@@ -222,15 +222,12 @@ new #[Title('Class Management')] class extends Component {
                                     @endcan
 
                                     @can('delete classes')
-                                        <form action="{{ route('classes.destroy', $schoolClass->id) }}" method="POST"
-                                            class="inline"
-                                            onsubmit="return confirm('Remove {{ $schoolClass->name }} permanently?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <flux:button type="submit" icon="trash" size="sm" variant="subtle"
-                                                class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                                                tooltip="Delete Class" />
-                                        </form>
+                                        <x-confirm-form
+                                            :action="route('classes.destroy', $schoolClass->id)"
+                                            title="Remove {{ $schoolClass->name }}?"
+                                            message="This permanently removes the class. Enrolled students lose their class assignment."
+                                            confirm="Remove Class"
+                                            tooltip="Delete Class" />
                                     @endcan
                                 </div>
                             </flux:table.cell>

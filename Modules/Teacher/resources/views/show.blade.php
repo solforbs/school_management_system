@@ -287,16 +287,15 @@
                         </flux:button>
                     @endcan
                     @can('delete teacher')
-                        <form action="{{ route('teacher.destroy', $teacherDetails->teacher_id) }}" method="POST"
-                            onsubmit="return confirm('Permanently remove {{ addslashes($teacherName) }} from faculty roster?');"
-                            class="w-full">
-                            @csrf
-                            @method('DELETE')
-                            <flux:button type="submit" variant="subtle"
-                                class="text-rose-600 hover:bg-rose-50 w-full justify-start" icon="trash">
-                                Remove Teacher
-                            </flux:button>
-                        </form>
+                        <x-confirm-form
+                            :action="route('teacher.destroy', $teacherDetails->teacher_id)"
+                            title="Remove {{ $teacherName }} from the faculty roster?"
+                            message="This deletes the teacher's staff record and login. Results and assignments they recorded are kept."
+                            confirm="Remove Teacher"
+                            label="Remove Teacher"
+                            variant="subtle"
+                            trigger-class="text-rose-600 hover:bg-rose-50 w-full justify-start"
+                            class="w-full" />
                     @endcan
                 </div>
 

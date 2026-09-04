@@ -117,12 +117,17 @@ new #[Title('Fee Invoices')] class extends Component
                     <flux:button href="{{ route('feemanagement.receipts.create') }}" wire:navigate.hover icon="camera" variant="subtle" class="font-semibold shadow-sm">
                         Scan Receipt
                     </flux:button>
-                    <form action="{{ route('feemanagement.send-reminders') }}" method="POST" class="inline">
-                        @csrf
-                        <flux:button type="submit" icon="bell" variant="subtle" class="font-semibold shadow-sm">
-                            Send Reminders
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('feemanagement.send-reminders')"
+                        method="POST"
+                        title="Send balance reminders?"
+                        message="Every parent with an outstanding balance receives an SMS and email. This may incur messaging charges."
+                        confirm="Send Reminders"
+                        confirm-variant="primary"
+                        label="Send Reminders"
+                        icon="bell"
+                        variant="subtle"
+                        trigger-class="font-semibold shadow-sm" />
                     <flux:button href="{{ route('feemanagement.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Issue Fee Invoice
                     </flux:button>

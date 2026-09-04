@@ -171,14 +171,15 @@
                 @endcan
 
                 @can('delete result')
-                    <form action="{{ route('result.destroy', $result->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this assessment score?');">
-                        @csrf
-                        @method('DELETE')
-                        <flux:button type="submit" variant="subtle" class="text-rose-600 hover:bg-rose-50" icon="trash">
-                            Delete
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('result.destroy', $result->id)"
+                        title="Remove this assessment score?"
+                        message="This permanently deletes the recorded mark."
+                        confirm="Delete Score"
+                        label="Delete"
+                        variant="subtle"
+                        trigger-class="text-rose-600 hover:bg-rose-50"
+                        size="base" />
                 @endcan
             </div>
         </div>
