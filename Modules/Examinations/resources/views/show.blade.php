@@ -38,9 +38,9 @@
                     @endif
                 </div>
                 <flux:text class="text-zinc-500 text-sm mt-1 flex items-center gap-2">
-                    <span>{{ $examination->subject?->name ?? $examination->subject_name }}</span>
+                    <span>{{ $examination->subject?->name ?? $examination->subject_name ?? 'All subjects' }}</span>
                     <span>&bull;</span>
-                    <span>{{ $examination->schoolClass?->name ?? $examination->class_name }}</span>
+                    <span>{{ $examination->schoolClass?->name ?? $examination->class_name ?? 'All classes' }}</span>
                     @if ($examination->institution)
                         <span>&bull;</span>
                         <span class="text-zinc-400">{{ $examination->institution->name }}</span>
@@ -87,15 +87,15 @@
                 title="Subject" 
                 icon="book-open" 
                 color="indigo" 
-                :count="$examination->subject?->name ?? $examination->subject_name" 
-                subtext="curriculum subject" 
+                :count="$examination->subject?->name ?? $examination->subject_name ?? 'All subjects'"
+                subtext="curriculum subject"
             />
-            <x-kpi-card 
-                title="Target Class" 
-                icon="academic-cap" 
-                color="violet" 
-                :count="$examination->schoolClass?->name ?? $examination->class_name" 
-                subtext="registered stream" 
+            <x-kpi-card
+                title="Target Class"
+                icon="academic-cap"
+                color="violet"
+                :count="$examination->schoolClass?->name ?? $examination->class_name ?? 'All classes'"
+                subtext="registered stream"
             />
             <x-kpi-card 
                 title="Scheduled Date" 

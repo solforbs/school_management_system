@@ -35,6 +35,23 @@ new #[Title('Examinations')] class extends Component {
         abort_unless(auth()->user()->can('view examination') || auth()->user()->can('view examinations'), 403);
     }
 
+    /**
+     * Delete a sitting from the listing, in place. Its results go with it
+     * (the foreign key cascades), so this is gated on the delete
+     * permission and confirmed in the UI.
+     */
+    public function delete(int $id): void
+    {
+        abort_unless(auth()->user()->can('delete examination'), 403);
+
+        $examination = Examination::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->findOrFail($id);
+
+        $examination->delete();
+
+        \Flux\Flux::toast(text: 'Examination deleted.', variant: 'success');
+    }
+
     #[Computed]
     public function examinations(): LengthAwarePaginator
     {
@@ -240,11 +257,11 @@ new #[Title('Examinations')] class extends Component {
                             <flux:table.cell>
                                 <div class="flex flex-col gap-0.5">
                                     <span class="font-medium text-xs text-zinc-900 dark:text-zinc-100">
-                                        {{ $examination->subject?->name ?? 'Subject' }}
+                                        {{ $examination->subject?->name ?? $examination->subject_name ?? 'All subjects' }}
                                     </span>
                                     <div class="flex items-center gap-1 text-[11px] text-zinc-500">
                                         <flux:icon icon="user-group" class="size-3 text-zinc-400 shrink-0" />
-                                        <span>{{ $examination->schoolClass?->name ?? 'Class' }}</span>
+                                        <span>{{ $examination->schoolClass?->name ?? $examination->class_name ?? 'All classes' }}</span>
                                     </div>
                                 </div>
                             </flux:table.cell>
@@ -294,15 +311,11 @@ new #[Title('Examinations')] class extends Component {
                                             tooltip="Edit Exam" />
                                     @endcan
                                     @can('delete examination')
-                                        <form action="{{ route('examinations.destroy', $examination->id) }}"
-                                            method="POST" class="inline"
-                                            onsubmit="return confirm('Delete this examination schedule?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <flux:button type="submit" icon="trash" size="sm" variant="subtle"
-                                                class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                                                tooltip="Delete Exam" />
-                                        </form>
+                                        <flux:button wire:click="delete({{ $examination->id }})"
+                                            wire:confirm="Delete this examination? Any results recorded against it will be removed too."
+                                            icon="trash" size="sm" variant="subtle"
+                                            class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                                            tooltip="Delete Exam" />
                                     @endcan
                                 </div>
                             </flux:table.cell>

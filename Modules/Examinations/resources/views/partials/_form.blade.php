@@ -25,8 +25,9 @@
                 </flux:select>
             </div>
 
-            <flux:select id="subject_id" name="subject_id" label="Subject">
-                <flux:select.option value="">Select Subject</flux:select.option>
+            <flux:select id="subject_id" name="subject_id" label="Subject"
+                description="Optional. Leave blank for a whole-school sitting every subject reports into.">
+                <flux:select.option value="">All subjects (whole-school sitting)</flux:select.option>
                 @foreach ($subjects as $subject)
                     <flux:select.option value="{{ $subject->id }}" data-institution-id="{{ $subject->institution_id }}" :selected="old('subject_id', $examination->subject_id ?? null) == $subject->id">
                         {{ $subject->name }}
@@ -34,8 +35,9 @@
                 @endforeach
             </flux:select>
 
-            <flux:select id="class_id" name="class_id" label="Class">
-                <flux:select.option value="">Select Class</flux:select.option>
+            <flux:select id="class_id" name="class_id" label="Class"
+                description="Optional. Leave blank to open this sitting to every class.">
+                <flux:select.option value="">All classes (whole-school sitting)</flux:select.option>
                 @foreach ($classes as $schoolClass)
                     <flux:select.option value="{{ $schoolClass->id }}" data-institution-id="{{ $schoolClass->institution_id }}" :selected="old('class_id', $examination->class_id ?? null) == $schoolClass->id">
                         {{ $schoolClass->name }}

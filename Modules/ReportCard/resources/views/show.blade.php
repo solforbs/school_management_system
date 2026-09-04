@@ -79,7 +79,7 @@
                                 });
                             }
                         })
-                        ->with('examination.subject')
+                        ->with(['subject', 'examination.subject'])
                         ->get();
                 @endphp
 
@@ -98,7 +98,7 @@
                             @forelse($results as $res)
                                 <tr class="hover:bg-zinc-50/50">
                                     <td class="py-3 px-4 font-semibold text-zinc-900">
-                                        {{ $res->examination?->subject?->name ?? $res->examination?->subject_name ?? 'Subject' }}
+                                        {{ $res->subject?->name ?? $res->examination?->subject?->name ?? $res->examination?->subject_name ?? 'Subject' }}
                                     </td>
                                     <td class="py-3 px-4 font-bold text-indigo-600">
                                         {{ $res->marks_obtained }}

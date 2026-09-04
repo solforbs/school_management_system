@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
 use Modules\ReportCard\Services\ReportCardCompletionService;
@@ -35,6 +36,8 @@ class ResultEntryController extends Controller
 
         $validated = $request->validate([
             'examination_id' => 'required|exists:examinations,id',
+            'class_id' => 'nullable|exists:classes,id',
+            'subject_id' => 'nullable|exists:subjects,id',
             'marks' => 'required|array',
             'marks.*' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|array',
@@ -47,7 +50,26 @@ class ResultEntryController extends Controller
         $institution = Institution::find($examination->institution_id);
         abort_unless($institution, 422, 'This examination has no institution.');
 
-        $students = $this->studentsIn($examination);
+        // The class and subject come from the sheet; a paper the Director
+        // pinned to one class/subject supplies them as the fallback.
+        $classId = (int) ($validated['class_id'] ?? $examination->class_id);
+        $subjectId = isset($validated['subject_id']) || $examination->subject_id !== null
+            ? (int) ($validated['subject_id'] ?? $examination->subject_id)
+            : null;
+
+        abort_unless($classId > 0, 422, 'Pick the class these marks are for.');
+
+        // Re-verify server-side that this viewer actually owns these marks -
+        // the dropdowns only ever offer their own classes/subjects, but a
+        // crafted request could carry anything.
+        if (Auth::user()->hasRole('Teacher')) {
+            abort_unless(ResultAccessService::canGrade(Auth::user(), $classId, $subjectId), 403);
+        }
+
+        $schoolClass = SchoolClass::find($classId);
+        abort_unless($schoolClass && $schoolClass->institution_id === $institution->id, 403);
+
+        $students = $this->studentsIn($classId);
         $studentIds = $students->pluck('student_id')->map(fn ($id) => (int) $id);
 
         $marks = collect($validated['marks'])
@@ -76,6 +98,7 @@ class ResultEntryController extends Controller
 
         $remarks = collect($request->input('remarks', []));
         $existing = Result::where('examination_id', $examination->id)
+            ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId))
             ->whereIn('student_id', $marks->keys())
             ->get()
             ->keyBy('student_id');
@@ -90,15 +113,15 @@ class ResultEntryController extends Controller
             );
         }
 
-        DB::transaction(function () use ($marks, $remarks, $examination, $institution) {
+        DB::transaction(function () use ($marks, $remarks, $examination, $institution, $classId, $subjectId, $schoolClass) {
             foreach ($marks as $studentId => $value) {
                 Result::updateOrCreate(
-                    ['examination_id' => $examination->id, 'student_id' => $studentId],
+                    ['examination_id' => $examination->id, 'student_id' => $studentId, 'subject_id' => $subjectId],
                     [
                         'institution_id' => $institution->id,
-                        'class_id' => $examination->class_id,
+                        'class_id' => $classId,
                         'marks_obtained' => $value,
-                        'grade' => ResultGrader::grade($examination, $value, $institution, $examination->schoolClass),
+                        'grade' => ResultGrader::grade($examination, $value, $institution, $schoolClass),
                         'remarks' => $remarks->get($studentId) ?: null,
                         'recorded_by' => Auth::id(),
                     ]
@@ -106,11 +129,15 @@ class ResultEntryController extends Controller
             }
         });
 
-        $this->checkReportCardCompletion($examination, $marks->keys());
+        $this->checkReportCardCompletion($examination, $marks->keys(), $subjectId);
 
         return redirect()
-            ->route('result.entry.create', ['examination_id' => $examination->id])
-            ->with('success', $marks->count().' result(s) saved for '.($examination->subject?->name ?? $examination->title).'.');
+            ->route('result.entry.create', array_filter([
+                'examination_id' => $examination->id,
+                'class_id' => $classId,
+                'subject_id' => $subjectId,
+            ]))
+            ->with('success', $marks->count().' result(s) saved for '.($schoolClass?->name ?? $examination->title).'.');
     }
 
     /**
@@ -119,7 +146,7 @@ class ResultEntryController extends Controller
      *
      * @param  Collection<int, int>  $studentIds
      */
-    private function checkReportCardCompletion(Examination $examination, $studentIds): void
+    private function checkReportCardCompletion(Examination $examination, $studentIds, ?int $subjectId = null): void
     {
         if (! $examination->term || ! $examination->academic_year) {
             return;
@@ -129,6 +156,7 @@ class ResultEntryController extends Controller
 
         Result::whereIn('student_id', $studentIds)
             ->where('examination_id', $examination->id)
+            ->when($subjectId !== null, fn ($q) => $q->where('subject_id', $subjectId))
             ->with('student')
             ->get()
             ->each(function ($result) use ($service, $examination) {
@@ -139,24 +167,26 @@ class ResultEntryController extends Controller
     }
 
     /**
-     * The class being examined, roll-call order.
+     * The class being marked, roll-call order.
      */
-    private function studentsIn(Examination $examination)
+    private function studentsIn(int $classId)
     {
-        if (! $examination->class_id) {
+        if ($classId <= 0) {
             return collect();
         }
 
         return StudentDetails::with('student')
-            ->where('class_id', $examination->class_id)
+            ->where('class_id', $classId)
             ->get()
             ->sortBy(fn ($details) => [$details->admission_number, $details->student?->name])
             ->values();
     }
 
     /**
-     * Examinations this viewer may enter marks for: a Teacher's own
-     * subjects and their class's, everything at the school for a Director.
+     * Examinations this viewer may enter marks for. A sitting is
+     * institution-wide, so a Teacher sees every sitting at their school -
+     * what they may actually grade within it is enforced per class/subject
+     * at save time via ResultAccessService::canGrade().
      */
     private function scopedExaminations()
     {
@@ -166,11 +196,10 @@ class ResultEntryController extends Controller
 
         if ($user->hasRole('Teacher')) {
             $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0);
-            ResultAccessService::scopeExaminations($query, $user);
         } elseif (! isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
 
-        return $query->whereNotNull('class_id')->orderByDesc('exam_date')->get();
+        return $query->orderByDesc('exam_date')->get();
     }
 }

@@ -13,11 +13,17 @@ use Modules\Result\Http\Controllers\ResultEntryController;
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     // Declared before the resource so "results/enter" and "results/create"
     // aren't swallowed by the {result} show route.
-    Route::livewire('results/enter', 'result::entry')->name('result.entry.create');
-    Route::post('results/enter', [ResultEntryController::class, 'store'])->name('result.entry.store');
+    //
+    // The teacher records marks in two steps: pick an exam sitting
+    // (result.entry.exams), then pick subject + class and fill the sheet
+    // (result.entry.create).
+    Route::livewire('results/enter', 'result::entry-exams')->name('result.entry.exams');
+    Route::livewire('results/enter/sheet', 'result::entry')->name('result.entry.create');
+    Route::post('results/enter/sheet', [ResultEntryController::class, 'store'])->name('result.entry.store');
 
     Route::livewire('results', 'result::index')->name('result.index');
     Route::livewire('results/create', 'result::form')->name('result.create');
+    Route::livewire('results/class/{classId}', 'result::class-results')->name('result.class');
     // Parameter deliberately not named {result}: that name triggers implicit
     // route-model binding, which hands mount() a model where it expects an
     // id (and bypasses the scoping done there).

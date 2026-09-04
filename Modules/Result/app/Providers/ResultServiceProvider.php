@@ -3,6 +3,7 @@
 namespace Modules\Result\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Result\Console\Commands\RegradeResults;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class ResultServiceProvider extends ModuleServiceProvider
@@ -22,7 +23,9 @@ class ResultServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    // protected array $commands = [];
+    protected array $commands = [
+        RegradeResults::class,
+    ];
 
     /**
      * Provider classes to register.

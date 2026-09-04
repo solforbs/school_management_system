@@ -49,9 +49,11 @@ class GradingBandService
 
     /**
      * Which curriculum's scale a class is marked against: its own if one is
-     * set, otherwise the school's only curriculum when it has exactly one.
-     * Null once a school runs several and the class hasn't said which - the
-     * school-wide bands then apply.
+     * set, otherwise the school's only curriculum when it has exactly one,
+     * otherwise the one whose system the class's own name points at
+     * ("Grade 7" is CBC, "Form 3" is 8-4-4). Null only when a school runs
+     * several curricula and none of that resolves - the school-wide bands
+     * then apply.
      */
     public static function curriculumIdFor(?SchoolClass $schoolClass, ?Institution $institution = null): ?int
     {
@@ -67,9 +69,52 @@ class GradingBandService
 
         $curricula = Curriculum::where('institution_id', $institution->id)
             ->where('status', 'active')
-            ->pluck('id');
+            ->get(['id', 'system']);
 
-        return $curricula->count() === 1 ? (int) $curricula->first() : null;
+        if ($curricula->count() === 1) {
+            return (int) $curricula->first()->id;
+        }
+
+        $system = self::systemFromClassName($schoolClass);
+
+        if ($system) {
+            $match = $curricula->firstWhere('system', $system);
+
+            if ($match) {
+                return (int) $match->id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The grading system a class's own name/level implies, for a school
+     * that runs both and hasn't pinned the class to a curriculum. "Grade
+     * 7 East" / "JSS 1" read as CBC; "Form 3" / "Standard 8" as 8-4-4.
+     * Null when the name says nothing either way.
+     */
+    private static function systemFromClassName(?SchoolClass $schoolClass): ?string
+    {
+        if (! $schoolClass) {
+            return null;
+        }
+
+        $haystack = strtolower(trim(($schoolClass->name ?? '') . ' ' . ($schoolClass->level ?? '')));
+
+        if ($haystack === '') {
+            return null;
+        }
+
+        if (preg_match('/\b(grade|jss|junior|pp\s*[12]|pre[-\s]?(primary|school)|cbc)\b/', $haystack)) {
+            return 'cbc';
+        }
+
+        if (preg_match('/\b(form|standard|std|8[-\s]?4[-\s]?4)\b/', $haystack)) {
+            return '844';
+        }
+
+        return null;
     }
 
     /**

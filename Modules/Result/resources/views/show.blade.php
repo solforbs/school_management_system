@@ -6,7 +6,7 @@
     $totalMarks = (float) ($result->examination?->total_marks ?? 100);
     $pct = $totalMarks > 0 ? round(($marks / $totalMarks) * 100, 1) : 0;
     $grade = $result->grade ?? '—';
-    $subjectName = $result->examination?->subject?->name ?? $result->examination?->subject_name ?? 'Subject';
+    $subjectName = $result->subject?->name ?? $result->examination?->subject?->name ?? $result->examination?->subject_name ?? 'Subject';
 @endphp
 
 <x-layouts::app :title="__('Assessment Result')">

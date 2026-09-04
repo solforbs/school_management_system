@@ -34,12 +34,7 @@ class ReportCardCompletionService
             return;
         }
 
-        $coveredSubjectIds = Result::where('student_id', $student->id)
-            ->whereHas('examination', fn ($q) => $q->where('term', $term)->where('academic_year', $academicYear)->whereIn('subject_id', $requiredSubjectIds))
-            ->with('examination:id,subject_id')
-            ->get()
-            ->pluck('examination.subject_id')
-            ->unique();
+        $coveredSubjectIds = $this->coveredSubjectIds($student, $term, $academicYear);
 
         if ($requiredSubjectIds->diff($coveredSubjectIds)->isNotEmpty()) {
             return;
@@ -76,14 +71,26 @@ class ReportCardCompletionService
             return false;
         }
 
-        $coveredSubjectIds = Result::where('student_id', $student->id)
-            ->whereHas('examination', fn ($q) => $q->where('term', $term)->where('academic_year', $academicYear)->whereIn('subject_id', $requiredSubjectIds))
+        return $requiredSubjectIds->diff($this->coveredSubjectIds($student, $term, $academicYear))->isEmpty();
+    }
+
+    /**
+     * The subjects this student already has a mark recorded for in the
+     * given term. The subject now lives on the result itself; rows from
+     * before that column fall back to their examination's subject.
+     *
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function coveredSubjectIds(User $student, string $term, int $academicYear)
+    {
+        return Result::where('student_id', $student->id)
+            ->whereHas('examination', fn ($q) => $q->where('term', $term)->where('academic_year', $academicYear))
             ->with('examination:id,subject_id')
             ->get()
-            ->pluck('examination.subject_id')
-            ->unique();
-
-        return $requiredSubjectIds->diff($coveredSubjectIds)->isEmpty();
+            ->map(fn ($result) => $result->subject_id ?: $result->examination?->subject_id)
+            ->filter()
+            ->unique()
+            ->values();
     }
 
     private function requiredSubjectIds(User $student, int $institutionId)

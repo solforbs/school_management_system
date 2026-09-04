@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
+use Modules\Subject\Models\Subject;
 
 class Result extends Model
 {
@@ -16,6 +17,7 @@ class Result extends Model
     protected $fillable = [
         'institution_id',
         'class_id',
+        'subject_id',
         'student_id',
         'examination_id',
         'marks_obtained',
@@ -36,6 +38,16 @@ class Result extends Model
     public function schoolClass()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    /**
+     * The subject this mark is for. Recorded on the result itself now that
+     * an examination can be a whole-school sitting spanning every subject.
+     * Older rows were backfilled from their examination.
+     */
+    public function subject()
+    {
+        return $this->belongsTo(Subject::class, 'subject_id');
     }
 
     public function student()

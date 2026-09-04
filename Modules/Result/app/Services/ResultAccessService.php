@@ -75,7 +75,10 @@ class ResultAccessService
     }
 
     /**
-     * Every class the teacher may enter results in, by either door.
+     * Every class the teacher is attached to - the ones they've been given
+     * a subject in, the ones they are class teacher of, and the ones on
+     * their class pivot even before a subject is assigned. Whether they may
+     * actually save a mark is still gated per subject by canGrade().
      *
      * @return Collection<int, int>
      */
@@ -84,6 +87,8 @@ class ResultAccessService
         return self::subjectPairs($teacher)
             ->pluck('class_id')
             ->concat(self::classTeacherClassIds($teacher))
+            ->concat(TeacherClasses::where('teacher_id', $teacher->id)->pluck('class_id'))
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
     }
@@ -111,6 +116,10 @@ class ResultAccessService
      * Narrow a Result query to what this teacher may see: their own
      * subjects in the classes they teach, plus everything in the classes
      * they're class teacher of.
+     *
+     * The subject a mark belongs to now lives on the result itself
+     * (`results.subject_id`); older rows that pre-date the column fall
+     * back to their examination's subject.
      */
     public static function scopeResults($query, User $teacher): void
     {
@@ -121,7 +130,11 @@ class ResultAccessService
             foreach ($pairs as $pair) {
                 $q->orWhere(function ($q2) use ($pair) {
                     $q2->where('class_id', $pair->class_id)
-                        ->whereHas('examination', fn ($q3) => $q3->where('subject_id', $pair->subject_id));
+                        ->where(function ($q3) use ($pair) {
+                            $q3->where('subject_id', $pair->subject_id)
+                                ->orWhere(fn ($q4) => $q4->whereNull('subject_id')
+                                    ->whereHas('examination', fn ($q5) => $q5->where('subject_id', $pair->subject_id)));
+                        });
                 });
             }
 
@@ -131,30 +144,6 @@ class ResultAccessService
 
             // Nothing assigned and no class of their own - the teacher sees
             // nothing rather than everything at the institution.
-            if ($pairs->isEmpty() && $classTeacherClassIds->isEmpty()) {
-                $q->whereRaw('1 = 0');
-            }
-        });
-    }
-
-    /**
-     * The same narrowing, for a query over Examinations rather than
-     * Results - examinations carry the subject on themselves.
-     */
-    public static function scopeExaminations($query, User $teacher): void
-    {
-        $pairs = self::subjectPairs($teacher);
-        $classTeacherClassIds = self::classTeacherClassIds($teacher);
-
-        $query->where(function ($q) use ($pairs, $classTeacherClassIds) {
-            foreach ($pairs as $pair) {
-                $q->orWhere(fn ($q2) => $q2->where('class_id', $pair->class_id)->where('subject_id', $pair->subject_id));
-            }
-
-            if ($classTeacherClassIds->isNotEmpty()) {
-                $q->orWhereIn('class_id', $classTeacherClassIds);
-            }
-
             if ($pairs->isEmpty() && $classTeacherClassIds->isEmpty()) {
                 $q->whereRaw('1 = 0');
             }
@@ -257,8 +246,11 @@ class ResultAccessService
     }
 
     /**
-     * Examinations selectable on a result screen, optionally narrowed to a
-     * single class and/or subject.
+     * Examinations selectable on a result screen. A sitting is
+     * institution-wide, so every viewer sees every sitting at their
+     * school - what a Teacher may actually grade within one is enforced
+     * per class/subject by canGrade(). The optional class/subject filters
+     * are still honoured for a paper the Director pinned.
      *
      * @return Collection<int, Examination>
      */
@@ -268,7 +260,6 @@ class ResultAccessService
 
         if ($user->hasRole('Teacher')) {
             $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0);
-            self::scopeExaminations($query, $user);
         } elseif (! isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }

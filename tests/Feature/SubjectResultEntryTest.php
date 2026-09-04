@@ -88,6 +88,23 @@ function makeGradedExamination(Institution $institution, SchoolClass $class, Sub
 }
 
 /**
+ * An institution-wide sitting - no class, no subject of its own.
+ */
+function makeWholeSchoolExamination(Institution $institution, int $total = 100): Examination
+{
+    return Examination::create([
+        'institution_id' => $institution->id,
+        'class_id' => null,
+        'subject_id' => null,
+        'title' => 'Third Term Examination',
+        'term' => 'Third Term',
+        'academic_year' => 2026,
+        'exam_date' => '2026-09-04',
+        'total_marks' => $total,
+    ]);
+}
+
+/**
  * student_details.parent_id is non-null and foreign-keyed to
  * parent_details.id rather than users.id - see the standing bug; lining the
  * ids up sidesteps it without depending on that fix.
@@ -162,14 +179,21 @@ test('a subject teacher enters marks for the whole class in one go', function ()
 
     $this->actingAs($teacher)->post(route('result.entry.store'), [
         'examination_id' => $examination->id,
+        'class_id' => $class->id,
+        'subject_id' => $maths->id,
         'marks' => $marks,
-    ])->assertRedirect(route('result.entry.create', ['examination_id' => $examination->id]));
+    ])->assertRedirect(route('result.entry.create', [
+        'examination_id' => $examination->id,
+        'class_id' => $class->id,
+        'subject_id' => $maths->id,
+    ]));
 
     expect(Result::count())->toBe(3)
         ->and(Result::where('student_id', $students[0]->id)->first()->grade)->toBe('A')
         ->and(Result::where('student_id', $students[1]->id)->first()->grade)->toBe('C')
         ->and(Result::where('student_id', $students[2]->id)->first()->grade)->toBe('E')
         ->and(Result::where('student_id', $students[0]->id)->first()->class_id)->toBe($class->id)
+        ->and(Result::where('student_id', $students[0]->id)->first()->subject_id)->toBe($maths->id)
         ->and(Result::where('student_id', $students[0]->id)->first()->recorded_by)->toBe($teacher->id);
 });
 
@@ -256,12 +280,16 @@ test('a teacher cannot enter marks for a subject they are not assigned', functio
         'teacher_id' => $teacher->id,
     ]);
 
+    // The sitting is institution-wide, so the sheet opens - but a save for
+    // a subject they don't own is refused.
     $this->actingAs($teacher)
         ->get(route('result.entry.create', ['examination_id' => $englishExam->id]))
-        ->assertForbidden();
+        ->assertOk();
 
     $this->actingAs($teacher)->post(route('result.entry.store'), [
         'examination_id' => $englishExam->id,
+        'class_id' => $class->id,
+        'subject_id' => $english->id,
         'marks' => [$students[0]->id => 90],
     ])->assertForbidden();
 
@@ -283,8 +311,14 @@ test('a class teacher enters marks for every subject in their own class', functi
     // of their claim to these marks.
     $this->actingAs($classTeacher)->post(route('result.entry.store'), [
         'examination_id' => $examination->id,
+        'class_id' => $class->id,
+        'subject_id' => $english->id,
         'marks' => [$students[0]->id => 66, $students[1]->id => 47],
-    ])->assertRedirect(route('result.entry.create', ['examination_id' => $examination->id]));
+    ])->assertRedirect(route('result.entry.create', [
+        'examination_id' => $examination->id,
+        'class_id' => $class->id,
+        'subject_id' => $english->id,
+    ]));
 
     expect(Result::count())->toBe(2)
         ->and(Result::where('student_id', $students[0]->id)->first()->grade)->toBe('B')
@@ -391,6 +425,67 @@ test('a cbc class is graded against expectations while an 8-4-4 class keeps lett
 
     expect(Result::where('student_id', $cbcStudent->id)->first()->grade)->toBe('EE2')
         ->and(Result::where('student_id', $legacyStudent->id)->first()->grade)->toBe('A');
+});
+
+test('a whole-school sitting grades each class on its own system when the class is not pinned to a curriculum', function () {
+    [$director, $institution] = makeGradedSchool();
+
+    $cbc = Curriculum::create(['institution_id' => $institution->id, 'name' => 'CBC', 'system' => 'cbc', 'status' => 'active']);
+    $legacy = Curriculum::create(['institution_id' => $institution->id, 'name' => '8-4-4', 'system' => '844', 'status' => 'active']);
+    loadScale($institution, $cbc, 'cbc');
+    loadScale($institution, $legacy, '844');
+
+    // Neither class carries a curriculum_id - the system is read off the name.
+    $grade8 = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Grade 8 East']);
+    $form2 = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 2 West']);
+
+    $maths = makeGradedSubject($institution);
+    $sitting = makeWholeSchoolExamination($institution);
+
+    $cbcStudent = enrolStudents($institution, $grade8, 1)->first();
+    $legacyStudent = enrolStudents($institution, $form2, 1)->first();
+
+    Livewire::actingAs($director)
+        ->test('result::entry', ['examinationId' => (string) $sitting->id])
+        ->set('subjectId', (string) $maths->id)
+        ->set('classId', (string) $grade8->id)
+        ->set('marks.'.$cbcStudent->id, '82')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->set('classId', (string) $form2->id)
+        ->set('marks.'.$legacyStudent->id, '82')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Result::where('student_id', $cbcStudent->id)->first()->grade)->toBe('EE2')
+        ->and(Result::where('student_id', $legacyStudent->id)->first()->grade)->toBe('A');
+});
+
+test('results:regrade recomputes stale grades against the class scale', function () {
+    [, $institution] = makeGradedSchool();
+
+    $cbc = Curriculum::create(['institution_id' => $institution->id, 'name' => 'CBC', 'system' => 'cbc', 'status' => 'active']);
+    $class = makeGradedClass($institution, ['curriculum_id' => $cbc->id]);
+    $maths = makeGradedSubject($institution);
+    $examination = makeGradedExamination($institution, $class, $maths);
+    $student = enrolStudents($institution, $class, 1)->first();
+
+    // A mark recorded before any scale existed - no grade could be worked out.
+    $result = Result::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'subject_id' => $maths->id,
+        'student_id' => $student->id,
+        'examination_id' => $examination->id,
+        'marks_obtained' => 82,
+        'grade' => null,
+    ]);
+
+    loadScale($institution, $cbc, 'cbc');
+
+    $this->artisan('results:regrade', ['--institution' => $institution->id])->assertSuccessful();
+
+    expect($result->fresh()->grade)->toBe('EE2');
 });
 
 test('the cbc scale covers each of the four bands through its eight levels', function () {
@@ -691,8 +786,9 @@ test('the livewire marks sheet saves a whole class in place', function () {
     ]);
 
     Livewire::actingAs($teacher)
-        ->test('result::entry')
-        ->set('examinationId', (string) $examination->id)
+        ->test('result::entry', ['examinationId' => (string) $examination->id])
+        ->set('subjectId', (string) $maths->id)
+        ->set('classId', (string) $class->id)
         ->assertSee($students[0]->name)
         ->set('marks.'.$students[0]->id, '85')
         ->set('marks.'.$students[1]->id, '52')
@@ -704,6 +800,7 @@ test('the livewire marks sheet saves a whole class in place', function () {
 
     expect(Result::count())->toBe(2)
         ->and(Result::where('student_id', $students[0]->id)->first()->grade)->toBe('A')
+        ->and(Result::where('student_id', $students[0]->id)->first()->subject_id)->toBe($maths->id)
         ->and(Result::where('student_id', $students[1]->id)->first()->grade)->toBe('C');
 });
 
@@ -718,8 +815,9 @@ test('the livewire marks sheet refuses a mark over the paper total', function ()
     loadScale($institution, null, '844');
 
     Livewire::actingAs($director)
-        ->test('result::entry')
-        ->set('examinationId', (string) $examination->id)
+        ->test('result::entry', ['examinationId' => (string) $examination->id])
+        ->set('subjectId', (string) $maths->id)
+        ->set('classId', (string) $class->id)
         ->set('marks.'.$students[0]->id, '45')
         ->set('marks.'.$students[1]->id, '60')
         ->call('save')
@@ -729,7 +827,7 @@ test('the livewire marks sheet refuses a mark over the paper total', function ()
     expect(Result::count())->toBe(0);
 });
 
-test('a teacher cannot open the livewire sheet for a subject they are not assigned', function () {
+test('the livewire sheet refuses to save a subject the teacher is not assigned', function () {
     [, $institution] = makeGradedSchool();
     $teacher = makeSchoolTeacher($institution);
 
@@ -737,6 +835,7 @@ test('a teacher cannot open the livewire sheet for a subject they are not assign
     $maths = makeGradedSubject($institution);
     $english = makeGradedSubject($institution, 'English');
     $englishExam = makeGradedExamination($institution, $class, $english);
+    $students = enrolStudents($institution, $class, 1);
 
     SubjectTeacher::create([
         'institution_id' => $institution->id,
@@ -745,13 +844,36 @@ test('a teacher cannot open the livewire sheet for a subject they are not assign
         'teacher_id' => $teacher->id,
     ]);
 
+    // The institution-wide sitting opens; saving English marks does not.
     Livewire::actingAs($teacher)
-        ->test('result::entry')
-        ->set('examinationId', (string) $englishExam->id)
+        ->test('result::entry', ['examinationId' => (string) $englishExam->id])
+        ->set('marks.'.$students[0]->id, '50')
+        ->call('save')
         ->assertForbidden();
+
+    expect(Result::count())->toBe(0);
 });
 
-test('the livewire result list filters and deletes in place', function () {
+test('the results landing page lists a card per class', function () {
+    [$director, $institution] = makeGradedSchool();
+    $teacher = makeSchoolTeacher($institution);
+
+    $mine = makeGradedClass($institution);
+    $other = makeGradedClass($institution);
+
+    \App\Models\TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $mine->id]);
+
+    // The Director sees every class; the teacher only the one assigned.
+    Livewire::actingAs($director)->test('result::index')
+        ->assertSee($mine->name)
+        ->assertSee($other->name);
+
+    Livewire::actingAs($teacher)->test('result::index')
+        ->assertSee($mine->name)
+        ->assertDontSee($other->name);
+});
+
+test('the per-class results screen filters and deletes in place', function () {
     [$director, $institution] = makeGradedSchool();
 
     $class = makeGradedClass($institution);
@@ -762,13 +884,14 @@ test('the livewire result list filters and deletes in place', function () {
     $result = Result::create([
         'institution_id' => $institution->id,
         'class_id' => $class->id,
+        'subject_id' => $maths->id,
         'student_id' => $students[0]->id,
         'examination_id' => $examination->id,
         'marks_obtained' => 70,
     ]);
 
     Livewire::actingAs($director)
-        ->test('result::index')
+        ->test('result::class-results', ['classId' => $class->id])
         ->assertSee($students[0]->name)
         ->set('search', 'nobody-by-this-name')
         ->assertDontSee($students[0]->name)
@@ -777,6 +900,19 @@ test('the livewire result list filters and deletes in place', function () {
         ->assertHasNoErrors();
 
     expect(Result::count())->toBe(0);
+});
+
+test('a teacher cannot open the results of a class they do not teach', function () {
+    [, $institution] = makeGradedSchool();
+    $teacher = makeSchoolTeacher($institution);
+
+    $theirs = makeGradedClass($institution);
+    \App\Models\TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $theirs->id]);
+
+    $other = makeGradedClass($institution);
+
+    $this->actingAs($teacher)->get(route('result.class', $other->id))->assertForbidden();
+    $this->actingAs($teacher)->get(route('result.class', $theirs->id))->assertOk();
 });
 
 test('the result form records a single mark', function () {

@@ -141,7 +141,7 @@ test('every converted module screen renders', function (string $route) {
     'expenditure.categories.index',
     'result.index',
     'result.create',
-    'result.entry.create',
+    'result.entry.exams',
     'subject.index',
     'subject.create',
     'subject.teachers.index',

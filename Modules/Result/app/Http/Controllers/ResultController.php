@@ -24,9 +24,10 @@ class ResultController extends Controller
         abort_unless(Auth::user()->can('create result'), 403);
 
         $validated = $request->validate(SaveResult::rules());
-        $this->assertTeacherCanGrade($validated['class_id'], $validated['examination_id']);
+        $subjectId = $this->resolvedSubjectId($validated);
+        $this->assertTeacherCanGrade((int) $validated['class_id'], $subjectId);
 
-        if (SaveResult::duplicateExists($validated['examination_id'], $validated['student_id'])) {
+        if (SaveResult::duplicateExists($validated['examination_id'], $validated['student_id'], null, $subjectId)) {
             return redirect()->back()->withInput()
                 ->with('error', 'A result for this student in this examination already exists. Edit it instead.');
         }
@@ -57,9 +58,10 @@ class ResultController extends Controller
 
         $result = $this->scopedResult($id);
         $validated = $request->validate(SaveResult::rules());
-        $this->assertTeacherCanGrade($validated['class_id'], $validated['examination_id']);
+        $subjectId = $this->resolvedSubjectId($validated);
+        $this->assertTeacherCanGrade((int) $validated['class_id'], $subjectId);
 
-        if (SaveResult::duplicateExists($validated['examination_id'], $validated['student_id'], $result->id)) {
+        if (SaveResult::duplicateExists($validated['examination_id'], $validated['student_id'], $result->id, $subjectId)) {
             return redirect()->back()->withInput()
                 ->with('error', 'A result for this student in this examination already exists.');
         }
@@ -105,15 +107,30 @@ class ResultController extends Controller
      * whom every subject in their class counts. Closes the gap a crafted
      * request could otherwise exploit to grade a subject they don't teach.
      */
-    private function assertTeacherCanGrade(int $classId, int $examinationId): void
+    private function assertTeacherCanGrade(int $classId, ?int $subjectId): void
     {
         if (! Auth::user()->hasRole('Teacher')) {
             return;
         }
 
-        $subjectId = Examination::find($examinationId)?->subject_id;
-
         abort_unless(ResultAccessService::canGrade(Auth::user(), $classId, $subjectId), 403);
+    }
+
+    /**
+     * The subject a single-form result is for: taken from the form, or
+     * from a paper the Director pinned to one subject.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolvedSubjectId(array $validated): ?int
+    {
+        if (! empty($validated['subject_id'])) {
+            return (int) $validated['subject_id'];
+        }
+
+        $pinned = Examination::find($validated['examination_id'])?->subject_id;
+
+        return $pinned !== null ? (int) $pinned : null;
     }
 
     private function scopeToViewer($query): void

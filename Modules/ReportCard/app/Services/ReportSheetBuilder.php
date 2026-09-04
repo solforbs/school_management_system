@@ -29,7 +29,7 @@ class ReportSheetBuilder
             ->whereHas('examination', fn ($q) => $q
                 ->where('term', $reportCard->term)
                 ->where('academic_year', $reportCard->academic_year))
-            ->with('examination.subject')
+            ->with(['subject', 'examination.subject'])
             ->get();
 
         $curriculumId = GradingBandService::curriculumIdFor($reportCard->schoolClass, $institution);
@@ -42,8 +42,10 @@ class ReportSheetBuilder
         // entered under, so anything with marks is folded in even when the
         // class no longer lists that subject.
         foreach ($results as $result) {
-            $subjectId = $result->examination?->subject_id;
-            $name = $result->examination?->subject?->name ?? $result->examination?->subject_name;
+            $subjectId = $result->subject_id ?: $result->examination?->subject_id;
+            $name = $result->subject?->name
+                ?? $result->examination?->subject?->name
+                ?? $result->examination?->subject_name;
 
             if (! $name) {
                 continue;
@@ -53,13 +55,13 @@ class ReportSheetBuilder
 
             $subjects[$key] ??= [
                 'name' => $name,
-                'code' => $result->examination?->subject?->code,
+                'code' => $result->subject?->code ?? $result->examination?->subject?->code,
                 'teacher' => null,
             ];
         }
 
-        $grouped = $results->groupBy(fn ($result) => $result->examination?->subject_id ?: 'name:'.(
-            $result->examination?->subject?->name ?? $result->examination?->subject_name
+        $grouped = $results->groupBy(fn ($result) => ($result->subject_id ?: $result->examination?->subject_id) ?: 'name:'.(
+            $result->subject?->name ?? $result->examination?->subject?->name ?? $result->examination?->subject_name
         ));
 
         return collect($subjects)

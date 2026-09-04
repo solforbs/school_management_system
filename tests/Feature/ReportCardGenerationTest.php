@@ -16,6 +16,7 @@ use Modules\ReportCard\Support\GradingScaleDefaults;
 use Modules\Result\Models\Result;
 use Modules\Student\Models\StudentDetails;
 use Modules\Subject\Models\Subject;
+use Modules\Teacher\Models\TeacherDetails;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -117,10 +118,8 @@ test('the generate button builds a report card and pdf for every marked learner 
     rcgMark($institution, $class, $examination, $alsoMarked, 55);
 
     Livewire::actingAs($director)
-        ->test('result::index')
+        ->test('result::class-results', ['classId' => $class->id])
         ->assertSee('Generate Report Cards')
-        ->set('classId', (string) $class->id)
-        ->set('examinationId', (string) $examination->id)
         // The screen says which term it is about to report on before the
         // button is pressed.
         ->assertSee('Second Term')
@@ -153,9 +152,7 @@ test('generating again after a mark is corrected refreshes the report card inste
     $result = rcgMark($institution, $class, $examination, $student, 30);
 
     $generate = fn () => Livewire::actingAs($director)
-        ->test('result::index')
-        ->set('classId', (string) $class->id)
-        ->set('examinationId', (string) $examination->id)
+        ->test('result::class-results', ['classId' => $class->id])
         ->call('generateReportCards');
 
     $generate();
@@ -177,10 +174,8 @@ test('the term is taken from the class when all its marks sit in one term', func
     $student = rcgLearner($institution, $class);
     rcgMark($institution, $class, $examination, $student, 70);
 
-    // No examination chosen - only the class.
     Livewire::actingAs($director)
-        ->test('result::index')
-        ->set('classId', (string) $class->id)
+        ->test('result::class-results', ['classId' => $class->id])
         ->call('generateReportCards');
 
     expect(ReportCard::where('student_id', $student->id)->firstOrFail()->term)->toBe('Second Term');
@@ -197,8 +192,7 @@ test('a class spanning two terms reports on the current one, and the examination
     rcgMark($institution, $class, $second, $student, 40);
 
     Livewire::actingAs($director)
-        ->test('result::index')
-        ->set('classId', (string) $class->id)
+        ->test('result::class-results', ['classId' => $class->id])
         // Filtering the table down to a first-term paper must not drag the
         // report back into first term: an examination is one subject, and a
         // report card covers the whole term.
@@ -252,14 +246,19 @@ test('the report card sets this term against the one before it, and reaches back
         ->and($history->last()->id)->toBe($current->id);
 });
 
-test('generating nothing happens without a class selected', function () {
-    [$director, $institution, $class] = rcgSchool();
+test('generating nothing happens for a class with no marks recorded', function () {
+    [$director, $institution] = rcgSchool();
 
-    $examination = rcgExam($institution, $class);
-    rcgMark($institution, $class, $examination, rcgLearner($institution, $class), 70);
+    // A fresh class with students but no results at all - no term can be
+    // resolved, so nothing is generated.
+    $emptyClass = \Modules\Classes\Models\SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Empty Class '.uniqid(),
+    ]);
+    rcgLearner($institution, $emptyClass);
 
     Livewire::actingAs($director)
-        ->test('result::index')
+        ->test('result::class-results', ['classId' => $emptyClass->id])
         ->call('generateReportCards');
 
     expect(ReportCard::count())->toBe(0);
@@ -271,14 +270,15 @@ test('a teacher without report card rights cannot generate them', function () {
     $examination = rcgExam($institution, $class);
     rcgMark($institution, $class, $examination, rcgLearner($institution, $class), 70);
 
-    $outsider = User::factory()->create();
-    $outsider->assignRole('Student');
-    $outsider->update(['active_institution_id' => $institution->id]);
+    // A teacher of the class - they can open its results, but generating
+    // report cards needs the reportcard permission they don't hold.
+    $teacher = User::factory()->create();
+    $teacher->assignRole('Teacher');
+    TeacherDetails::create(['teacher_id' => $teacher->id, 'institution_id' => $institution->id, 'is_active' => true]);
+    \App\Models\TeacherClasses::create(['teacher_id' => $teacher->id, 'class_id' => $class->id]);
 
-    Livewire::actingAs($outsider)
-        ->test('result::index')
-        ->set('classId', (string) $class->id)
-        ->set('examinationId', (string) $examination->id)
+    Livewire::actingAs($teacher)
+        ->test('result::class-results', ['classId' => $class->id])
         ->call('generateReportCards')
         ->assertForbidden();
 

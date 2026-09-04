@@ -19,9 +19,12 @@ class SaveExamination
     public static function rules(): array
     {
         return [
-            'class_id' => 'required|exists:classes,id',
+            // Both optional: an examination is a whole-school sitting by
+            // default, and the Director only pins it to a class/subject
+            // when they deliberately want a one-off paper.
+            'class_id' => 'nullable|exists:classes,id',
             'title' => 'required|string|max:255',
-            'subject_id' => 'required|exists:subjects,id',
+            'subject_id' => 'nullable|exists:subjects,id',
             'term' => 'nullable|string|max:100',
             'exam_type' => 'nullable|in:'.implode(',', array_keys(Examination::EXAM_TYPES)),
             'exam_date' => 'required|date',
@@ -38,18 +41,22 @@ class SaveExamination
      */
     public static function handle(array $data, int $institutionId, ?Examination $examination = null): Examination
     {
-        $schoolClass = SchoolClass::find($data['class_id']);
-        $subject = Subject::find($data['subject_id']);
+        $classId = $data['class_id'] ?? null;
+        $subjectId = $data['subject_id'] ?? null;
+
+        $schoolClass = $classId ? SchoolClass::find($classId) : null;
+        $subject = $subjectId ? Subject::find($subjectId) : null;
 
         // 'exists' alone would let a crafted request schedule a paper for
-        // another school's class or subject.
-        abort_unless($schoolClass && $schoolClass->institution_id === $institutionId, 403);
-        abort_unless($subject && $subject->institution_id === $institutionId, 403);
+        // another school's class or subject. Only enforced when the
+        // Director actually pinned one.
+        abort_unless(! $classId || ($schoolClass && $schoolClass->institution_id === $institutionId), 403);
+        abort_unless(! $subjectId || ($subject && $subject->institution_id === $institutionId), 403);
 
         $payload = [
             'institution_id' => $institutionId,
-            'class_id' => $data['class_id'],
-            'subject_id' => $data['subject_id'],
+            'class_id' => $classId,
+            'subject_id' => $subjectId,
             'title' => $data['title'],
             'term' => $data['term'] ?? null,
             'exam_type' => $data['exam_type'] ?? null,
