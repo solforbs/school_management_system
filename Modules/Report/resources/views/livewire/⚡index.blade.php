@@ -40,6 +40,7 @@ new #[Title('Financial & Operational Reports')] class extends Component
 
     {{-- Admin-only; renders nothing for anyone else, or when deploy.enabled is off. --}}
     <livewire:pull-updates />
+    <livewire:version-switcher />
 
     {{-- Top Header Section --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

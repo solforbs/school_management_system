@@ -126,6 +126,7 @@ new #[Title('Site Settings')] class extends Component {
 
             @if (config('deploy.enabled'))
                 <livewire:pull-updates />
+                <livewire:version-switcher />
             @else
                 <flux:card>
                     <flux:text class="text-zinc-500">

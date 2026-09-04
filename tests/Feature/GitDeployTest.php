@@ -488,3 +488,192 @@ it('the deploy:pull command exits non-zero when the pull is refused', function (
 
     Process::assertNothingRan();
 });
+
+// ------------------------------------------------------------------
+// Version list and switch/rollback
+// ------------------------------------------------------------------
+
+it('lists tags newest first with their relation to the running commit', function () {
+    Process::fake([
+        '*fetch --tags*' => Process::result(''),
+        '*rev-parse*HEAD*' => Process::result('head123'),
+        '*tag --list*' => Process::result("v2.0.0\nv1.0.0"),
+        '*rev-list -n 1 refs/tags/v2.0.0*' => Process::result('newer456'),
+        '*rev-list -n 1 refs/tags/v1.0.0*' => Process::result('head123'),
+        '*merge-base --is-ancestor newer456 head123*' => Process::result(exitCode: 1),
+        '*merge-base --is-ancestor head123 newer456*' => Process::result(exitCode: 0),
+        '*log -1 --pretty=%s*' => Process::result('a release'),
+        '*log -1 --format=%ci*' => Process::result('2026-01-01 00:00:00 +0000'),
+        '*' => Process::result(''),
+    ]);
+
+    $versions = app(GitDeploy::class)->listVersions();
+
+    expect($versions)->toHaveCount(2)
+        ->and($versions[0]['tag'])->toBe('v2.0.0')
+        ->and($versions[0]['current'])->toBeFalse()
+        ->and($versions[0]['relation'])->toBe('upgrade')
+        ->and($versions[1]['tag'])->toBe('v1.0.0')
+        ->and($versions[1]['current'])->toBeTrue()
+        ->and($versions[1]['relation'])->toBe('current');
+});
+
+it('lists nothing while pulling is switched off, same as pull', function () {
+    config()->set('deploy.enabled', false);
+    Process::fake();
+
+    expect(app(GitDeploy::class)->listVersions())->toBe([]);
+    Process::assertNothingRan();
+});
+
+it('switches forward to a newer version and runs the migrations it adds', function () {
+    $calls = [];
+    Artisan::shouldReceive('call')->andReturnUsing(function ($command) use (&$calls) {
+        $calls[] = $command;
+
+        return 0;
+    });
+    Artisan::shouldReceive('output')->andReturn('INFO  Migrated: 2099_01_01_000000_add_a_column');
+
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch --tags*' => Process::result(''),
+        '*rev-list -n 1 refs/tags/v2.0.0*' => Process::result('def456'),
+        '*merge-base --is-ancestor abc123 def456*' => Process::result(exitCode: 0),
+        '*diff --quiet*' => Process::result(exitCode: 0),
+        '*checkout def456*' => Process::result(''),
+        '*diff --name-only*' => Process::result('database/migrations/2099_01_01_000000_add_a_column.php'),
+        '*rev-list --count*' => Process::result('1'),
+        '*log*' => Process::result('a release'),
+        '*' => Process::result(''),
+    ]);
+
+    $result = app(GitDeploy::class)->switchToVersion('v2.0.0');
+
+    expect($result->status)->toBe('deployed')
+        ->and($result->message)->toContain('Switched forward to "v2.0.0"')
+        ->and($result->migrations)->toContain('migration')
+        ->and($result->skippedMigrations)->toBe([])
+        ->and($calls)->toContain('migrate');
+});
+
+it('rolls back to an older version without touching the database, and names what is left unreverted', function () {
+    $calls = [];
+    Artisan::shouldReceive('call')->andReturnUsing(function ($command) use (&$calls) {
+        $calls[] = $command;
+
+        return 0;
+    });
+
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        // Specific enough not to also match "diff --name-status" below,
+        // which contains the substring "status" too.
+        '*status --porcelain*' => Process::result(''),
+        '*fetch --tags*' => Process::result(''),
+        '*rev-list -n 1 refs/tags/v1.0.0*' => Process::result('old111'),
+        '*merge-base --is-ancestor abc123 old111*' => Process::result(exitCode: 1),
+        '*merge-base --is-ancestor old111 abc123*' => Process::result(exitCode: 0),
+        '*diff --quiet*' => Process::result(exitCode: 0),
+        '*checkout old111*' => Process::result(''),
+        '*diff --name-status*' => Process::result("A\tdatabase/migrations/2099_01_01_000000_add_a_column.php"),
+        '*rev-list --count*' => Process::result('1'),
+        '*log*' => Process::result('an earlier release'),
+        '*' => Process::result(''),
+    ]);
+
+    $result = app(GitDeploy::class)->switchToVersion('v1.0.0');
+
+    expect($result->status)->toBe('deployed')
+        ->and($result->message)->toContain('Rolled back to "v1.0.0"')
+        ->and($result->message)->toContain('2099_01_01_000000_add_a_column.php')
+        ->and($result->skippedMigrations)->toHaveCount(1)
+        ->and($calls)->not->toContain('migrate');
+});
+
+it('refuses to switch to a version that is not a real tag', function () {
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch --tags*' => Process::result(''),
+        '*rev-list -n 1 refs/tags/v9.9.9*' => Process::result(output: '', exitCode: 1),
+        '*' => Process::result(''),
+    ]);
+
+    $result = app(GitDeploy::class)->switchToVersion('v9.9.9');
+
+    expect($result->status)->toBe('refused')
+        ->and($result->message)->toContain('No such version');
+
+    Process::assertDidntRun(commandContains('checkout'));
+});
+
+it('reports already being on the requested version without touching anything', function () {
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch --tags*' => Process::result(''),
+        '*rev-list -n 1 refs/tags/v1.0.0*' => Process::result('abc123'),
+        '*log*' => Process::result('current release'),
+        '*' => Process::result(''),
+    ]);
+
+    $result = app(GitDeploy::class)->switchToVersion('v1.0.0');
+
+    expect($result->status)->toBe('up_to_date');
+    Process::assertDidntRun(commandContains('checkout'));
+});
+
+it('refuses to switch over uncommitted work on the server, same as pull', function () {
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(' M app/Http/Controllers/DevicesController.php'),
+    ]);
+
+    $result = app(GitDeploy::class)->switchToVersion('v1.0.0');
+
+    expect($result->status)->toBe('refused')
+        ->and($result->message)->toContain('uncommitted changes');
+
+    Process::assertDidntRun(commandContains('fetch'));
+});
+
+it('refuses to switch version for a Director', function () {
+    Process::fake();
+
+    $director = User::factory()->create();
+    $director->assignRole('Director');
+
+    Livewire::actingAs($director)
+        ->test('version-switcher')
+        ->call('switchVersion', 'v1.0.0')
+        ->assertForbidden();
+
+    Process::assertNothingRan();
+});
+
+it('lists versions and switches on confirm for an Admin', function () {
+    Artisan::shouldReceive('call')->andReturn(0);
+
+    Process::fake([
+        '*fetch --tags*' => Process::result(''),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*tag --list*' => Process::result('v1.1.0'),
+        '*rev-list -n 1 refs/tags/v1.1.0*' => Process::result('def456'),
+        '*status --porcelain*' => Process::result(''),
+        '*rev-list --count*' => Process::result('1'),
+        '*diff*' => Process::result(''),
+        '*checkout def456*' => Process::result(''),
+        '*log -1 --pretty=%s*' => Process::result('a release'),
+        '*log -1 --format=%ci*' => Process::result('2026-01-01 00:00:00 +0000'),
+        '*' => Process::result(''),
+    ]);
+
+    Livewire::actingAs(admin())
+        ->test('version-switcher')
+        ->assertSee('v1.1.0')
+        ->call('switchVersion', 'v1.1.0');
+
+    Process::assertRan(commandContains('checkout def456'));
+});

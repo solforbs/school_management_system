@@ -190,6 +190,267 @@ class GitDeploy
     }
 
     /**
+     * Every tagged release on the remote, newest first, with enough to tell
+     * an Admin what pressing a button next to it would do: whether it's the
+     * version already running, one ahead of it, or one behind.
+     *
+     * Read-only - the fetch is the only network call, and nothing here
+     * touches the working copy. Best-effort against a remote that can't be
+     * reached: whatever tags are already known locally are still listed
+     * rather than the whole card disappearing.
+     *
+     * @return list<array{tag: string, commit: string, subject: string, date: string, current: bool, relation: string}>
+     */
+    public function listVersions(): array
+    {
+        if (! config('deploy.enabled', false)) {
+            return [];
+        }
+
+        $remote = (string) config('deploy.remote', 'origin');
+        $this->git([...$this->authArgs($remote), 'fetch', '--tags', $remote]);
+
+        $head = trim($this->git(['rev-parse', 'HEAD'])->output());
+
+        $tags = $this->git(['tag', '--list', '--sort=-creatordate']);
+        $names = array_values(array_filter(array_map('trim', preg_split('/\R/', $tags->output()) ?: [])));
+
+        $versions = [];
+
+        foreach ($names as $name) {
+            $commit = trim($this->git(['rev-list', '-n', '1', 'refs/tags/'.$name])->output());
+
+            if ($commit === '') {
+                continue;
+            }
+
+            $versions[] = [
+                'tag' => $name,
+                'commit' => $commit,
+                'subject' => $this->subject($commit),
+                'date' => trim($this->git(['log', '-1', '--format=%ci', $commit])->output()),
+                'current' => $commit === $head,
+                'relation' => $commit === $head ? 'current' : $this->relationTo($head, $commit),
+            ];
+        }
+
+        return $versions;
+    }
+
+    /**
+     * Check out a specific tagged version rather than whatever the branch
+     * points at now - the "switch to this version" and "roll back" actions
+     * on the dashboard's version list.
+     *
+     * Moving forward (the target descends from what's running) is exactly
+     * a pinned pull: pending migrations run same as pull() does. Moving
+     * backward never runs anything against the database - see
+     * DeployResult::switched() for why - it only reports which migrations
+     * a rollback leaves in place.
+     */
+    public function switchToVersion(string $tag): DeployResult
+    {
+        if (! config('deploy.enabled', false)) {
+            return DeployResult::refused('Pulling from the dashboard is switched off.');
+        }
+
+        $lock = Cache::lock(self::LOCK_KEY, 300);
+
+        if (! $lock->get()) {
+            return DeployResult::refused('A deploy is already running. Give it a moment.');
+        }
+
+        try {
+            return $this->runSwitch($tag);
+        } catch (Throwable $e) {
+            Log::error('Deploy version switch crashed', ['tag' => $tag, 'error' => $e->getMessage()]);
+
+            return DeployResult::failed('Switching version failed unexpectedly: '.$e->getMessage());
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function runSwitch(string $tag): DeployResult
+    {
+        $remote = (string) config('deploy.remote', 'origin');
+
+        $head = $this->git(['rev-parse', 'HEAD']);
+
+        if (! $head->successful()) {
+            $stderr = trim($head->errorOutput());
+
+            if ($this->looksLikePermissionProblem($stderr)) {
+                return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            return DeployResult::failed('Not a git checkout, or git cannot read it: '.$stderr);
+        }
+
+        $previous = trim($head->output());
+
+        $dirty = $this->git(['status', '--porcelain', '--untracked-files=no', '--ignore-submodules=dirty']);
+
+        if (trim($dirty->output()) !== '') {
+            return DeployResult::refused(
+                'There are uncommitted changes on the server, so nothing was switched: '.trim($dirty->output())
+            );
+        }
+
+        $fetch = $this->git([...$this->authArgs($remote), 'fetch', '--tags', $remote]);
+
+        if (! $fetch->successful()) {
+            $stderr = $this->scrubToken(trim($fetch->errorOutput()));
+
+            if ($this->looksLikePermissionProblem($stderr)) {
+                return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            return DeployResult::failed('Could not reach the remote: '.$stderr);
+        }
+
+        // Resolved through refs/tags/ specifically, and only ever to a real
+        // tag on the remote - never a branch name, and never trusted just
+        // because the button sent it.
+        $resolved = $this->git(['rev-list', '-n', '1', 'refs/tags/'.$tag]);
+
+        if (! $resolved->successful() || trim($resolved->output()) === '') {
+            return DeployResult::refused("No such version: {$tag}.");
+        }
+
+        $target = trim($resolved->output());
+
+        if ($target === $previous) {
+            return DeployResult::upToDate($previous, $this->subject($previous));
+        }
+
+        $isUpgrade = $this->git(['merge-base', '--is-ancestor', $previous, $target])->successful();
+        $isRollback = ! $isUpgrade && $this->git(['merge-base', '--is-ancestor', $target, $previous])->successful();
+
+        $lockChanged = ! $this->git(['diff', '--quiet', $previous, $target, '--', 'composer.lock'])->successful();
+
+        // The resolved commit, not the tag name: a tag and a branch can
+        // share a name, and checking out a sha is never ambiguous.
+        $checkout = $this->git(['checkout', $target]);
+
+        if (! $checkout->successful()) {
+            $stderr = trim($checkout->errorOutput());
+            $this->rollback($previous);
+
+            if ($this->looksLikePermissionProblem($stderr)) {
+                return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            return DeployResult::failed('Checkout failed, server left unchanged: '.$stderr);
+        }
+
+        $cleared = $this->refreshCaches();
+
+        if ($cleared !== null) {
+            $this->rollback($previous);
+
+            return DeployResult::failed("Rolled back - {$cleared}");
+        }
+
+        $now = trim($this->git(['rev-parse', 'HEAD'])->output());
+
+        if ($isUpgrade) {
+            $changed = $this->changedFiles($previous, $now);
+            $pendingSeeders = $this->seederClassesAmong($changed);
+            $migrations = null;
+
+            if (config('deploy.run_migrations', true) && $this->touchesMigrations($changed)) {
+                $ran = $this->runMigrations();
+
+                if (! $ran['ok']) {
+                    Log::error('Deploy migration failed', ['from' => $previous, 'to' => $now, 'output' => $ran['summary']]);
+
+                    return DeployResult::needsAttention(
+                        $now,
+                        $this->subject($now),
+                        $this->countCommits($previous, $now),
+                        'Code updated, but a migration failed - the server needs attention: '.$ran['summary'],
+                        $pendingSeeders,
+                    );
+                }
+
+                $migrations = $ran['summary'];
+            }
+
+            Log::info('Deploy version switch applied', ['tag' => $tag, 'from' => $previous, 'to' => $now, 'direction' => 'upgrade']);
+
+            return DeployResult::switched($tag, $now, $this->subject($now), $this->countCommits($previous, $now), 'upgrade', $lockChanged, $migrations, $pendingSeeders);
+        }
+
+        // Rollback (or a diverged history, e.g. the server was manually
+        // reset to something off this tag's line): the database is never
+        // touched, only reported on, so a "down" migration nobody has
+        // reviewed can't run unattended.
+        $direction = $isRollback ? 'rollback' : 'diverged';
+        $skippedMigrations = $this->migrationsAddedSince($target, $previous);
+
+        Log::warning('Deploy version switch applied', ['tag' => $tag, 'from' => $previous, 'to' => $now, 'direction' => $direction, 'skipped_migrations' => $skippedMigrations]);
+
+        return DeployResult::switched(
+            $tag,
+            $now,
+            $this->subject($now),
+            $this->countCommits($target, $previous),
+            $direction,
+            $lockChanged,
+            null,
+            [],
+            $skippedMigrations,
+        );
+    }
+
+    /**
+     * Whether $commit is behind $head ('rollback', an ancestor of it) or
+     * ahead of it ('upgrade', $head is an ancestor of $commit). Neither
+     * merge-base check succeeding means the two lines diverged - a manual
+     * reset on the server, most likely - and is reported as 'diverged'
+     * rather than guessed at.
+     */
+    private function relationTo(string $head, string $commit): string
+    {
+        if ($this->git(['merge-base', '--is-ancestor', $commit, $head])->successful()) {
+            return 'rollback';
+        }
+
+        if ($this->git(['merge-base', '--is-ancestor', $head, $commit])->successful()) {
+            return 'upgrade';
+        }
+
+        return 'diverged';
+    }
+
+    /**
+     * Migration files present at $newerCommit but not at $olderCommit - what
+     * a rollback to $olderCommit leaves applied in the database with no
+     * code left that knows about them.
+     *
+     * @return list<string>
+     */
+    private function migrationsAddedSince(string $olderCommit, string $newerCommit): array
+    {
+        $diff = $this->git(['diff', '--name-status', $olderCommit, $newerCommit]);
+
+        if (! $diff->successful()) {
+            return [];
+        }
+
+        $added = [];
+
+        foreach (preg_split('/\R/', trim($diff->output())) ?: [] as $line) {
+            if (preg_match('#^A\s+(\S*database/migrations/[^/]+\.php)$#', trim($line), $matches)) {
+                $added[] = $matches[1];
+            }
+        }
+
+        return $added;
+    }
+
+    /**
      * Run any seeder classes a release added, on explicit request. Every
      * class is re-checked here against what actually lives in the seeder
      * directories - the list from the deploy is a convenience, not a

@@ -16,6 +16,7 @@ final class DeployResult
 {
     /**
      * @param  list<string>  $pendingSeeders  seeder classes a release changed, for someone to run by hand
+     * @param  list<string>  $skippedMigrations  migration files a rollback left in the database untouched
      */
     private function __construct(
         public readonly string $status,
@@ -26,6 +27,7 @@ final class DeployResult
         public readonly bool $dependenciesChanged = false,
         public readonly ?string $migrations = null,
         public readonly array $pendingSeeders = [],
+        public readonly array $skippedMigrations = [],
     ) {}
 
     /**
@@ -92,6 +94,62 @@ final class DeployResult
             message: count($classes) === 1
                 ? $names[0].' seeder ran.'
                 : count($classes).' seeders ran: '.implode(', ', $names).'.',
+        );
+    }
+
+    /**
+     * A specific tagged version was checked out from the dashboard's version
+     * list, rather than "whatever origin/branch points at now".
+     *
+     * Forward switches run pending migrations exactly like a normal pull.
+     * A rollback never does - reversing a migration can drop data a "down"
+     * method has no way to know is still wanted, so the schema is left
+     * exactly as it is and $skippedMigrations names what that leaves
+     * unreverted, for someone to judge by hand.
+     *
+     * @param  list<string>  $pendingSeeders
+     * @param  list<string>  $skippedMigrations
+     */
+    public static function switched(
+        string $tag,
+        string $commit,
+        string $subject,
+        int $commits,
+        string $direction,
+        bool $dependenciesChanged,
+        ?string $migrations = null,
+        array $pendingSeeders = [],
+        array $skippedMigrations = [],
+    ): self {
+        $verb = match ($direction) {
+            'rollback' => 'Rolled back to',
+            'upgrade' => 'Switched forward to',
+            default => 'Switched to',
+        };
+
+        $message = sprintf('%s "%s" (%s).', $verb, $tag, $subject);
+
+        if ($skippedMigrations !== []) {
+            $names = implode(', ', array_map('basename', $skippedMigrations));
+            $message .= sprintf(
+                ' %d migration%s applied after this version %s left in the database untouched: %s.',
+                count($skippedMigrations),
+                count($skippedMigrations) === 1 ? '' : 's',
+                count($skippedMigrations) === 1 ? 'was' : 'were',
+                $names,
+            );
+        }
+
+        return new self(
+            status: 'deployed',
+            message: $message,
+            commit: $commit,
+            subject: $subject,
+            commits: $commits,
+            dependenciesChanged: $dependenciesChanged,
+            migrations: $migrations,
+            pendingSeeders: $pendingSeeders,
+            skippedMigrations: $skippedMigrations,
         );
     }
 
