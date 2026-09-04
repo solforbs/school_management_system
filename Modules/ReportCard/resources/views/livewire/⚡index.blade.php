@@ -151,6 +151,17 @@ new #[Title('Report Cards')] class extends Component
 
             <div class="flex items-center gap-3">
                 @can('edit reportcard')
+                    <x-confirm-form
+                        :action="route('reportcard.send-ready')"
+                        method="POST"
+                        title="Send all ready report cards?"
+                        message="Every report card that's been ready for at least a day gets a one-time download link by email and SMS. This may incur messaging charges."
+                        confirm="Send Ready Report Cards"
+                        confirm-variant="primary"
+                        label="Send Ready"
+                        icon="paper-airplane"
+                        variant="subtle"
+                        trigger-class="font-semibold shadow-sm" />
                     <flux:button href="{{ route('reportcard.settings') }}" wire:navigate.hover icon="cog-6-tooth" variant="primary" class="font-semibold shadow-sm px-4">
                         Grading Settings
                     </flux:button>

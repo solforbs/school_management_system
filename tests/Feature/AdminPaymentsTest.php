@@ -109,16 +109,19 @@ test('filtering by institution narrows the table and the summary together', func
     $riverside = makePaymentsInstitution(['name' => 'Riverside Academy']);
     $lakeside = makePaymentsInstitution(['name' => 'Lakeside College']);
 
-    makeTestPayment(['institution_id' => $riverside->id, 'amount' => 4000]);
-    makeTestPayment(['institution_id' => $lakeside->id, 'amount' => 9000]);
+    makeTestPayment(['institution_id' => $riverside->id, 'amount' => 4000, 'reference' => 'riverside-ref']);
+    makeTestPayment(['institution_id' => $lakeside->id, 'amount' => 9000, 'reference' => 'lakeside-ref']);
 
     Livewire::actingAs($admin)
         ->test('pages::admin.payments')
-        ->assertSee('Riverside Academy')
-        ->assertSee('Lakeside College')
+        ->assertSee('riverside-ref')
+        ->assertSee('lakeside-ref')
         ->set('institutionId', (string) $riverside->id)
-        ->assertSee('Riverside Academy')
-        ->assertDontSee('Lakeside College');
+        ->assertSee('riverside-ref')
+        // "Lakeside College" itself still appears in the (unfiltered)
+        // institution dropdown - assert on the row content instead, since
+        // that's what actually narrows.
+        ->assertDontSee('lakeside-ref');
 });
 
 test('filtering by purpose only shows setup fees', function () {

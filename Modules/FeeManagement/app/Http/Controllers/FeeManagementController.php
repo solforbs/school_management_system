@@ -36,12 +36,12 @@ class FeeManagementController extends Controller
 
         $result = $this->reminderService->sendForDefaulters($query);
 
-        if ($result['parents_notified'] === 0) {
+        if ($result['parents_queued'] === 0) {
             return redirect()->route('feemanagement.index')
                 ->with('success', 'No outstanding fee balances to remind anyone about.');
         }
 
-        $message = "Reminders sent to {$result['parents_notified']} parent(s) - {$result['emails_sent']} email(s), {$result['sms_sent']} SMS.";
+        $message = "Reminders queued for {$result['parents_queued']} parent(s) - {$result['emails_queued']} email(s), {$result['sms_queued']} SMS. They go out gradually in the background to protect your messaging budget.";
         if ($result['skipped_no_contact'] > 0) {
             $message .= " {$result['skipped_no_contact']} parent(s) skipped - no email or phone on file.";
         }

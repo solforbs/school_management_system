@@ -48,6 +48,15 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('sync', fn (Request $request) => Limit::perMinute(60)
             ->by($request->user()?->id ?: $request->ip()));
+
+        // Fee reminders and report cards are both queued jobs, one per
+        // parent/report card, sharing this single platform-wide bucket -
+        // they hit the same mail server and the same SMS gateway account,
+        // so a school with a thousand students can't blow through either
+        // in one go, whichever feature happens to be running.
+        RateLimiter::for('notifications', fn () => Limit::perMinute(
+            (int) config('services.notifications.rate_limit', 100)
+        ));
     }
 
     /**

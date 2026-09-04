@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AnalyticsExportService;
 use App\Services\AnalyticsService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\FeeManagement\Models\Fee;
@@ -25,6 +26,11 @@ class ReportController extends Controller
      * scoped to what they're allowed to see); everyone else who can export
      * keeps the simpler fees-only CSV, since their own records are already
      * the full extent of what they can see.
+     *
+     * The workbook can be narrowed to a period: an explicit "from"/"to"
+     * (either one alone is an open-ended range) takes priority, otherwise a
+     * "period" preset (this_month/this_year) is honoured; no period at all
+     * exports everything.
      */
     public function export(Request $request)
     {
@@ -35,18 +41,48 @@ class ReportController extends Controller
         @ini_set('memory_limit', '512M');
         @set_time_limit(300);
 
+        [$from, $to, $label] = $this->resolvePeriod($request);
+
         if ($user->hasRole('Admin') || $user->hasRole('Director')) {
-            return $this->exportWorkbook($user);
+            return $this->exportWorkbook($user, $from, $to, $label);
         }
 
         return $this->exportFeesCsv($user);
     }
 
-    private function exportWorkbook(User $user): StreamedResponse
+    /**
+     * @return array{0: ?CarbonImmutable, 1: ?CarbonImmutable, 2: string}
+     */
+    private function resolvePeriod(Request $request): array
+    {
+        $from = $request->date('from');
+        $to = $request->date('to');
+
+        if ($from || $to) {
+            $from = $from?->toImmutable()->startOfDay();
+            $to = $to?->toImmutable()->endOfDay();
+
+            $label = match (true) {
+                $from && $to => $from->format('d M Y').' – '.$to->format('d M Y'),
+                (bool) $from => 'From '.$from->format('d M Y'),
+                default => 'Up to '.$to->format('d M Y'),
+            };
+
+            return [$from, $to, $label];
+        }
+
+        return match ($request->string('period')->toString()) {
+            'this_month' => [now()->startOfMonth(), now()->endOfMonth(), now()->format('F Y')],
+            'this_year' => [now()->startOfYear(), now()->endOfYear(), now()->format('Y')],
+            default => [null, null, 'All time'],
+        };
+    }
+
+    private function exportWorkbook(User $user, ?CarbonImmutable $from, ?CarbonImmutable $to, string $label): StreamedResponse
     {
         @ini_set('memory_limit', '512M');
 
-        ['filename' => $filename, 'spreadsheet' => $spreadsheet] = $this->export->forUser($user);
+        ['filename' => $filename, 'spreadsheet' => $spreadsheet] = $this->export->forUser($user, $from, $to, $label);
 
         $writer = new Xlsx($spreadsheet);
 

@@ -9,17 +9,31 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 // Monday morning, once, and nothing in between.
 //
-// This cadence *is* the throttle: FeeReminderService keeps no record of who
-// it last wrote to, so every run re-notifies every parent who still owes
-// anything. Any schedule tighter than the time you'd give someone to act on
-// the reminder just sends the same parent the same balance again - and each
-// one costs a real SMS. A week matches what the message now asks for.
+// This cadence *is* the throttle on how often a parent gets nagged:
+// FeeReminderService keeps no record of who it last wrote to, so every run
+// re-notifies every parent who still owes anything. Any schedule tighter
+// than the time you'd give someone to act on the reminder just sends the
+// same parent the same balance again - and each one costs a real SMS. A
+// week matches what the message now asks for. (Separately, how fast the
+// notifications actually go out once queued is capped by the 'notifications'
+// rate limiter in AppServiceProvider, not by this cadence.)
 Schedule::command('feemanagement:send-reminders')->weeklyOn(1, '09:00');
 
 // Not urgent: the command only picks up a report card that has been ready
 // for a full day, so running it more often than daily cannot find anything
 // a daily run wouldn't.
 Schedule::command('reportcards:send-ready')->dailyAt('07:00');
+
+// A safety net for environments with no separate always-on queue worker
+// process: without this, jobs queued above (and by the manual bulk-send
+// buttons) would just sit in the jobs table forever. --stop-when-empty lets
+// it exit as soon as there's nothing left to do instead of idling for the
+// full five minutes; the 'notifications' rate limiter is what actually
+// paces deliveries to ~100/minute, not this cadence.
+Schedule::command('queue:work --queue=default --stop-when-empty --max-time=240 --tries=3')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10)
+    ->runInBackground();
 
 // School day runs 8am-4pm (Timetable module) - give teachers a couple of
 // hours' buffer to finish marking attendance before tallying the day.

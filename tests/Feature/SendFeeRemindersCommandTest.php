@@ -41,7 +41,7 @@ test('the scheduled command reminds defaulters by both email and sms', function 
         ->andReturn(['success' => true]);
 
     $this->artisan('feemanagement:send-reminders')
-        ->expectsOutputToContain('Reminded 1 parent(s) - 1 email(s), 1 SMS.')
+        ->expectsOutputToContain('Queued reminders for 1 parent(s) - 1 email(s), 1 SMS.')
         ->assertSuccessful();
 
     Notification::assertSentTo($parent, FeePaymentReminder::class);

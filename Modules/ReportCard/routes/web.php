@@ -24,6 +24,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     // otherwise swallow "report-cards/settings/preview".
     Route::get('report-cards/settings/preview', [ReportSettingsController::class, 'preview'])->name('reportcard.settings.preview');
     Route::delete('report-card/{reportCard}/delete', [ReportCardController::class, 'destroy'])->name('reportcard.destroy');
+    Route::post('report-cards/send-ready', [ReportCardController::class, 'sendReady'])->name('reportcard.send-ready');
     Route::livewire('report-cards', 'reportcard::index')->name('reportcard.index');
     Route::get('report-cards/{reportcard}', [ReportCardController::class, 'show'])->name('reportcard.show');
     Route::get('report-cards/{reportcard}/pdf', [ReportCardController::class, 'pdf'])->name('reportcard.pdf');

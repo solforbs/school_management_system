@@ -140,8 +140,34 @@ test('the admin export contains every entity, system-wide', function () {
     );
 
     expect($spreadsheet->getSheetNames())->toEqual([
-        'Institutions', 'Users', 'Students', 'Parents', 'Fees', 'Payments', 'Devices', 'Attendance (30 days)', 'Contact Messages',
+        'Summary', 'Institutions', 'Users', 'Students', 'Parents', 'Fees', 'Payments', 'Devices', 'Attendance (30 days)', 'Contact Messages',
     ]);
+});
+
+test('the admin export can be narrowed to a custom period', function () {
+    $admin = makeAnalyticsAdmin();
+    $this->actingAs($admin);
+
+    $inRange = User::factory()->create(['created_at' => now()->subDays(5)]);
+    $inRange->assignRole('Director');
+    $outOfRange = User::factory()->create(['created_at' => now()->subDays(60)]);
+    $outOfRange->assignRole('Director');
+
+    $response = $this->get(route('report.export', [
+        'from' => now()->subDays(10)->format('Y-m-d'),
+        'to' => now()->format('Y-m-d'),
+    ]));
+
+    $response->assertOk();
+
+    $spreadsheet = IOFactory::load(streamedResponseToTempFile($response));
+
+    $summary = collect($spreadsheet->getSheetByName('Summary')->toArray())->mapWithKeys(fn ($row) => [$row[0] => $row[1]]);
+    expect((int) $summary['Users'])->toBe(1);
+
+    $names = array_column($spreadsheet->getSheetByName('Users')->toArray(), 0);
+    expect($names)->toContain($inRange->name)
+        ->and($names)->not->toContain($outOfRange->name);
 });
 
 test("a director's export only covers their own institution", function () {
@@ -177,7 +203,7 @@ test("a director's export only covers their own institution", function () {
         streamedResponseToTempFile($response)
     );
 
-    expect($spreadsheet->getSheetNames())->toEqual(['Students', 'Parents', 'Fees', 'Devices', 'Attendance (30 days)']);
+    expect($spreadsheet->getSheetNames())->toEqual(['Summary', 'Students', 'Parents', 'Fees', 'Devices', 'Attendance (30 days)']);
 
     $feesSheet = $spreadsheet->getSheetByName('Fees')->toArray();
     $titles = array_column($feesSheet, 1);

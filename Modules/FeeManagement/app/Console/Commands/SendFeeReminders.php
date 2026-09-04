@@ -16,7 +16,7 @@ class SendFeeReminders extends Command
     {
         $result = $reminderService->sendForDefaulters(Fee::query());
 
-        $this->info("Reminded {$result['parents_notified']} parent(s) - {$result['emails_sent']} email(s), {$result['sms_sent']} SMS.");
+        $this->info("Queued reminders for {$result['parents_queued']} parent(s) - {$result['emails_queued']} email(s), {$result['sms_queued']} SMS.");
 
         return self::SUCCESS;
     }

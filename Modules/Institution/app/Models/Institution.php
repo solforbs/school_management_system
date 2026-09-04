@@ -7,6 +7,7 @@ use App\Models\Devices;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -49,14 +50,14 @@ use Modules\Timetable\Models\TimetableEntry;
  * @property bool $is_active
  * @property string $status
  * @property bool $is_approved
- * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property Carbon|null $approved_at
  * @property int|null $approved_by_id
  * @property string|null $notes
  * @property int|null $subscription_plan
- * @property \Carbon\CarbonImmutable|null $subscription_expires_at
- * @property \Carbon\CarbonImmutable|null $subscription_started_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property CarbonImmutable|null $subscription_expires_at
+ * @property CarbonImmutable|null $subscription_started_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Institution extends Model
 {
@@ -346,6 +347,7 @@ class Institution extends Model
     {
         return $this->hasMany(Subject::class);
     }
+
     public function isApproved(): bool
     {
         return (bool) $this->is_approved;

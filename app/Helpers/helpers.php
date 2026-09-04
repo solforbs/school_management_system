@@ -5,6 +5,7 @@ use App\Models\Setting;
 use App\Models\TeacherClasses;
 use App\Models\TeacherSubjects;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
@@ -21,7 +22,7 @@ if (! function_exists('progress')) {
     {
         $institutionColumns = $institution->toArray();
         $columns = count($institutionColumns);
-        $filled = Arr::where($institutionColumns, fn($value) => filled($value));
+        $filled = Arr::where($institutionColumns, fn ($value) => filled($value));
 
         return round((count($filled) / $columns) * 100, 0);
     }
@@ -265,61 +266,65 @@ if (! function_exists('institutionCanUpgrade')) {
         return Plan::whereIsActive(true)->where('price', '>', $currentPrice)->exists();
     }
 }
-if (!function_exists('institutionSubjects')) {
+if (! function_exists('institutionSubjects')) {
     /**
-     * @return \Illuminate\Support\Collection<int, Subject>
+     * @return Collection<int, Subject>
      */
-    function institutionSubjects(): \Illuminate\Support\Collection
+    function institutionSubjects(): Collection
     {
         $institution = currentInstitution();
         if (! $institution) {
             return collect();
         }
+
         return $institution->subjects()->get();
     }
 }
-if (!function_exists('institutionClasses')) {
+if (! function_exists('institutionClasses')) {
     /**
-     * @return \Illuminate\Support\Collection<int, SchoolClass>
+     * @return Collection<int, SchoolClass>
      */
-    function institutionClasses(): \Illuminate\Support\Collection
+    function institutionClasses(): Collection
     {
         $institution = currentInstitution();
         if (! $institution) {
             return collect();
         }
+
         return $institution->classes()->orderBy('name')->get();
     }
 }
-if (!function_exists('teacherSubjects')) {
+if (! function_exists('teacherSubjects')) {
     /**
-     * @return \Illuminate\Support\Collection<int, TeacherSubjects>
+     * @return Collection<int, TeacherSubjects>
      */
-    function teacherSubjects(int $teacherId): \Illuminate\Support\Collection
+    function teacherSubjects(int $teacherId): Collection
     {
         return TeacherSubjects::where('teacher_id', $teacherId)->get();
     }
 }
-if (!function_exists('teacherClasses')) {
+if (! function_exists('teacherClasses')) {
     /**
-     * @return \Illuminate\Support\Collection<int, TeacherClasses>
+     * @return Collection<int, TeacherClasses>
      */
-    function teacherClasses(int $teacherId): \Illuminate\Support\Collection
+    function teacherClasses(int $teacherId): Collection
     {
         return TeacherClasses::where('teacher_id', $teacherId)->get();
     }
 }
-if (!function_exists('getSubjectName')) {
+if (! function_exists('getSubjectName')) {
     function getSubjectName(int $subjectId): string
     {
         $subject = Subject::find($subjectId);
+
         return $subject ? $subject->name : 'Unknown Subject';
     }
 }
-if (!function_exists('getClassName')) {
+if (! function_exists('getClassName')) {
     function getClassName(int $classId): string
     {
         $schoolClass = SchoolClass::find($classId);
+
         return $schoolClass ? $schoolClass->name : 'Unknown Class';
     }
 }

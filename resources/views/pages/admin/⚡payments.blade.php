@@ -162,8 +162,9 @@ new #[Title('Payments')] class extends Component {
         </div>
 
         <div class="flex items-center gap-3">
-            <flux:button href="{{ route('report.export') }}" icon="arrow-down-tray" variant="subtle" class="font-semibold shadow-sm">
-                Export Full Workbook
+            <flux:button href="{{ route('report.export', array_filter(['from' => $from, 'to' => $to])) }}"
+                icon="arrow-down-tray" variant="subtle" class="font-semibold shadow-sm">
+                Export Full Workbook{{ $from || $to ? ' (filtered period)' : '' }}
             </flux:button>
         </div>
     </div>

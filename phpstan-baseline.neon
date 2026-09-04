@@ -7,18 +7,6 @@ parameters:
 			path: app/Helpers/helpers.php
 
 		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Helpers/helpers.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$is_approved\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Helpers/helpers.php
-
-		-
 			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$plan\.$#'
 			identifier: property.notFound
 			count: 1
@@ -128,12 +116,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/DevicesController.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/DevicesController.php

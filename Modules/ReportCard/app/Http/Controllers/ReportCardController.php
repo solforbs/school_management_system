@@ -9,12 +9,39 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Services\ReportCardPdfService;
+use Modules\ReportCard\Services\ReportCardQueuer;
 use Modules\Student\Models\StudentDetails;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportCardController extends Controller
 {
     use Sortable;
+
+    /**
+     * Queue every report card that's been ready for a day, scoped the same
+     * way the listing itself is. A manual backstop for the nightly command -
+     * a director who can't wait for it, or wants to confirm it isn't stuck,
+     * doesn't have to touch the server to run it again.
+     */
+    public function sendReady(ReportCardQueuer $queuer)
+    {
+        abort_unless(Auth::user()->can('edit reportcard'), 403);
+
+        $query = ReportCard::query();
+        if (! isAdmin()) {
+            $query->where('institution_id', currentInstitution()?->id ?? 0);
+        }
+
+        $count = $queuer->queueReady($query);
+
+        if ($count === 0) {
+            return redirect()->route('reportcard.index')
+                ->with('success', 'No report cards are ready to send yet.');
+        }
+
+        return redirect()->route('reportcard.index')
+            ->with('success', "Queued {$count} report card(s) for sending. They go out gradually in the background to protect your messaging budget.");
+    }
 
     /**
      * Show the specified resource.

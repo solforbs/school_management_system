@@ -15,7 +15,7 @@ class IsInstitutionApproved
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!currentInstitution()->isApproved()) {
+        if (! currentInstitution()->isApproved()) {
             abort(403, 'Institution is not approved.');
         }
 

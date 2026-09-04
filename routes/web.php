@@ -11,11 +11,8 @@ use App\Http\Controllers\SyncDeviceController;
 use App\Http\Controllers\SyncStudentToDeviceController;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\HasInstitution;
-use App\Http\Middleware\IsInstitutionApproved;
-use App\InstitutionSubjects;
 use App\Models\Plan;
 use Illuminate\Support\Facades\Route;
-use Modules\Subject\Models\Subject;
 
 Route::view('/', 'frontend.home')->name('home');
 Route::view('/about', 'frontend.about')->name('about');
@@ -23,7 +20,7 @@ Route::view('/services', 'frontend.services')->name('services');
 // Priced from the plans table rather than the template, so an admin
 // editing a plan changes the public page too - the same data the /api/plans
 // endpoint serves.
-Route::get('/plans', fn() => view('frontend.plans', [
+Route::get('/plans', fn () => view('frontend.plans', [
     'plans' => Plan::query()->active()->orderBy('price')->orderBy('name')->get(),
 ]))->name('plans');
 Route::view('/contact', 'frontend.contact')->name('contact');
@@ -64,10 +61,10 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
     Route::get('students/{studentId}/sync-device', [SyncStudentToDeviceController::class, 'syncStudent'])->name('students.sync-device');
 });
 Route::get('subjects-available', function () {
-    return institutionSubjects()->map(fn($subject) => [
+    return institutionSubjects()->map(fn ($subject) => [
         'id' => $subject->id,
         'name' => $subject->name,
     ]);
 })->name('subjects-available');
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';

@@ -7,6 +7,7 @@ use App\Models\Devices;
 use App\Models\Payment;
 use App\Models\User;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Modules\FeeManagement\Models\Fee;
@@ -23,68 +24,133 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * their own institution(s); everyone else keeps the simpler fees-only CSV
  * they already had (their own records are already "everything" within what
  * they're allowed to see).
+ *
+ * Every workbook opens on a Summary cover sheet - generated-at, the period
+ * it covers, and headline totals - so the file reads as a report rather
+ * than a bare data dump. When $from/$to are given, every time-stamped sheet
+ * (users, students, fees, payments, attendance, messages) is narrowed to
+ * that window; the roster-style sheets (institutions, devices) stay
+ * unfiltered since "who exists" isn't a period-bound fact.
  */
 class AnalyticsExportService
 {
     /**
      * @return array{filename: string, spreadsheet: Spreadsheet}
      */
-    public function forUser(User $user): array
+    public function forUser(User $user, ?CarbonImmutable $from = null, ?CarbonImmutable $to = null, string $periodLabel = 'All time'): array
     {
+        $suffix = $from || $to ? '-'.now()->format('His') : '';
+
         if ($user->hasRole('Admin')) {
             return [
-                'filename' => 'system-report-'.now()->format('Y-m-d').'.xlsx',
-                'spreadsheet' => $this->systemWorkbook(),
+                'filename' => 'system-report-'.now()->format('Y-m-d').$suffix.'.xlsx',
+                'spreadsheet' => $this->systemWorkbook($from, $to, $periodLabel),
             ];
         }
 
         $institutionIds = $user->institution()->pluck('id');
 
         return [
-            'filename' => 'institution-report-'.now()->format('Y-m-d').'.xlsx',
-            'spreadsheet' => $this->institutionWorkbook($institutionIds),
+            'filename' => 'institution-report-'.now()->format('Y-m-d').$suffix.'.xlsx',
+            'spreadsheet' => $this->institutionWorkbook($institutionIds, $from, $to, $periodLabel),
         ];
     }
 
-    private function systemWorkbook(): Spreadsheet
+    private function systemWorkbook(?CarbonImmutable $from, ?CarbonImmutable $to, string $periodLabel): Spreadsheet
     {
         $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
-        $this->addInstitutionsSheet($spreadsheet, Institution::with('owner')->get());
-        $this->addUsersSheet($spreadsheet, User::withoutRole('Admin')->with('roles')->get());
-        $this->addStudentsSheet($spreadsheet, StudentDetails::with(['student', 'institution'])->get(), showInstitution: true);
-        $this->addParentsSheet($spreadsheet, User::role('Parent')->with('parent')->get(), showInstitution: false);
-        $this->addFeesSheet($spreadsheet, Fee::with(['student', 'institution'])->latest()->get(), showInstitution: true);
-        $this->addPaymentsSheet($spreadsheet, Payment::with(['institution', 'plan'])->latest('created_at')->get());
-        $this->addDevicesSheet($spreadsheet, Devices::with(['zktecoDevice', 'institution'])->get(), showInstitution: true);
-        $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::query());
-        $this->addMessagesSheet($spreadsheet, ContactMessage::latest()->get());
+        $institutions = Institution::with('owner')->get();
+        $users = $this->betweenDates(User::withoutRole('Admin')->with('roles'), $from, $to)->get();
+        $students = $this->betweenDates(StudentDetails::with(['student', 'institution']), $from, $to)->get();
+        $parents = $this->betweenDates(User::role('Parent')->with('parent'), $from, $to)->get();
+        $fees = $this->betweenDates(Fee::with(['student', 'institution']), $from, $to)->latest()->get();
+        $payments = $this->betweenDates(Payment::with(['institution', 'plan']), $from, $to)->latest('created_at')->get();
+        $devices = Devices::with(['zktecoDevice', 'institution'])->get();
+        $messages = $this->betweenDates(ContactMessage::query(), $from, $to)->latest()->get();
+
+        $this->addSummarySheet($spreadsheet, $periodLabel, [
+            'Institutions' => $institutions->count(),
+            'Users' => $users->count(),
+            'Students' => $students->count(),
+            'Parents' => $parents->count(),
+            'Fees raised' => 'KES '.number_format((float) $fees->sum('amount'), 2),
+            'Fees collected' => 'KES '.number_format((float) $fees->sum('amount_paid'), 2),
+            'Payments received' => 'KES '.number_format((float) $payments->where('status', 'successful')->sum('amount'), 2),
+            'Devices' => $devices->count(),
+            'Contact messages' => $messages->count(),
+        ]);
+        $this->addInstitutionsSheet($spreadsheet, $institutions);
+        $this->addUsersSheet($spreadsheet, $users);
+        $this->addStudentsSheet($spreadsheet, $students, showInstitution: true);
+        $this->addParentsSheet($spreadsheet, $parents, showInstitution: false);
+        $this->addFeesSheet($spreadsheet, $fees, showInstitution: true);
+        $this->addPaymentsSheet($spreadsheet, $payments);
+        $this->addDevicesSheet($spreadsheet, $devices, showInstitution: true);
+        $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::query(), $from, $to);
+        $this->addMessagesSheet($spreadsheet, $messages);
 
         return $spreadsheet;
     }
 
-    private function institutionWorkbook(Collection $institutionIds): Spreadsheet
+    private function institutionWorkbook(Collection $institutionIds, ?CarbonImmutable $from, ?CarbonImmutable $to, string $periodLabel): Spreadsheet
     {
         $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
-        $students = StudentDetails::whereIn('institution_id', $institutionIds)->with('student')->get();
-        $parents = User::role('Parent')
-            ->whereHas('children', fn ($q) => $q->whereIn('institution_id', $institutionIds))
-            ->with('parent')
-            ->get();
-        $fees = Fee::whereIn('institution_id', $institutionIds)->with('student')->latest()->get();
+        $students = $this->betweenDates(StudentDetails::whereIn('institution_id', $institutionIds)->with('student'), $from, $to)->get();
+        $parents = $this->betweenDates(
+            User::role('Parent')->whereHas('children', fn ($q) => $q->whereIn('institution_id', $institutionIds))->with('parent'),
+            $from,
+            $to,
+        )->get();
+        $fees = $this->betweenDates(Fee::whereIn('institution_id', $institutionIds)->with('student'), $from, $to)->latest()->get();
         $devices = Devices::whereIn('institution_id', $institutionIds)->with('zktecoDevice')->get();
         $deviceIds = $devices->pluck('zktecoDevice.id')->filter();
 
+        $this->addSummarySheet($spreadsheet, $periodLabel, [
+            'Students' => $students->count(),
+            'Parents' => $parents->count(),
+            'Fees raised' => 'KES '.number_format((float) $fees->sum('amount'), 2),
+            'Fees collected' => 'KES '.number_format((float) $fees->sum('amount_paid'), 2),
+            'Devices' => $devices->count(),
+        ]);
         $this->addStudentsSheet($spreadsheet, $students, showInstitution: false);
         $this->addParentsSheet($spreadsheet, $parents, showInstitution: false);
         $this->addFeesSheet($spreadsheet, $fees, showInstitution: false);
         $this->addDevicesSheet($spreadsheet, $devices, showInstitution: false);
-        $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::whereIn('device_id', $deviceIds));
+        $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::whereIn('device_id', $deviceIds), $from, $to);
 
         return $spreadsheet;
+    }
+
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
+    private function betweenDates(Builder $query, ?CarbonImmutable $from, ?CarbonImmutable $to): Builder
+    {
+        return $query
+            ->when($from, fn (Builder $q) => $q->where('created_at', '>=', $from))
+            ->when($to, fn (Builder $q) => $q->where('created_at', '<=', $to));
+    }
+
+    /**
+     * @param  array<string, int|string>  $totals
+     */
+    private function addSummarySheet(Spreadsheet $spreadsheet, string $periodLabel, array $totals): void
+    {
+        $rows = collect($totals)->map(fn ($value, $label) => [$label, $value])->values()->all();
+
+        $sheet = $this->addSheet($spreadsheet, 'Summary', ['Metric', 'Value'], $rows);
+        $sheet->setCellValue('A'.(count($rows) + 3), 'Period covered');
+        $sheet->setCellValue('B'.(count($rows) + 3), $periodLabel);
+        $sheet->setCellValue('A'.(count($rows) + 4), 'Generated');
+        $sheet->setCellValue('B'.(count($rows) + 4), now()->format('D, d M Y H:i'));
+        $sheet->getStyle('A'.(count($rows) + 3).':A'.(count($rows) + 4))->getFont()->setBold(true);
     }
 
     private function addInstitutionsSheet(Spreadsheet $spreadsheet, Collection $institutions): void
@@ -269,26 +335,41 @@ class AnalyticsExportService
         );
     }
 
-    private function addAttendanceSheet(Spreadsheet $spreadsheet, Builder $query): void
+    /**
+     * Daily check-in counts. Defaults to the trailing 30 days when no period
+     * is selected; a custom period uses that range instead, capped at a
+     * year so a huge "All time" range never tries to render one row per day
+     * since the dawn of the log.
+     */
+    private function addAttendanceSheet(Spreadsheet $spreadsheet, Builder $query, ?CarbonImmutable $from = null, ?CarbonImmutable $to = null): void
     {
-        $start = now()->subDays(29)->startOfDay();
+        $end = ($to ?? now())->startOfDay();
+        $start = $from ? $from->startOfDay() : $end->subDays(29);
+
+        if ($start->diffInDays($end) > 365) {
+            $start = $end->subDays(365);
+        }
+
+        $days = $start->diffInDays($end);
 
         $counts = (clone $query)
             ->where('occurred_at', '>=', $start)
+            ->where('occurred_at', '<=', $end->endOfDay())
             ->toBase()
             ->selectRaw('DATE(occurred_at) as log_date, count(*) as total')
             ->groupBy('log_date')
             ->pluck('total', 'log_date');
 
         $rows = collect();
-        for ($i = 29; $i >= 0; $i--) {
-            $date = now()->subDays($i);
+        for ($i = $days; $i >= 0; $i--) {
+            $date = $end->subDays($i);
             $key = $date->format('Y-m-d');
             $count = (int) ($counts->get($key) ?? $counts->get($date->format('Y-m-d 00:00:00')) ?? 0);
             $rows->push([$key, $count]);
         }
 
-        $this->addSheet($spreadsheet, 'Attendance (30 days)', ['Date', 'Check-ins'], $rows);
+        $title = $from || $to ? 'Attendance' : 'Attendance (30 days)';
+        $this->addSheet($spreadsheet, $title, ['Date', 'Check-ins'], $rows);
     }
 
     private function addMessagesSheet(Spreadsheet $spreadsheet, Collection $messages): void

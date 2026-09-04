@@ -57,17 +57,35 @@ new #[Title('Financial & Operational Reports')] class extends Component
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
-            @can('export report')
-                <flux:button href="{{ route('report.export') }}" icon="arrow-down-tray" variant="primary" class="shadow-sm font-semibold">
+        @can('export report')
+            <form method="GET" action="{{ route('report.export') }}" x-data="{ period: 'all_time' }"
+                class="flex flex-wrap items-end gap-2">
+                @if (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Director'))
+                    <div class="min-w-[9.5rem]">
+                        <flux:select name="period" size="sm" label="Period" x-model="period">
+                            <flux:select.option value="all_time">All time</flux:select.option>
+                            <flux:select.option value="this_month">This month</flux:select.option>
+                            <flux:select.option value="this_year">This year</flux:select.option>
+                            <flux:select.option value="custom">Custom range</flux:select.option>
+                        </flux:select>
+                    </div>
+                    <template x-if="period === 'custom'">
+                        <div class="flex items-end gap-2">
+                            <flux:input type="date" name="from" size="sm" label="From" />
+                            <flux:input type="date" name="to" size="sm" label="To" />
+                        </div>
+                    </template>
+                @endif
+
+                <flux:button type="submit" icon="arrow-down-tray" variant="primary" class="shadow-sm font-semibold">
                     @if (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Director'))
-                        Export Full Workbook (Excel)
+                        Export Workbook (Excel)
                     @else
                         Export Fee Ledger (CSV)
                     @endif
                 </flux:button>
-            @endcan
-        </div>
+            </form>
+        @endcan
     </div>
 
     {{-- Role Scoped Partials --}}

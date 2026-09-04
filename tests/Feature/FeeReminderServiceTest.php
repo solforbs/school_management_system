@@ -54,7 +54,7 @@ test('it notifies by both email and sms when both features are enabled', functio
 
     $result = app(FeeReminderService::class)->sendForDefaulters(Fee::query());
 
-    expect($result)->toMatchArray(['parents_notified' => 1, 'emails_sent' => 1, 'sms_sent' => 1]);
+    expect($result)->toMatchArray(['parents_queued' => 1, 'emails_queued' => 1, 'sms_queued' => 1]);
     Notification::assertSentTo($parent, FeePaymentReminder::class);
 });
 
@@ -67,7 +67,7 @@ test('it skips sms without calling the sms service when the sms feature is disab
 
     $result = app(FeeReminderService::class)->sendForDefaulters(Fee::query());
 
-    expect($result)->toMatchArray(['parents_notified' => 1, 'emails_sent' => 1, 'sms_sent' => 0]);
+    expect($result)->toMatchArray(['parents_queued' => 1, 'emails_queued' => 1, 'sms_queued' => 0]);
     Notification::assertSentTo($parent, FeePaymentReminder::class);
 });
 
@@ -83,6 +83,6 @@ test('it skips email without notifying when the email_notifications feature is d
 
     $result = app(FeeReminderService::class)->sendForDefaulters(Fee::query());
 
-    expect($result)->toMatchArray(['parents_notified' => 1, 'emails_sent' => 0, 'sms_sent' => 1]);
+    expect($result)->toMatchArray(['parents_queued' => 1, 'emails_queued' => 0, 'sms_queued' => 1]);
     Notification::assertNotSentTo($parent, FeePaymentReminder::class);
 });

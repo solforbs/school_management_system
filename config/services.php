@@ -50,4 +50,11 @@ return [
         'executable' => env('TESSERACT_PATH'),
     ],
 
+    'notifications' => [
+        // Shared platform-wide cap on outbound email/SMS jobs (fee reminders,
+        // report cards) per minute, so a school with hundreds of students
+        // doesn't blast the mail server and SMS gateway all at once.
+        'rate_limit' => env('NOTIFICATION_RATE_LIMIT', 100),
+    ],
+
 ];

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Modules\Institution\Models\Institution;
 
 /**
@@ -19,10 +20,10 @@ use Modules\Institution\Models\Institution;
  * @property string $currency
  * @property string|null $channel
  * @property string $status
- * @property \Illuminate\Support\Carbon|null $paid_at
+ * @property Carbon|null $paid_at
  * @property array<string, mixed>|null $gateway_response
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read Institution|null $institution a setup fee taken before the school exists has none yet
  * @property-read Plan|null $plan
  * @property-read User|null $initiatedBy
