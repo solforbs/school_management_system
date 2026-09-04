@@ -406,11 +406,25 @@ class GitDeploy
     }
 
     /**
+     * Every git call names the working copy as a trusted directory.
+     *
+     * A deploy user is rarely the one that owns the checkout - PHP-FPM runs
+     * as www-data, the files belong to a deploy account - and modern git
+     * refuses to touch a repo it does not own ("detected dubious
+     * ownership") until the path is marked safe. Passing it per-command
+     * with `-c` fixes that for our calls without a global config change on
+     * the server.
+     *
      * @param  array<int, string>  $arguments
      */
     private function git(array $arguments)
     {
-        return $this->process(array_merge(['git'], $arguments));
+        $path = rtrim((string) config('deploy.path', base_path()), '/\\');
+
+        return $this->process(array_merge(
+            ['git', '-c', 'safe.directory='.$path, '-c', 'safe.directory=*'],
+            $arguments,
+        ));
     }
 
     /**
