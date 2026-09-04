@@ -26,15 +26,42 @@ new #[Title('Parent')] class extends Component
         $this->authorizeAccessTo($this->parent);
     }
 
+    /**
+     * Students not currently linked to any parent, plus this parent's own
+     * children - so an already-linked child still shows up (checked, badged
+     * "Currently Linked") rather than silently dropping off the list and
+     * being unlinked the moment the form is saved.
+     */
     #[Computed]
     public function availableStudents(): Collection
     {
         return $this->linkableStudentsQuery()->with(['student', 'institution'])->get();
     }
 
+    /**
+     * The children already linked to this parent - unchecking one of these
+     * on save is what unlinks it. Empty while creating, since there's no
+     * parent yet to be linked to anything.
+     */
+    #[Computed]
+    public function linkedStudentIds(): Collection
+    {
+        return $this->parent
+            ? StudentDetails::where('parent_id', $this->parent->id)->pluck('student_id')
+            : collect();
+    }
+
     private function linkableStudentsQuery()
     {
-        $query = StudentDetails::whereNull('parent_id');
+        $parentId = $this->parent?->id;
+
+        $query = StudentDetails::where(function ($q) use ($parentId) {
+            $q->whereNull('parent_id');
+
+            if ($parentId) {
+                $q->orWhere('parent_id', $parentId);
+            }
+        });
 
         if (! isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);

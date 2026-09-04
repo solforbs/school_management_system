@@ -60,6 +60,98 @@ test('an admin approves an institution', function () {
         ->and($institution->approved_by_id)->toBe($admin->id);
 });
 
+test('an admin disapproves a previously approved institution', function () {
+    $admin = makeAdminUser();
+    $director = User::factory()->create();
+
+    $institution = Institution::create([
+        'user_id' => $director->id,
+        'name' => 'Apex High',
+        'code' => 'APEX',
+        'type' => 'School',
+        'email' => 'contact@apex.edu',
+        'phone' => '+254700998877',
+        'is_approved' => true,
+        'approved_at' => now(),
+        'approved_by_id' => $admin->id,
+    ]);
+
+    $this->actingAs($admin)->post(route('institution.disapprove', $institution->id))
+        ->assertRedirect();
+
+    $institution->refresh();
+
+    expect($institution->is_approved)->toBeFalse()
+        ->and($institution->approved_at)->toBeNull()
+        ->and($institution->approved_by_id)->toBeNull();
+});
+
+test('a director is locked out of the dashboard once their institution is disapproved', function () {
+    $admin = makeAdminUser();
+    $director = User::factory()->create();
+    $director->assignRole('Director');
+
+    $institution = Institution::create([
+        'user_id' => $director->id,
+        'name' => 'Apex High',
+        'code' => 'APEX',
+        'type' => 'School',
+        'is_approved' => true,
+        'approved_at' => now(),
+        'approved_by_id' => $admin->id,
+    ]);
+
+    $director->update(['active_institution_id' => $institution->id]);
+
+    $this->actingAs($admin)->post(route('institution.disapprove', $institution->id))->assertRedirect();
+
+    $this->actingAs($director)
+        ->get(route('dashboard'))
+        ->assertRedirect(route('institution.show', $institution->id));
+});
+
+test('a non-admin cannot disapprove an institution', function () {
+    $director = User::factory()->create();
+    $director->assignRole('Director');
+
+    $institution = Institution::create([
+        'user_id' => $director->id,
+        'name' => 'Apex High',
+        'code' => 'APEX',
+        'type' => 'School',
+        'is_approved' => true,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($director)
+        ->post(route('institution.disapprove', $institution->id))
+        ->assertForbidden();
+
+    expect($institution->refresh()->is_approved)->toBeTrue();
+});
+
+test('an admin revokes approval from the institutions list', function () {
+    $admin = makeAdminUser();
+    $director = User::factory()->create();
+
+    $institution = Institution::create([
+        'user_id' => $director->id,
+        'name' => 'Apex High',
+        'code' => 'APEX',
+        'type' => 'School',
+        'is_approved' => true,
+        'approved_at' => now(),
+        'approved_by_id' => $admin->id,
+    ]);
+
+    Livewire::actingAs($admin)
+        ->test('institution::index')
+        ->call('disapprove', $institution->id)
+        ->assertHasNoErrors();
+
+    expect($institution->refresh()->is_approved)->toBeFalse();
+});
+
 test('a director switches active institution', function () {
     $director = User::factory()->create();
     $director->assignRole('Director');

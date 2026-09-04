@@ -37,18 +37,6 @@ parameters:
 			path: app/Helpers/helpers.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Payment\:\:\$institution\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/BillingController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Payment\:\:\$plan\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/BillingController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 2
@@ -57,12 +45,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Models\\Plan\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Plan\>\:\:\$is_active\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/BillingController.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: mixed$#'
-			identifier: match.unhandled
 			count: 1
 			path: app/Http/Controllers/BillingController.php
 
@@ -529,24 +511,6 @@ parameters:
 			path: app/Models/Devices.php
 
 		-
-			message: '#^Method App\\Models\\Payment\:\:initiatedBy\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Models/Payment.php
-
-		-
-			message: '#^Method App\\Models\\Payment\:\:institution\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Models/Payment.php
-
-		-
-			message: '#^Method App\\Models\\Payment\:\:plan\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: app/Models/Payment.php
-
-		-
 			message: '#^Method App\\Models\\Payment\:\:scopeUnclaimedSetupFee\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
 			identifier: missingType.generics
 			count: 1
@@ -865,57 +829,9 @@ parameters:
 			path: app/Services/AnalyticsExportService.php
 
 		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$city\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$county\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$is_active\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$is_approved\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/AnalyticsExportService.php
-
-		-
 			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$owner\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Services/AnalyticsExportService.php
 
 		-
@@ -1005,7 +921,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 4
+			count: 3
 			path: app/Services/AnalyticsExportService.php
 
 		-
@@ -1029,7 +945,7 @@ parameters:
 		-
 			message: '#^Return type of call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: method.unresolvableReturnType
-			count: 4
+			count: 3
 			path: app/Services/AnalyticsExportService.php
 
 		-

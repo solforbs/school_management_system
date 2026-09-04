@@ -121,6 +121,26 @@ class InstitutionController extends Controller
     }
 
     /**
+     * Revoke a previously-approved institution, locking its Director back
+     * out of the dashboard (EnsureInstitutionApproved) until an Admin
+     * approves it again. For a school that turns out not to have been
+     * vetted properly, or needs to be paused - not a substitute for
+     * destroy(), which is permanent and Admin-only for a different reason.
+     */
+    public function disapprove(Institution $institution)
+    {
+        abort_unless(isAdmin(), 403);
+
+        $institution->update([
+            'is_approved' => false,
+            'approved_at' => null,
+            'approved_by_id' => null,
+        ]);
+
+        return back()->with('success', 'Institution "'.$institution->name.'" is no longer approved. Its Director will be locked out of the dashboard until it is approved again.');
+    }
+
+    /**
      * Set which of a Director's institutions the rest of the system
      * (dashboard, billing, modules) runs as for them. Remembered across
      * logins until they choose a different one.

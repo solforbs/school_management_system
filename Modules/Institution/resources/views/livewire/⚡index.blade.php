@@ -61,6 +61,36 @@ new #[Title('Institutions')] class extends Component
         Flux::toast(text: 'Institution "'.$institution->name.'" has been approved.', variant: 'success');
     }
 
+    /** The institution the disapprove dialog is confirming. */
+    public ?int $disapprovingId = null;
+
+    /**
+     * Revoke approval - locks the Director back out of the dashboard
+     * (EnsureInstitutionApproved) until an Admin approves it again.
+     */
+    public function disapprove(?int $id = null): void
+    {
+        abort_unless(isAdmin(), 403);
+
+        $id ??= $this->disapprovingId;
+        abort_unless($id, 404);
+
+        $this->disapprovingId = null;
+        Flux::modal('confirm-disapprove-institution')->close();
+
+        $institution = Institution::findOrFail($id);
+
+        $institution->update([
+            'is_approved' => false,
+            'approved_at' => null,
+            'approved_by_id' => null,
+        ]);
+
+        unset($this->institutions);
+
+        Flux::toast(text: 'Institution "'.$institution->name.'" is no longer approved.', variant: 'success');
+    }
+
     public function choose(int $id): void
     {
         $institution = Institution::findOrFail($id);
@@ -466,9 +496,28 @@ new #[Title('Institutions')] class extends Component
                                 </td>
 
                                 <td class="py-4 px-5">
-                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold {{ $institute->is_approved ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200' }}">
-                                        {{ $institute->is_approved ? 'Approved' : 'Pending' }}
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold {{ $institute->is_approved ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200' }}">
+                                            {{ $institute->is_approved ? 'Approved' : 'Pending' }}
+                                        </span>
+                                        @if (isAdmin())
+                                            @if ($institute->is_approved)
+                                                <flux:modal.trigger name="confirm-disapprove-institution">
+                                                    <flux:button type="button" size="sm" variant="ghost"
+                                                        wire:click="$set('disapprovingId', {{ $institute->id }})"
+                                                        class="text-[11px] text-rose-600 hover:text-rose-700">
+                                                        Revoke
+                                                    </flux:button>
+                                                </flux:modal.trigger>
+                                            @else
+                                                <flux:button type="button" size="sm" variant="ghost"
+                                                    wire:click="approve({{ $institute->id }})"
+                                                    class="text-[11px] text-emerald-600 hover:text-emerald-700">
+                                                    Approve
+                                                </flux:button>
+                                            @endif
+                                        @endif
+                                    </div>
                                 </td>
 
                                 <td class="py-4 px-5">
@@ -502,4 +551,20 @@ new #[Title('Institutions')] class extends Component
             </div>
         </div>
 
+        @if (isAdmin())
+            <flux:modal name="confirm-disapprove-institution" class="max-w-md" wire:close="$set('disapprovingId', null)">
+                <div class="space-y-5">
+                    <div>
+                        <flux:heading size="lg">Revoke this institution's approval?</flux:heading>
+                        <flux:subheading>Its Director is locked out of the dashboard immediately, until an Admin approves it again.</flux:subheading>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close>
+                            <flux:button type="button" variant="filled">Cancel</flux:button>
+                        </flux:modal.close>
+                        <flux:button type="button" variant="danger" wire:click="disapprove">Revoke Approval</flux:button>
+                    </div>
+                </div>
+            </flux:modal>
+        @endif
     </div>

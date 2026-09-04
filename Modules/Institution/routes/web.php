@@ -20,5 +20,6 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
         ->only(['store', 'show', 'update', 'destroy']);
 
     Route::post('institutions/{institution}/approve', [InstitutionController::class, 'approve'])->name('institution.approve');
+    Route::post('institutions/{institution}/disapprove', [InstitutionController::class, 'disapprove'])->name('institution.disapprove');
     Route::post('institutions/{institution}/choose', [InstitutionController::class, 'choose'])->name('institution.choose');
 });

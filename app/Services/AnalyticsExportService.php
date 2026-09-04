@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ContactMessage;
 use App\Models\Devices;
+use App\Models\Payment;
 use App\Models\User;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Database\Eloquent\Builder;
@@ -55,6 +56,7 @@ class AnalyticsExportService
         $this->addStudentsSheet($spreadsheet, StudentDetails::with(['student', 'institution'])->get(), showInstitution: true);
         $this->addParentsSheet($spreadsheet, User::role('Parent')->with('parent')->get(), showInstitution: false);
         $this->addFeesSheet($spreadsheet, Fee::with(['student', 'institution'])->latest()->get(), showInstitution: true);
+        $this->addPaymentsSheet($spreadsheet, Payment::with(['institution', 'plan'])->latest('created_at')->get());
         $this->addDevicesSheet($spreadsheet, Devices::with(['zktecoDevice', 'institution'])->get(), showInstitution: true);
         $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::query());
         $this->addMessagesSheet($spreadsheet, ContactMessage::latest()->get());
@@ -243,6 +245,30 @@ class AnalyticsExportService
      * anyway. Grouped in PHP for the same SQLite/MySQL portability reason as
      * AnalyticsService's trend helpers.
      */
+    /**
+     * @param  Collection<int, Payment>  $payments
+     */
+    private function addPaymentsSheet(Spreadsheet $spreadsheet, Collection $payments): void
+    {
+        $this->addSheet(
+            $spreadsheet,
+            'Payments',
+            ['Institution', 'Purpose', 'Plan', 'Amount', 'Currency', 'Channel', 'Status', 'Reference', 'Paid At', 'Created'],
+            $payments->map(fn (Payment $payment) => [
+                $payment->institution === null ? 'Unclaimed' : $payment->institution->name,
+                $payment->isSetupFee() ? 'Setup fee' : 'Subscription',
+                $payment->plan?->name,
+                (float) $payment->amount,
+                $payment->currency,
+                $payment->channel,
+                ucfirst($payment->status),
+                $payment->reference,
+                $payment->paid_at?->format('Y-m-d H:i'),
+                $payment->created_at?->format('Y-m-d H:i'),
+            ]),
+        );
+    }
+
     private function addAttendanceSheet(Spreadsheet $spreadsheet, Builder $query): void
     {
         $start = now()->subDays(29)->startOfDay();

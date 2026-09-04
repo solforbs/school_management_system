@@ -202,9 +202,11 @@ class BillingController extends Controller
         if (! $hadActiveSubscription) {
             $institution->subscription_started_at = $now;
             $institution->subscription_expires_at = match ($plan->billing_cycle) {
+                'termly' => $now->copy()->addMonths(4),
                 'monthly' => $now->copy()->addMonth(),
                 'yearly' => $now->copy()->addYear(),
                 'lifetime' => null,
+                default => $now->copy()->addMonth(),
             };
         } elseif (! $institution->subscription_started_at) {
             // An institution whose plan was assigned manually before this

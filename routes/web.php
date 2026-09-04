@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
         ->only(['index', 'create', 'store', 'destroy']);
     Route::resource('admin/modules', ModuleController::class)->names('admin.modules');
     Route::resource('admin/plans', PlanController::class)->names('admin.plans')->except(['show']);
+    Route::livewire('admin/payments', 'pages::admin.payments')->name('admin.payments.index');
     Route::livewire('admin/settings', 'pages::admin.site-settings')->name('admin.settings.edit');
     Route::resource('messages', ContactMessageController::class)->names('messages');
     Route::get('billing', [BillingController::class, 'show'])->name('billing.show');

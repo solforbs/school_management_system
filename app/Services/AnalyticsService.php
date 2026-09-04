@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Controllers\Concerns\Sortable;
 use App\Models\ContactMessage;
 use App\Models\Devices;
+use App\Models\Payment;
 use App\Models\User;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Database\Eloquent\Builder;
@@ -99,7 +100,79 @@ class AnalyticsService
                 defaultDirection: 'desc',
             )->take(5)->get(),
             'recent_contact_messages' => ContactMessage::latest()->take(5)->get(),
+        ] + $this->revenueStats();
+    }
+
+    /**
+     * What institutions have actually paid the platform: onboarding setup
+     * fees and subscription payments, settled and outstanding alike. Feeds
+     * both the Admin dashboard's revenue tiles and the Payments page.
+     *
+     * @return array<string, mixed>
+     */
+    private function revenueStats(): array
+    {
+        $successful = Payment::where('status', 'successful');
+
+        $totals = (clone $successful)->selectRaw(
+            'SUM(amount) as total,
+             SUM(CASE WHEN purpose = ? THEN amount ELSE 0 END) as setup,
+             SUM(CASE WHEN purpose = ? THEN amount ELSE 0 END) as subscription',
+            [Payment::PURPOSE_SETUP, Payment::PURPOSE_SUBSCRIPTION],
+        )->first();
+
+        $lastMonth = now()->subMonthNoOverflow();
+
+        return [
+            'revenue_total' => (float) ($totals->total ?? 0),
+            'revenue_setup' => (float) ($totals->setup ?? 0),
+            'revenue_subscription' => (float) ($totals->subscription ?? 0),
+            'revenue_this_month' => (float) (clone $successful)
+                ->whereYear('paid_at', now()->year)
+                ->whereMonth('paid_at', now()->month)
+                ->sum('amount'),
+            'revenue_last_month' => (float) (clone $successful)
+                ->whereYear('paid_at', $lastMonth->year)
+                ->whereMonth('paid_at', $lastMonth->month)
+                ->sum('amount'),
+            'revenue_trend' => $this->monthlyAmountTrend(Payment::where('status', 'successful')),
+            'payments_pending_count' => Payment::where('status', 'pending')->count(),
+            'payments_pending_amount' => (float) Payment::where('status', 'pending')->sum('amount'),
+            'payments_failed_count' => Payment::whereIn('status', ['failed', 'abandoned'])
+                ->where('created_at', '>=', now()->subDays(30))
+                ->count(),
+            'recent_payments' => Payment::with(['institution', 'plan'])
+                ->latest('created_at')
+                ->take(6)
+                ->get(),
         ];
+    }
+
+    /**
+     * Month-by-month settled-payment totals for the last N months (oldest
+     * first), including months with no activity - grouped by paid_at, the
+     * only date a settled payment is guaranteed to carry. Grouped in PHP
+     * for the same reason monthlyCounts() is: identical behaviour across
+     * this app's MySQL and test-suite SQLite connections.
+     *
+     * @param  Builder<Payment>  $query
+     * @return array<string, float>
+     */
+    private function monthlyAmountTrend(Builder $query, int $months = 6): array
+    {
+        $start = now()->subMonths($months - 1)->startOfMonth();
+
+        $grouped = $query->where('paid_at', '>=', $start)
+            ->get(['paid_at', 'amount'])
+            ->groupBy(fn (Payment $payment) => $payment->paid_at?->format('Y-m') ?? '');
+
+        $trend = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $trend[$month->format('M Y')] = (float) $grouped->get($month->format('Y-m'), collect())->sum('amount');
+        }
+
+        return $trend;
     }
 
     /**

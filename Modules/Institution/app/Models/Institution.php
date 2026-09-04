@@ -25,7 +25,38 @@ use Modules\Timetable\Models\TimetableEntry;
 
 /**
  * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $code
+ * @property string $type
+ * @property string|null $email
+ * @property string|null $phone
+ * @property string|null $alternate_phone
+ * @property string|null $website
+ * @property string $country
+ * @property string|null $county
+ * @property string|null $city
+ * @property string|null $postal_address
+ * @property string|null $physical_address
  * @property string|null $logo
+ * @property string|null $favicon
+ * @property string|null $principal_name
+ * @property string|null $principal_phone
+ * @property string|null $education_level
+ * @property int $min_electives
+ * @property int|null $max_electives
+ * @property string $timezone
+ * @property bool $is_active
+ * @property string $status
+ * @property bool $is_approved
+ * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property int|null $approved_by_id
+ * @property string|null $notes
+ * @property int|null $subscription_plan
+ * @property \Carbon\CarbonImmutable|null $subscription_expires_at
+ * @property \Carbon\CarbonImmutable|null $subscription_started_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  */
 class Institution extends Model
 {

@@ -50,6 +50,27 @@
                         Edit Details
                     </flux:button>
                 @endif
+                @if (isAdmin())
+                    @if ($institution->is_approved)
+                        <x-confirm-form
+                            :action="route('institution.disapprove', $institution->id)"
+                            method="POST"
+                            title="Revoke this institution's approval?"
+                            message="Its Director is locked out of the dashboard immediately, until an Admin approves it again."
+                            confirm="Revoke Approval"
+                            label="Revoke Approval"
+                            icon="x-circle"
+                            variant="subtle"
+                            trigger-class="text-rose-600 hover:bg-rose-50" />
+                    @else
+                        <form action="{{ route('institution.approve', $institution->id) }}" method="POST">
+                            @csrf
+                            <flux:button type="submit" icon="check-circle" variant="primary" color="emerald">
+                                Approve Institution
+                            </flux:button>
+                        </form>
+                    @endif
+                @endif
             </div>
         </div>
 

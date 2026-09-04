@@ -103,6 +103,93 @@
         </flux:card>
     </div>
 
+    {{-- Platform Revenue --}}
+    <div class="mt-6 flex items-center justify-between">
+        <div>
+            <flux:heading size="lg" class="font-bold">Platform Revenue</flux:heading>
+            <flux:text class="text-xs text-zinc-400">Onboarding setup fees and subscription payments, across every institution</flux:text>
+        </div>
+        <flux:button href="{{ route('admin.payments.index') }}" wire:navigate.hover size="sm" variant="ghost" class="text-xs font-semibold">
+            View all payments
+        </flux:button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-3">
+        <x-kpi-card title="Total Revenue" icon="banknotes" color="emerald"
+            count="KES {{ $currency($stats['revenue_total']) }}" href="{{ route('admin.payments.index') }}">
+            @php($delta = $stats['revenue_last_month'] > 0 ? round((($stats['revenue_this_month'] - $stats['revenue_last_month']) / $stats['revenue_last_month']) * 100) : null)
+            <div class="flex items-center flex-wrap gap-1.5 mt-0.5">
+                <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    KES {{ $currency($stats['revenue_this_month']) }} this month
+                </span>
+                @if ($delta !== null)
+                    <span class="{{ $delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }} text-xs font-bold">
+                        {{ $delta >= 0 ? '&uarr;' : '&darr;' }} {{ abs($delta) }}%
+                    </span>
+                @endif
+            </div>
+        </x-kpi-card>
+
+        <x-kpi-card title="Onboarding Fees" icon="rocket-launch" color="indigo"
+            count="KES {{ $currency($stats['revenue_setup']) }}" href="{{ route('admin.payments.index', ['purpose' => 'setup']) }}"
+            subtext="one-off setup fees, all time" />
+
+        <x-kpi-card title="Subscriptions" icon="arrow-path" color="sky"
+            count="KES {{ $currency($stats['revenue_subscription']) }}" href="{{ route('admin.payments.index', ['purpose' => 'subscription']) }}"
+            subtext="plan renewals &amp; upgrades" />
+
+        <x-kpi-card title="Needs Follow-up" icon="exclamation-triangle" color="amber"
+            :count="$stats['payments_pending_count']" href="{{ route('admin.payments.index', ['status' => 'pending']) }}">
+            <span class="text-xs font-semibold text-rose-600 block">{{ $stats['payments_failed_count'] }} failed in 30 days</span>
+        </x-kpi-card>
+    </div>
+
+    <div class="grid grid-cols-1 gap-5 mt-5 lg:grid-cols-3">
+        <flux:card class="lg:col-span-2 space-y-3">
+            <flux:heading size="lg" class="font-bold">Revenue, last 6 months</flux:heading>
+            @php
+                $revenueSeries = [['name' => 'Revenue', 'data' => array_values($stats['revenue_trend'])]];
+                $revenueLabels = array_keys($stats['revenue_trend']);
+            @endphp
+            <x-charts.apex type="area" :series="$revenueSeries" :labels="$revenueLabels" :colors="['#059669']" :height="220" currency-prefix="KES " />
+        </flux:card>
+
+        <flux:card class="space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                <flux:heading size="lg" class="font-bold">Recent Payments</flux:heading>
+                <flux:button href="{{ route('admin.payments.index') }}" wire:navigate.hover size="sm" variant="ghost" class="text-xs font-semibold">View all</flux:button>
+            </div>
+            <div class="space-y-2.5">
+                @forelse ($stats['recent_payments'] as $payment)
+                    <div class="rounded-xl border border-zinc-100 dark:border-zinc-800 p-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-bold text-xs text-zinc-900 dark:text-white truncate">
+                                {{ $payment->institution?->name ?? 'Unclaimed' }}
+                            </span>
+                            <span class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300 shrink-0">
+                                KES {{ $currency($payment->amount) }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2 mt-1">
+                            <span class="text-[11px] text-zinc-400">
+                                {{ $payment->isSetupFee() ? 'Setup fee' : 'Subscription' }}
+                                &bull; {{ $payment->created_at->diffForHumans() }}
+                            </span>
+                            <flux:badge size="sm" :color="match ($payment->status) {
+                                'successful' => 'emerald',
+                                'pending' => 'amber',
+                                'failed' => 'rose',
+                                default => 'zinc',
+                            }">{{ ucfirst($payment->status) }}</flux:badge>
+                        </div>
+                    </div>
+                @empty
+                    <flux:text class="text-xs text-zinc-400 text-center py-4">No payments recorded yet.</flux:text>
+                @endforelse
+            </div>
+        </flux:card>
+    </div>
+
     {{-- Distributions --}}
     <div class="grid grid-cols-1 gap-5 mt-6 lg:grid-cols-3">
         <flux:card class="space-y-3">
