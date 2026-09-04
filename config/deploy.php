@@ -27,6 +27,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Access Token
+    |--------------------------------------------------------------------------
+    |
+    | A private repo fetched over HTTPS needs credentials, and the PHP-FPM
+    | user has no terminal to be asked for them - git fails with "could not
+    | read Username". Set a token here (a GitHub fine-grained PAT with
+    | Contents: read, or a classic token with repo scope) and it is passed
+    | to `git fetch` as an auth header, the same way CI does it. Leave blank
+    | for a public repo or an SSH remote.
+    |
+    */
+    'token' => env('DEPLOY_TOKEN'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Repository Path
     |--------------------------------------------------------------------------
     |

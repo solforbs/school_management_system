@@ -81,15 +81,25 @@ class GitDeploy
             );
         }
 
-        $fetch = $this->git(['fetch', $remote, $branch]);
+        $fetch = $this->git([...$this->authArgs($remote), 'fetch', $remote, $branch]);
 
         if (! $fetch->successful()) {
-            $stderr = trim($fetch->errorOutput());
+            $stderr = $this->scrubToken(trim($fetch->errorOutput()));
 
             // "cannot open '.git/FETCH_HEAD': Permission denied" is a local
             // write-permission problem wearing a network error's clothes.
             if ($this->looksLikePermissionProblem($stderr)) {
                 return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            if (str_contains(strtolower($stderr), 'could not read username')
+                || str_contains(strtolower($stderr), 'authentication failed')
+                || str_contains(strtolower($stderr), 'terminal prompts disabled')) {
+                return DeployResult::failed(
+                    'The remote needs credentials the server cannot supply. Set DEPLOY_TOKEN in the '
+                    .'environment to a GitHub token with read access to this repo, or switch the remote '
+                    .'to SSH. Original error: '.$stderr
+                );
             }
 
             return DeployResult::failed('Could not reach the remote: '.$stderr);
@@ -277,6 +287,55 @@ class GitDeploy
     private function subject(string $commit): string
     {
         return trim($this->git(['log', '-1', '--pretty=%s', $commit])->output());
+    }
+
+    /**
+     * `-c` overrides that carry an auth header on the fetch, for a private
+     * repo on an HTTPS remote. Nothing here is taken from the request - the
+     * token is server config - and it is scoped to the remote's own host so
+     * it never leaks to a redirect or a submodule elsewhere.
+     *
+     * @return list<string>
+     */
+    private function authArgs(string $remote): array
+    {
+        $token = trim((string) config('deploy.token', ''));
+
+        if ($token === '') {
+            return [];
+        }
+
+        $url = trim($this->git(['remote', 'get-url', $remote])->output());
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! is_string($host) || $host === '' || ! str_starts_with($url, 'https://')) {
+            return [];
+        }
+
+        // The scheme GitHub (and Azure DevOps CI) uses: basic auth with a
+        // throwaway username and the token as the password.
+        $header = 'AUTHORIZATION: basic '.base64_encode('x-access-token:'.$token);
+
+        return ['-c', "http.https://{$host}/.extraheader={$header}"];
+    }
+
+    /**
+     * Keep a configured token out of any message that reaches a screen or
+     * a log, in case git ever echoes the header back.
+     */
+    private function scrubToken(string $text): string
+    {
+        $token = trim((string) config('deploy.token', ''));
+
+        if ($token === '') {
+            return $text;
+        }
+
+        return str_replace(
+            [$token, base64_encode('x-access-token:'.$token)],
+            '***',
+            $text,
+        );
     }
 
     /**
@@ -491,6 +550,9 @@ class GitDeploy
     {
         return Process::path((string) config('deploy.path', base_path()))
             ->timeout((int) config('deploy.timeout', 120))
+            // No terminal is attached, so a credential prompt would hang
+            // until the timeout. Fail fast instead.
+            ->env(['GIT_TERMINAL_PROMPT' => '0'])
             ->run($command);
     }
 }

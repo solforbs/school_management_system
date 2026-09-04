@@ -122,6 +122,52 @@ it('reports a remote it cannot reach without changing anything', function () {
     Process::assertDidntRun(commandContains('checkout'));
 });
 
+it('explains a missing credential instead of the generic network error', function () {
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch*' => Process::result(
+            output: '',
+            errorOutput: "fatal: could not read Username for 'https://github.com': No such device or address",
+            exitCode: 1,
+        ),
+    ]);
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('failed')
+        ->and($result->message)->toContain('DEPLOY_TOKEN')
+        ->and($result->message)->not->toContain('Could not reach the remote');
+});
+
+it('passes a configured token to the fetch as an auth header, scoped to the remote host', function () {
+    config()->set('deploy.token', 'ghp_secrettoken');
+
+    Process::fake([
+        '*remote get-url*' => Process::result('https://github.com/solforbs/school_management_system.git'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch*' => Process::result(''),
+        '*rev-parse*origin*' => Process::result('abc123'),
+        '*log*' => Process::result('a commit'),
+        '*' => Process::result(''),
+    ]);
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('up_to_date');
+
+    Process::assertRan(function ($process) {
+        $command = is_array($process->command) ? implode(' ', $process->command) : $process->command;
+
+        return str_contains($command, 'fetch')
+            && str_contains($command, 'http.https://github.com/.extraheader=AUTHORIZATION: basic ')
+            && str_contains($command, base64_encode('x-access-token:ghp_secrettoken'))
+            // The raw token itself is never on the command line.
+            && ! str_contains($command, 'ghp_secrettoken:');
+    });
+});
+
 it('names the permission problem when the web user cannot write .git', function () {
     Process::fake([
         '*rev-parse*HEAD*' => Process::result('abc123'),
