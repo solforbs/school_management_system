@@ -37,6 +37,12 @@ return [
     | to `git fetch` as an auth header, the same way CI does it. Leave blank
     | for a public repo or an SSH remote.
     |
+    | The web user (PHP-FPM, usually www-data) must actually see it. After
+    | adding it to .env run `php artisan config:clear` - or, if you keep
+    | config cached, set it as a real process env var instead (an FPM pool
+    | `env[DEPLOY_TOKEN] = ...` line, then reload php-fpm), which GitDeploy
+    | also reads directly.
+    |
     */
     'token' => env('DEPLOY_TOKEN'),
 
