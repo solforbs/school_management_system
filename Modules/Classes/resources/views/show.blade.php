@@ -47,15 +47,12 @@
                     </flux:button>
                 @endcan
                 @can('delete classes')
-                    <form action="{{ route('classes.destroy', $schoolClass->id) }}" method="POST"
-                        onsubmit="return confirm('Remove {{ $schoolClass->name }} permanently?');" class="inline">
-                        @csrf
-                        @method('DELETE')
-                        <flux:button type="submit" icon="trash" variant="subtle"
-                            class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
-                            Delete
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('classes.destroy', $schoolClass->id)"
+                        title="Remove {{ $schoolClass->name }}?"
+                        message="This permanently removes the class. Enrolled students are not deleted, but lose their class assignment."
+                        confirm="Remove Class"
+                        label="Delete" />
                 @endcan
             </div>
         </div>

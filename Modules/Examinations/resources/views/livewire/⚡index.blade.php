@@ -1,6 +1,7 @@
 <?php
 
 use Carbon\Carbon;
+use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
@@ -30,26 +31,41 @@ new #[Title('Examinations')] class extends Component {
     #[Url(as: 'type')]
     public string $examType = '';
 
+    /** The sitting the delete dialog is currently confirming. */
+    public ?int $deletingId = null;
+
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view examination') || auth()->user()->can('view examinations'), 403);
     }
 
+    #[Computed]
+    public function deletingExamination(): ?Examination
+    {
+        return $this->deletingId
+            ? Examination::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))->find($this->deletingId)
+            : null;
+    }
+
     /**
-     * Delete a sitting from the listing, in place. Its results go with it
+     * Delete the sitting the dialog is confirming. Its results go with it
      * (the foreign key cascades), so this is gated on the delete
-     * permission and confirmed in the UI.
+     * permission and confirmed with a dialog.
      */
-    public function delete(int $id): void
+    public function delete(): void
     {
         abort_unless(auth()->user()->can('delete examination'), 403);
 
-        $examination = Examination::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
-            ->findOrFail($id);
+        $examination = $this->deletingExamination;
 
-        $examination->delete();
+        if ($examination) {
+            $examination->delete();
+            \Flux\Flux::toast(text: 'Examination deleted.', variant: 'success');
+        }
 
-        \Flux\Flux::toast(text: 'Examination deleted.', variant: 'success');
+        $this->deletingId = null;
+        unset($this->deletingExamination);
+        Flux::modal('delete-examination')->close();
     }
 
     #[Computed]
@@ -311,11 +327,12 @@ new #[Title('Examinations')] class extends Component {
                                             tooltip="Edit Exam" />
                                     @endcan
                                     @can('delete examination')
-                                        <flux:button wire:click="delete({{ $examination->id }})"
-                                            wire:confirm="Delete this examination? Any results recorded against it will be removed too."
-                                            icon="trash" size="sm" variant="subtle"
-                                            class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                                            tooltip="Delete Exam" />
+                                        <flux:modal.trigger name="delete-examination">
+                                            <flux:button type="button" wire:click="$set('deletingId', {{ $examination->id }})"
+                                                icon="trash" size="sm" variant="subtle"
+                                                class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                                                tooltip="Delete Exam" />
+                                        </flux:modal.trigger>
                                     @endcan
                                 </div>
                             </flux:table.cell>
@@ -345,4 +362,26 @@ new #[Title('Examinations')] class extends Component {
             </div>
         @endif
     </div>
+
+    {{-- Shared delete confirmation --}}
+    <flux:modal name="delete-examination" class="max-w-md" wire:close="$set('deletingId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Delete this examination?</flux:heading>
+                <flux:subheading>
+                    <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $this->deletingExamination?->title ?? 'This sitting' }}</span>
+                    and every result recorded against it will be permanently removed.
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" wire:click="delete">
+                    <span wire:loading.remove wire:target="delete">Delete Examination</span>
+                    <span wire:loading wire:target="delete">Deleting…</span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

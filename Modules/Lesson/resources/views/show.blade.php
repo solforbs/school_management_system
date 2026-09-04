@@ -67,15 +67,13 @@
                     </a>
                 @endcan
                 @can('delete lesson')
-                    <form action="{{ route('lesson.destroy', $lesson->id) }}" method="POST"
-                        onsubmit="return confirm('Remove this lesson record?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                            class="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700">
-                            Delete
-                        </button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('lesson.destroy', $lesson->id)"
+                        title="Remove this lesson record?"
+                        message="This permanently deletes the lesson entry."
+                        confirm="Delete Lesson"
+                        label="Delete"
+                        size="base" />
                 @endcan
             </div>
         </div>

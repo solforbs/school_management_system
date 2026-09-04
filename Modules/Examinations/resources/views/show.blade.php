@@ -64,15 +64,14 @@
                 @endcan
 
                 @can('delete examination')
-                    <form action="{{ route('examinations.destroy', $examination->id) }}" method="POST"
-                        onsubmit="return confirm('Delete this examination?');" class="inline">
-                        @csrf
-                        @method('DELETE')
-                        <flux:button type="submit" icon="trash" variant="subtle"
-                            class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
-                            Delete
-                        </flux:button>
-                    </form>
+                    <x-confirm-form
+                        :action="route('examinations.destroy', $examination->id)"
+                        title="Delete this examination?"
+                        message="The sitting and every result recorded against it will be permanently removed."
+                        confirm="Delete Examination"
+                        label="Delete"
+                        size="base"
+                    />
                 @endcan
             </div>
         </div>
