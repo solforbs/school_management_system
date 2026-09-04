@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -111,15 +114,105 @@ class GitDeploy
         }
 
         $now = trim($this->git(['rev-parse', 'HEAD'])->output());
+        $commits = $this->countCommits($previous, $now);
 
-        Log::info('Deploy pull applied', ['from' => $previous, 'to' => $now]);
+        // What the release actually touched, so migrations only run when a
+        // migration file moved and seeders are only ever surfaced, never run.
+        $changed = $this->changedFiles($previous, $now);
+        $pendingSeeders = $this->seederClassesAmong($changed);
+
+        $migrations = null;
+
+        if (config('deploy.run_migrations', true) && $this->touchesMigrations($changed)) {
+            $ran = $this->runMigrations();
+
+            if (! $ran['ok']) {
+                Log::error('Deploy migration failed', ['from' => $previous, 'to' => $now, 'output' => $ran['summary']]);
+
+                // The code is in place and stays in place: resetting it now
+                // would leave a half-applied schema against the old code,
+                // which is worse than telling someone to look.
+                return DeployResult::needsAttention(
+                    $now,
+                    $this->subject($now),
+                    $commits,
+                    'Code updated, but a migration failed - the server needs attention: '.$ran['summary'],
+                    $pendingSeeders,
+                );
+            }
+
+            $migrations = $ran['summary'];
+        }
+
+        Log::info('Deploy pull applied', ['from' => $previous, 'to' => $now, 'migrations' => $migrations]);
 
         return DeployResult::deployed(
             $now,
             $this->subject($now),
-            $this->countCommits($previous, $now),
+            $commits,
             $lockChanged,
+            $migrations,
+            $pendingSeeders,
         );
+    }
+
+    /**
+     * Run any seeder classes a release added, on explicit request. Every
+     * class is re-checked here against what actually lives in the seeder
+     * directories - the list from the deploy is a convenience, not a
+     * trusted input.
+     *
+     * @param  list<string>  $classes
+     */
+    public function runSeeders(array $classes): DeployResult
+    {
+        if (! config('deploy.enabled', false)) {
+            return DeployResult::refused('Pulling from the dashboard is switched off.');
+        }
+
+        $known = $this->allSeederClasses();
+        $requested = array_values(array_unique($classes));
+        $unknown = array_diff($requested, $known);
+
+        if ($unknown !== []) {
+            return DeployResult::refused('Not a seeder in this project: '.implode(', ', $unknown));
+        }
+
+        if ($requested === []) {
+            return DeployResult::refused('No seeders were selected.');
+        }
+
+        $lock = Cache::lock(self::LOCK_KEY, 600);
+
+        if (! $lock->get()) {
+            return DeployResult::refused('A deploy is already running. Give it a moment.');
+        }
+
+        try {
+            $ran = [];
+
+            foreach ($requested as $class) {
+                try {
+                    $code = Artisan::call('db:seed', ['--class' => $class, '--force' => true]);
+                } catch (Throwable $e) {
+                    Log::error('Deploy seeder crashed', ['class' => $class, 'error' => $e->getMessage()]);
+
+                    return DeployResult::failed("Seeder {$class} failed: ".$e->getMessage().'. '.count($ran).' of '.count($requested).' ran.');
+                }
+
+                if ($code !== 0) {
+                    return DeployResult::failed("Seeder {$class} exited {$code}. ".count($ran).' of '.count($requested).' ran.');
+                }
+
+                $ran[] = $class;
+            }
+
+            Log::info('Deploy seeders run', ['classes' => $ran]);
+
+            return DeployResult::seeded($ran);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -165,6 +258,144 @@ class GitDeploy
     private function subject(string $commit): string
     {
         return trim($this->git(['log', '-1', '--pretty=%s', $commit])->output());
+    }
+
+    /**
+     * The repo-relative paths a release touched, in either direction.
+     *
+     * @return list<string>
+     */
+    private function changedFiles(string $from, string $to): array
+    {
+        $diff = $this->git(['diff', '--name-only', $from, $to]);
+
+        if (! $diff->successful()) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', preg_split('/\R/', $diff->output()) ?: [])));
+    }
+
+    /**
+     * @param  list<string>  $files
+     */
+    private function touchesMigrations(array $files): bool
+    {
+        foreach ($files as $file) {
+            if (preg_match('#(^|/)database/migrations/[^/]+\.php$#', $file)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Run outstanding migrations in-process. Shelling out to `artisan` is
+     * unreliable here: under PHP-FPM PHP_BINARY is the FPM binary, not the
+     * CLI one.
+     *
+     * @return array{ok: bool, summary: string}
+     */
+    private function runMigrations(): array
+    {
+        try {
+            $code = Artisan::call('migrate', ['--force' => true]);
+        } catch (Throwable $e) {
+            return ['ok' => false, 'summary' => $e->getMessage()];
+        }
+
+        $output = trim(Artisan::output());
+        $ran = preg_match_all('/^\s*(Migrated|Migrating):/mi', $output);
+
+        return [
+            'ok' => $code === 0,
+            'summary' => $code === 0
+                ? ($ran > 0 ? $ran.' migration'.($ran === 1 ? '' : 's').' run.' : 'No new migrations.')
+                : (Str::limit($output, 500) ?: "migrate exited {$code}."),
+        ];
+    }
+
+    /**
+     * The seeder classes a release added or changed - resolved to their
+     * fully-qualified names, never run.
+     *
+     * @param  list<string>  $files
+     * @return list<string>
+     */
+    private function seederClassesAmong(array $files): array
+    {
+        $classes = [];
+
+        foreach ($files as $file) {
+            if (! preg_match('#(^|/)database/seeders/[^/]+\.php$#', $file)) {
+                continue;
+            }
+
+            $class = $this->resolveSeederClass($this->repoPath($file));
+
+            if ($class !== null) {
+                $classes[$class] = true;
+            }
+        }
+
+        return array_keys($classes);
+    }
+
+    /**
+     * The fully-qualified class name declared in a PHP file, when it is a
+     * concrete seeder that still exists on disk.
+     */
+    private function resolveSeederClass(string $path): ?string
+    {
+        if (! File::exists($path)) {
+            return null;
+        }
+
+        $source = File::get($path);
+
+        if (! preg_match('/^\s*namespace\s+([^;]+);/m', $source, $ns)
+            || ! preg_match('/^\s*(?:final\s+|abstract\s+)?class\s+(\w+)/m', $source, $cls)) {
+            return null;
+        }
+
+        $class = trim($ns[1]).'\\'.$cls[1];
+
+        return class_exists($class) && is_subclass_of($class, Seeder::class) && ! (new \ReflectionClass($class))->isAbstract()
+            ? $class
+            : null;
+    }
+
+    /**
+     * Every seeder class under the configured seeder directories, so a
+     * request to run one can be checked against real files.
+     *
+     * @return list<string>
+     */
+    private function allSeederClasses(): array
+    {
+        /** @var list<string> $globs */
+        $globs = (array) config('deploy.seeder_paths', ['database/seeders']);
+        $classes = [];
+
+        foreach ($globs as $glob) {
+            foreach (File::glob($this->repoPath($glob).'/*.php') as $file) {
+                $class = $this->resolveSeederClass($file);
+
+                if ($class !== null) {
+                    $classes[$class] = true;
+                }
+            }
+        }
+
+        return array_keys($classes);
+    }
+
+    private function repoPath(string $relative): string
+    {
+        $root = rtrim((string) config('deploy.path', base_path()), '/\\');
+
+        return $relative === '' ? $root : $root.DIRECTORY_SEPARATOR.ltrim($relative, '/\\');
     }
 
     private function countCommits(string $from, string $to): int

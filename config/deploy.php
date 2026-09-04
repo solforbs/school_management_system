@@ -45,4 +45,36 @@ return [
     |
     */
     'timeout' => env('DEPLOY_TIMEOUT', 120),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Migrations After A Pull
+    |--------------------------------------------------------------------------
+    |
+    | When a release adds or changes migration files, run "migrate --force"
+    | as the last step of the deploy. Migrations are forward-only and the
+    | migrations table makes them idempotent, so this is safe to automate.
+    | A migration that fails leaves the code updated and is reported for
+    | someone to look at, rather than rolled back over a half-applied schema.
+    |
+    */
+    'run_migrations' => env('DEPLOY_RUN_MIGRATIONS', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Seeders After A Pull
+    |--------------------------------------------------------------------------
+    |
+    | Seeders are never run automatically - many of them truncate and
+    | re-insert. A release that changes seeder files has the changed classes
+    | listed on the deploy result, and an Admin runs them explicitly from
+    | the Deployment card when they know it is safe.
+    |
+    | Directories scanned for seeder classes, relative to the repo root.
+    |
+    */
+    'seeder_paths' => [
+        'database/seeders',
+        'Modules/*/database/seeders',
+    ],
 ];

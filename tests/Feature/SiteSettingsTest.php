@@ -46,6 +46,27 @@ test('admins can view the site settings page and see every feature toggle', func
     }
 });
 
+test('the deployment card shows on the site settings page when pulling is enabled', function () {
+    config()->set('deploy.enabled', true);
+    $this->actingAs(makeSettingsAdmin());
+
+    $this->get(route('admin.settings.edit'))
+        ->assertOk()
+        ->assertSee('Deployment')
+        ->assertSee('Pull updates');
+});
+
+test('the deployment card explains how to switch pulling on when it is disabled', function () {
+    config()->set('deploy.enabled', false);
+    $this->actingAs(makeSettingsAdmin());
+
+    $this->get(route('admin.settings.edit'))
+        ->assertOk()
+        ->assertSee('Deployment')
+        ->assertSee('DEPLOY_PULL_ENABLED')
+        ->assertDontSee('Pull updates');
+});
+
 test('toggling a feature off persists immediately', function () {
     $admin = makeSettingsAdmin();
     $this->actingAs($admin);

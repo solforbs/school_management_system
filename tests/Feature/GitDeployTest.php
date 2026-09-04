@@ -278,3 +278,143 @@ it('hides the card entirely while pulling is switched off', function () {
         ->assertOk()
         ->assertDontSee('Pull updates');
 });
+
+// ------------------------------------------------------------------
+// Migrations and seeders
+// ------------------------------------------------------------------
+
+/**
+ * A diff that carries a migration file, and the catch-all for everything
+ * else a pull runs.
+ *
+ * @param  list<string>  $changed
+ */
+function deployFake(array $changed = []): void
+{
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch*' => Process::result(''),
+        '*rev-parse*origin*' => Process::result('def456'),
+        '*diff --name-only*' => Process::result(implode("\n", $changed)),
+        '*rev-list*' => Process::result('1'),
+        '*log*' => Process::result('a release'),
+        '*' => Process::result(''),
+    ]);
+}
+
+it('runs migrations when a release adds a migration file', function () {
+    deployFake(['database/migrations/2099_01_01_000000_add_a_column.php']);
+
+    $calls = [];
+    Artisan::shouldReceive('call')->andReturnUsing(function ($command) use (&$calls) {
+        $calls[] = $command;
+
+        return 0;
+    });
+    Artisan::shouldReceive('output')->andReturn('INFO  Running migrations.  Migrated: 2099_01_01_000000_add_a_column');
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('deployed')
+        ->and($result->migrations)->toContain('migration')
+        ->and($calls)->toContain('migrate');
+});
+
+it('does not run migrations when no migration file changed', function () {
+    deployFake(['app/Services/GitDeploy.php']);
+
+    $calls = [];
+    Artisan::shouldReceive('call')->andReturnUsing(function ($command) use (&$calls) {
+        $calls[] = $command;
+
+        return 0;
+    });
+    Artisan::shouldReceive('output')->andReturn('');
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('deployed')
+        ->and($calls)->not->toContain('migrate');
+});
+
+it('leaves the code in place and asks for a look when a migration fails', function () {
+    deployFake(['database/migrations/2099_01_01_000000_add_a_column.php']);
+
+    Artisan::shouldReceive('call')->andReturnUsing(fn ($command) => $command === 'migrate' ? 1 : 0);
+    Artisan::shouldReceive('output')->andReturn('SQLSTATE[42S21]: Column already exists');
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('needs_attention')
+        ->and($result->message)->toContain('migration failed');
+
+    // No rollback: a half-applied schema under the old code is worse.
+    Process::assertDidntRun(commandContains('reset --hard'));
+});
+
+it('lists the seeder classes a release changed without running them', function () {
+    Artisan::shouldReceive('call')->andReturn(0);
+    Artisan::shouldReceive('output')->andReturn('');
+
+    deployFake(['database/seeders/SettingSeeder.php']);
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('deployed')
+        ->and($result->pendingSeeders)->toContain(\Database\Seeders\SettingSeeder::class);
+
+    Process::assertDidntRun(commandContains('db:seed'));
+});
+
+it('runs a listed seeder only on explicit request', function () {
+    $calls = [];
+    Artisan::shouldReceive('call')->andReturnUsing(function ($command, $params = []) use (&$calls) {
+        $calls[] = [$command, $params];
+
+        return 0;
+    });
+
+    $result = app(GitDeploy::class)->runSeeders([\Database\Seeders\SettingSeeder::class]);
+
+    expect($result->ok())->toBeTrue()
+        ->and($result->message)->toContain('SettingSeeder')
+        ->and($calls)->toContain(['db:seed', ['--class' => \Database\Seeders\SettingSeeder::class, '--force' => true]]);
+});
+
+it('refuses to run anything that is not a real seeder', function () {
+    Process::fake();
+
+    $result = app(GitDeploy::class)->runSeeders(['App\\Services\\GitDeploy', 'Nope\\NotReal']);
+
+    expect($result->status)->toBe('refused')
+        ->and($result->message)->toContain('Not a seeder');
+
+    Process::assertNothingRan();
+});
+
+it('the deploy:pull command reports an up-to-date server and exits zero', function () {
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch*' => Process::result(''),
+        '*rev-parse*origin*' => Process::result('abc123'),
+        '*log*' => Process::result('a commit'),
+        '*' => Process::result(''),
+    ]);
+
+    $this->artisan('deploy:pull')
+        ->expectsOutputToContain('Already up to date')
+        ->assertExitCode(0);
+});
+
+it('the deploy:pull command exits non-zero when the pull is refused', function () {
+    config()->set('deploy.enabled', false);
+    Process::fake();
+
+    $this->artisan('deploy:pull')
+        ->expectsOutputToContain('switched off')
+        ->assertExitCode(1);
+
+    Process::assertNothingRan();
+});

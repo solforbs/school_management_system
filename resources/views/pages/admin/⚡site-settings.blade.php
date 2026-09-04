@@ -88,4 +88,26 @@ new #[Title('Site Settings')] class extends Component {
                 </flux:button>
             </form>
         </flux:card>
+
+        {{-- Deployment --}}
+        <div class="mt-8 max-w-2xl">
+            <flux:heading size="lg">{{ __('Deployment') }}</flux:heading>
+            <flux:text class="mb-4 mt-1 text-zinc-500">
+                {{ __('Pull the latest code from GitHub onto this server and run any migrations it adds - without opening an SSH session.') }}
+            </flux:text>
+
+            @if (config('deploy.enabled'))
+                <livewire:pull-updates />
+            @else
+                <flux:card>
+                    <flux:text class="text-zinc-500">
+                        {{ __('Pulling from the dashboard is switched off. Set') }}
+                        <span class="font-mono">DEPLOY_PULL_ENABLED=true</span>
+                        {{ __('(and DEPLOY_BRANCH / DEPLOY_REMOTE if they differ from') }}
+                        <span class="font-mono">main</span> / <span class="font-mono">origin</span>)
+                        {{ __('in the server environment to enable it.') }}
+                    </flux:text>
+                </flux:card>
+            @endif
+        </div>
     </div>
