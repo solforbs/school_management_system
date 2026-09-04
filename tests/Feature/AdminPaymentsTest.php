@@ -42,12 +42,14 @@ function makePaymentsPlan(): Plan
         'price' => 5000,
         'billing_cycle' => 'monthly',
         'is_active' => true,
+        'modules' => ['Student'],
     ]);
 }
 
 function makeTestPayment(array $overrides = []): Payment
 {
     return Payment::create(array_merge([
+        'plan_id' => $overrides['plan_id'] ?? makePaymentsPlan()->id,
         'purpose' => Payment::PURPOSE_SUBSCRIPTION,
         'reference' => 'ref-'.uniqid(),
         'amount' => 1000,
@@ -60,6 +62,11 @@ function makeTestPayment(array $overrides = []): Payment
 test('a non-admin cannot view the payments page', function () {
     $director = User::factory()->create();
     $director->assignRole('Director');
+    // An onboarded Director, not a brand-new sign-up: HasInstitution would
+    // otherwise redirect a zero-institution user before this page's own
+    // isAdmin() gate ever runs.
+    $institution = makePaymentsInstitution(['user_id' => $director->id]);
+    $director->update(['active_institution_id' => $institution->id]);
 
     Livewire::actingAs($director)
         ->test('pages::admin.payments')
@@ -155,7 +162,7 @@ test('the admin dashboard shows platform revenue and links to the payments page'
         ->get(route('report.index'))
         ->assertOk()
         ->assertSee('Platform Revenue')
-        ->assertSee('KES 12,000.00')
+        ->assertSee('KES 12,000') // the dashboard's $currency() helper drops decimals on a whole number
         ->assertSee(route('admin.payments.index'));
 });
 

@@ -117,7 +117,13 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-3">
         <x-kpi-card title="Total Revenue" icon="banknotes" color="emerald"
             count="KES {{ $currency($stats['revenue_total']) }}" href="{{ route('admin.payments.index') }}">
-            @php($delta = $stats['revenue_last_month'] > 0 ? round((($stats['revenue_this_month'] - $stats['revenue_last_month']) / $stats['revenue_last_month']) * 100) : null)
+            @php
+                $delta = null;
+                if ($stats['revenue_last_month'] > 0) {
+                    $change = $stats['revenue_this_month'] - $stats['revenue_last_month'];
+                    $delta = round($change / $stats['revenue_last_month'] * 100);
+                }
+            @endphp
             <div class="flex items-center flex-wrap gap-1.5 mt-0.5">
                 <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     KES {{ $currency($stats['revenue_this_month']) }} this month
