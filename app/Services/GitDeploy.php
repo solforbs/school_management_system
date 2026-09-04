@@ -95,10 +95,14 @@ class GitDeploy
             if (str_contains(strtolower($stderr), 'could not read username')
                 || str_contains(strtolower($stderr), 'authentication failed')
                 || str_contains(strtolower($stderr), 'terminal prompts disabled')) {
+                $hasToken = $this->deployToken() !== '' ? ' (DEPLOY_TOKEN is set but was not applied - '
+                    .'run "php artisan config:clear" if config is cached, or set it as a real process '
+                    .'env var)' : '';
+
                 return DeployResult::failed(
-                    'The remote needs credentials the server cannot supply. Set DEPLOY_TOKEN in the '
-                    .'environment to a GitHub token with read access to this repo, or switch the remote '
-                    .'to SSH. Original error: '.$stderr
+                    'The remote needs credentials the server cannot supply'.$hasToken.'. Set DEPLOY_TOKEN '
+                    .'to a GitHub token with read access to this repo, or switch the remote to SSH. '
+                    .'Original error: '.$stderr
                 );
             }
 
@@ -299,7 +303,7 @@ class GitDeploy
      */
     private function authArgs(string $remote): array
     {
-        $token = trim((string) config('deploy.token', ''));
+        $token = $this->deployToken();
 
         if ($token === '') {
             return [];
@@ -320,12 +324,35 @@ class GitDeploy
     }
 
     /**
+     * The deploy token, from config or straight from the environment.
+     *
+     * The environment fallback matters on a server that runs
+     * `config:cache`: `config('deploy.token')` there is frozen to whatever
+     * .env held when the cache was built, so a token added afterwards is
+     * only seen if it is also a real process env var (an FPM pool `env[]`
+     * line, or systemd) - which is the recommended way to hold a secret
+     * under cached config anyway.
+     */
+    private function deployToken(): string
+    {
+        $token = trim((string) config('deploy.token', ''));
+
+        if ($token !== '') {
+            return $token;
+        }
+
+        $fromEnv = getenv('DEPLOY_TOKEN');
+
+        return is_string($fromEnv) ? trim($fromEnv) : '';
+    }
+
+    /**
      * Keep a configured token out of any message that reaches a screen or
      * a log, in case git ever echoes the header back.
      */
     private function scrubToken(string $text): string
     {
-        $token = trim((string) config('deploy.token', ''));
+        $token = $this->deployToken();
 
         if ($token === '') {
             return $text;
