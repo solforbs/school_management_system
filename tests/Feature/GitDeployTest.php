@@ -122,6 +122,28 @@ it('reports a remote it cannot reach without changing anything', function () {
     Process::assertDidntRun(commandContains('checkout'));
 });
 
+it('names the permission problem when the web user cannot write .git', function () {
+    Process::fake([
+        '*rev-parse*HEAD*' => Process::result('abc123'),
+        '*status*' => Process::result(''),
+        '*fetch*' => Process::result(
+            output: '',
+            errorOutput: "error: cannot open '.git/FETCH_HEAD': Permission denied",
+            exitCode: 1,
+        ),
+    ]);
+
+    $result = app(GitDeploy::class)->pull();
+
+    expect($result->status)->toBe('failed')
+        ->and($result->message)->toContain('cannot write the git checkout')
+        ->and($result->message)->toContain('chown')
+        // Not the misleading network message.
+        ->and($result->message)->not->toContain('Could not reach the remote');
+
+    Process::assertDidntRun(commandContains('checkout'));
+});
+
 it('flags a release that changes dependencies instead of running composer', function () {
     // Stub Artisan: a real view:clear deletes Livewire's compiled
     // components and breaks whatever test runs next.

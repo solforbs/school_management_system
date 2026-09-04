@@ -59,7 +59,13 @@ class GitDeploy
         $head = $this->git(['rev-parse', 'HEAD']);
 
         if (! $head->successful()) {
-            return DeployResult::failed('Not a git checkout, or git cannot read it: '.trim($head->errorOutput()));
+            $stderr = trim($head->errorOutput());
+
+            if ($this->looksLikePermissionProblem($stderr)) {
+                return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            return DeployResult::failed('Not a git checkout, or git cannot read it: '.$stderr);
         }
 
         $previous = trim($head->output());
@@ -78,7 +84,15 @@ class GitDeploy
         $fetch = $this->git(['fetch', $remote, $branch]);
 
         if (! $fetch->successful()) {
-            return DeployResult::failed('Could not reach the remote: '.trim($fetch->errorOutput()));
+            $stderr = trim($fetch->errorOutput());
+
+            // "cannot open '.git/FETCH_HEAD': Permission denied" is a local
+            // write-permission problem wearing a network error's clothes.
+            if ($this->looksLikePermissionProblem($stderr)) {
+                return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            return DeployResult::failed('Could not reach the remote: '.$stderr);
         }
 
         $target = $this->git(['rev-parse', $remote.'/'.$branch]);
@@ -100,9 +114,14 @@ class GitDeploy
         $checkout = $this->git(['checkout', '-B', $branch, $remote.'/'.$branch]);
 
         if (! $checkout->successful()) {
+            $stderr = trim($checkout->errorOutput());
             $this->rollback($previous);
 
-            return DeployResult::failed('Checkout failed, server left unchanged: '.trim($checkout->errorOutput()));
+            if ($this->looksLikePermissionProblem($stderr)) {
+                return DeployResult::failed($this->permissionHint($stderr));
+            }
+
+            return DeployResult::failed('Checkout failed, server left unchanged: '.$stderr);
         }
 
         $cleared = $this->refreshCaches();
@@ -258,6 +277,44 @@ class GitDeploy
     private function subject(string $commit): string
     {
         return trim($this->git(['log', '-1', '--pretty=%s', $commit])->output());
+    }
+
+    /**
+     * Whether a git failure is really the web-server user not being able to
+     * write the checkout - the recurring blocker for deploying over HTTP,
+     * since PHP-FPM runs as one user and the repo is owned by another.
+     */
+    private function looksLikePermissionProblem(string $stderr): bool
+    {
+        $stderr = strtolower($stderr);
+
+        return str_contains($stderr, 'permission denied')
+            || str_contains($stderr, 'dubious ownership')
+            || str_contains($stderr, 'unable to create')
+            || (str_contains($stderr, '.git/') && str_contains($stderr, 'cannot open'));
+    }
+
+    /**
+     * A message that names the actual fix rather than the symptom.
+     */
+    private function permissionHint(string $stderr): string
+    {
+        $pw = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
+            ? posix_getpwuid(posix_geteuid())
+            : false;
+
+        $user = is_array($pw) ? $pw['name'] : 'the web server user';
+
+        $path = rtrim((string) config('deploy.path', base_path()), '/\\');
+
+        return sprintf(
+            'The web server user (%s) cannot write the git checkout at %s, so nothing was pulled. '
+            .'Give it write access to the repository and its .git directory - for example: '
+            .'sudo chown -R %s: %s  (or add %s to the owner\'s group and run '
+            .'chmod -R g+ws %s && git -C %s config core.sharedRepository group). '
+            .'Original error: %s',
+            $user, $path, $user, $path, $user, $path, $path, $stderr,
+        );
     }
 
     /**
