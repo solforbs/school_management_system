@@ -4,17 +4,78 @@ namespace Modules\Result\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
 use Modules\Result\Actions\SaveResult;
 use Modules\Result\Models\Result;
 use Modules\Result\Services\ResultAccessService;
+use Modules\Student\Models\StudentDetails;
 
 class ResultController extends Controller
 {
     use Sortable;
+
+    private const HEADERS = ['Class', 'Level', 'Students', 'Marks Recorded', 'Mean Score'];
+
+    /**
+     * Export the per-class results overview shown on the index landing page
+     * (Excel or PDF), scoped to exactly the classes this viewer may open -
+     * a Teacher's own classes, everyone else's institution.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export result'), 403);
+
+        $classes = ResultAccessService::selectableClasses(Auth::user());
+        $classIds = $classes->pluck('id');
+
+        $resultStats = $classIds->isEmpty() ? collect() : Result::query()
+            ->selectRaw('class_id, count(*) as results_count, avg(marks_obtained) as mean_mark')
+            ->whereIn('class_id', $classIds)
+            ->groupBy('class_id')
+            ->get()
+            ->keyBy('class_id');
+
+        $studentStats = $classIds->isEmpty() ? collect() : StudentDetails::query()
+            ->selectRaw('class_id, count(*) as students_count')
+            ->whereIn('class_id', $classIds)
+            ->groupBy('class_id')
+            ->get()
+            ->keyBy('class_id');
+
+        $rows = $classes->map(fn (SchoolClass $class) => $this->toExportRow($class, $resultStats, $studentStats));
+
+        $format = $request->string('format')->lower()->value();
+        $filename = 'exam-results-overview-'.now()->format('Y-m-d');
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Exam Results Overview')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Exam Results Overview');
+    }
+
+    /**
+     * Flatten a class and its headline figures into the row shape shared by
+     * the Excel and PDF exports.
+     *
+     * @return array<int, string>
+     */
+    private function toExportRow(SchoolClass $class, $resultStats, $studentStats): array
+    {
+        $resultRow = $resultStats[$class->id] ?? null;
+        $studentRow = $studentStats[$class->id] ?? null;
+
+        return [
+            $class->name,
+            $class->level ?? 'Class',
+            (string) (int) ($studentRow->students_count ?? 0),
+            (string) (int) ($resultRow->results_count ?? 0),
+            number_format(round((float) ($resultRow->mean_mark ?? 0), 1), 1),
+        ];
+    }
 
     /**
      * Store a newly created resource in storage.

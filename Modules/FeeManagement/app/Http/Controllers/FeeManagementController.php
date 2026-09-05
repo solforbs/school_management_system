@@ -4,6 +4,7 @@ namespace Modules\FeeManagement\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use App\Services\FeeReminderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,9 +16,73 @@ class FeeManagementController extends Controller
 {
     use Sortable;
 
+    private const HEADERS = ['Student Name', 'Admission No', 'Institution', 'Fee Title', 'Fee Type', 'Due Date', 'Amount', 'Amount Paid', 'Balance', 'Status'];
+
     public function __construct(
         private readonly FeeReminderService $reminderService,
     ) {}
+
+    /**
+     * Export the fee ledger (Excel or PDF) with the same filters and
+     * institution/role scoping the index listing applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export feemanagement'), 403);
+
+        $query = Fee::with(['student.studentUserDetails', 'institution']);
+        $this->scopeToViewer($query);
+
+        $search = $request->string('search')->value();
+        $status = $request->string('status')->value();
+        $feeType = $request->string('fee_type')->value();
+        $classId = $request->string('class_id')->value();
+
+        $query->when($search !== '', function ($q) use ($search) {
+            $term = '%'.$search.'%';
+
+            $q->where(function ($sub) use ($term) {
+                $sub->where('title', 'like', $term)
+                    ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', $term)->orWhere('email', 'like', $term));
+            });
+        })
+            ->when($status !== '', fn ($q) => $q->withStatus($status))
+            ->when($feeType !== '', fn ($q) => $q->where('fee_type', $feeType))
+            ->when($classId !== '', fn ($q) => $q->whereHas('student.studentUserDetails', fn ($sq) => $sq->where('class_id', $classId)))
+            ->orderBy('due_date', 'asc');
+
+        $rows = $query->get()->map(fn (Fee $fee) => $this->toExportRow($fee));
+
+        $format = $request->string('format')->lower()->value();
+        $filename = 'fee-invoices-'.now()->format('Y-m-d');
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Fee Invoices')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Fee Invoices');
+    }
+
+    /**
+     * Flatten a fee into the row shape shared by the Excel and PDF exports.
+     *
+     * @return array<int, string>
+     */
+    private function toExportRow(Fee $fee): array
+    {
+        $student = $fee->student;
+
+        return [
+            $student?->name ?? 'Unknown Student',
+            $student?->studentUserDetails?->admission_number ?? 'N/A',
+            $fee->institution?->name ?? 'N/A',
+            $fee->title,
+            ucfirst($fee->fee_type ?? ''),
+            $fee->due_date ? $fee->due_date->format('Y-m-d') : '',
+            number_format((float) ($fee->amount ?? 0), 2),
+            number_format((float) ($fee->amount_paid ?? 0), 2),
+            number_format((float) $fee->balance, 2),
+            ucfirst($fee->status ?? ''),
+        ];
+    }
 
     /**
      * Display a listing of the resource.

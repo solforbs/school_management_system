@@ -10,6 +10,7 @@ use Modules\Parent\Http\Controllers\ParentController;
  */
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::livewire('parents', 'parent::index')->name('parent.index');
+    Route::get('parents/export', [ParentController::class, 'export'])->name('parent.export');
     Route::livewire('parents/create', 'parent::form')->name('parent.create');
     // Parameter deliberately not named after the model - implicit binding
     // would hand mount() a model where it expects an id.

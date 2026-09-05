@@ -5,6 +5,7 @@ namespace Modules\Staff\Http\Controllers;
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,60 @@ class StaffController extends Controller
      * @var string[]
      */
     private const SYSTEM_ROLES = ['Accountant'];
+
+    private const HEADERS = ['Name', 'Staff No', 'Job Title', 'Department', 'Phone', 'Email', 'Salary', 'Status'];
+
+    /**
+     * Export the staff directory (Excel/PDF) with the same filters and
+     * institution scoping the Livewire index component applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export staff'), 403);
+
+        $query = StaffDetails::with(['user', 'institution'])
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $term = '%'.$request->string('search')->value().'%';
+
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('name', 'like', $term)
+                        ->orWhere('staff_number', 'like', $term)
+                        ->orWhere('job_title', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhereHas('user', fn ($uq) => $uq->where('email', 'like', $term));
+                });
+            })
+            ->when($request->filled('department'), fn ($q) => $q->where('department', $request->string('department')->value()))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')->value()))
+            ->orderBy('name');
+
+        $rows = $query->get()->map(fn (StaffDetails $member) => $this->toExportRow($member));
+
+        $filename = 'staff-'.now()->format('Y-m-d');
+        $format = $request->string('format')->lower()->value();
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Staff Directory')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Staff Directory');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(StaffDetails $member): array
+    {
+        return [
+            $member->name,
+            $member->staff_number ?? 'N/A',
+            $member->job_title ?? 'N/A',
+            $member->department ?? 'General',
+            $member->phone ?? 'N/A',
+            $member->user?->email ?? 'N/A',
+            $member->salary !== null ? number_format($member->salary, 2) : 'N/A',
+            $member->status ? ucfirst(str_replace('_', ' ', $member->status)) : 'Unknown',
+        ];
+    }
 
     /**
      * Display a listing of the resource.

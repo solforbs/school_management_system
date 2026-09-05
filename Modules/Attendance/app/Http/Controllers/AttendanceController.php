@@ -4,7 +4,7 @@ namespace Modules\Attendance\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
-use App\Models\Devices;
+use App\Services\Export\TableExportService;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,10 +15,13 @@ class AttendanceController extends Controller
 {
     use Sortable;
 
+    private const HEADERS = ['Student Name', 'Admission No', 'Device / Terminal', 'Status', 'Verify Mode', 'Date & Time'];
+
     /**
-     * Export attendance logs to CSV stream with active filters applied.
+     * Export attendance logs (CSV by default, or Excel/PDF via ?format=)
+     * with active filters applied.
      */
-    public function export(Request $request)
+    public function export(Request $request, TableExportService $exporter)
     {
         abort_unless(Auth::user()->can('view attendance'), 403);
 
@@ -31,29 +34,54 @@ class AttendanceController extends Controller
         $query = AttendanceLogQuery::build($institution->id, $user, $request->only(['device_id', 'search', 'from', 'to']))
             ->orderByDesc('occurred_at');
 
-        $filename = 'attendance-logs-'.now()->format('Y-m-d').'.csv';
+        $format = $request->string('format')->lower()->value();
+        $filename = 'attendance-logs-'.now()->format('Y-m-d');
+
+        if (in_array($format, ['xlsx', 'pdf'], true)) {
+            abort_unless(Auth::user()->can('export attendance'), 403);
+
+            $rows = $query->get()->map(fn (ZktecoAttendanceLog $log) => $this->toExportRow($log));
+
+            return $format === 'xlsx'
+                ? $exporter->excel($rows, self::HEADERS, $filename, 'Attendance Logs')
+                : $exporter->pdf($rows, self::HEADERS, $filename, 'Attendance Logs');
+        }
 
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Student Name', 'Admission No', 'Device / Terminal', 'Status', 'Verify Mode', 'Date & Time']);
+            fputcsv($handle, self::HEADERS);
 
             $query->chunk(500, function ($logs) use ($handle) {
                 foreach ($logs as $log) {
-                    $student = $log->zktecoUser?->appUser;
-                    $studentDetails = $student?->studentUserDetails;
-                    fputcsv($handle, [
-                        $student?->name ?? 'Unknown',
-                        $studentDetails?->admission_number ?? 'N/A',
-                        $log->device?->name ?? 'N/A',
-                        ucfirst($log->status?->value ?? (string) $log->status),
-                        ucfirst($log->verify_mode?->value ?? (string) $log->verify_mode),
-                        $log->occurred_at?->format('Y-m-d H:i:s') ?? '',
-                    ]);
+                    fputcsv($handle, $this->toExportRow($log));
                 }
             });
 
             fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename.'.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Flatten a log into the row shape every export format (CSV, Excel, PDF)
+     * shares, always using the exact device verification method label
+     * (Fingerprint/Card/Password/etc) rather than its raw numeric code.
+     *
+     * @return array<int, string>
+     */
+    private function toExportRow(ZktecoAttendanceLog $log): array
+    {
+        $student = $log->zktecoUser?->appUser;
+        $studentDetails = $student?->studentUserDetails;
+        [$statusLabel] = AttendanceLogQuery::statusMeta($log->status);
+
+        return [
+            $student?->name ?? 'Unknown',
+            $studentDetails?->admission_number ?? 'N/A',
+            $log->device?->name ?? 'N/A',
+            $statusLabel,
+            $log->verify_mode?->getLabel() ?? 'Unknown',
+            $log->occurred_at?->format('Y-m-d H:i:s') ?? '',
+        ];
     }
 
     /**

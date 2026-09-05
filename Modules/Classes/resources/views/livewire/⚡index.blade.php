@@ -69,6 +69,7 @@ new #[Title('Class Management')] class extends Component {
         </div>
 
         <div class="flex items-center gap-3">
+            <x-export-buttons base-route="classes.export" module="classes" :params="['search' => $this->search]" />
             @can('create classes')
                 <flux:button href="{{ route('classes.create') }}" wire:navigate.hover icon="plus" variant="primary"
                     class="shadow-sm hover:shadow-md transition-all">

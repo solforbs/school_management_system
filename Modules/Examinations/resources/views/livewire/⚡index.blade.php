@@ -146,6 +146,10 @@ new #[Title('Examinations')] class extends Component {
         </div>
 
         <div class="flex items-center gap-3">
+            <x-export-buttons
+                base-route="examinations.export"
+                module="examination"
+                :params="['search' => $this->search, 'class_id' => $this->class_id, 'subject_id' => $this->subject_id, 'exam_type' => $this->examType, 'status' => $this->status]" />
             @if (Route::has('examinations.timetable.pdf'))
                 <flux:button href="{{ route('examinations.timetable.pdf', $pdfFilters) }}" icon="arrow-down-tray"
                     variant="subtle">

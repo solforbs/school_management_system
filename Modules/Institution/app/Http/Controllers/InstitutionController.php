@@ -5,6 +5,7 @@ namespace Modules\Institution\Http\Controllers;
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -16,12 +17,75 @@ class InstitutionController extends Controller
 {
     use Sortable;
 
+    private const SORTABLE = ['name', 'code', 'phone', 'email', 'created_at'];
+
+    private const HEADERS = ['Name', 'Code', 'Email', 'Phone', 'City', 'Students', 'Teachers', 'Status', 'Created At'];
+
     public User $user;
 
     public function __construct(
         private readonly SaveInstitution $saveInstitution,
     ) {
         $this->user = Auth::user();
+    }
+
+    /**
+     * Export the institutions list (Excel/PDF), mirroring the same
+     * Admin-sees-all vs Director-sees-own-institution branching the
+     * Livewire index component applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless($this->user->can('export institution'), 403);
+
+        $sort = $request->string('sort')->value();
+        $sort = in_array($sort, self::SORTABLE, true) ? $sort : 'created_at';
+        $direction = $request->string('direction')->lower()->value() === 'asc' ? 'asc' : 'desc';
+        $search = $request->string('search')->value();
+
+        $query = Institution::withCount(['studentDetails', 'teacherDetails']);
+
+        if (! isAdmin()) {
+            $query->where('user_id', $this->user->id);
+        }
+
+        $query->when($search !== '', function ($q) use ($search) {
+            $term = '%'.$search.'%';
+
+            $q->where(fn ($q2) => $q2->where('name', 'like', $term)
+                ->orWhere('code', 'like', $term)
+                ->orWhere('email', 'like', $term));
+        })->orderBy($sort, $direction);
+
+        $rows = $query->get()->map(fn (Institution $institution) => $this->toExportRow($institution));
+
+        $filename = 'institutions-'.now()->format('Y-m-d');
+        $format = $request->string('format')->lower()->value();
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Institutions')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Institutions');
+    }
+
+    /**
+     * Flatten an institution into the row shape shared by every export
+     * format (Excel, PDF).
+     *
+     * @return array<int, string>
+     */
+    private function toExportRow(Institution $institution): array
+    {
+        return [
+            $institution->name,
+            $institution->code ?? 'N/A',
+            $institution->email ?? 'N/A',
+            $institution->phone ?? 'N/A',
+            $institution->city ?? $institution->county ?? 'N/A',
+            (string) ($institution->student_details_count ?? 0),
+            (string) ($institution->teacher_details_count ?? 0),
+            $institution->is_approved ? 'Approved' : 'Pending',
+            $institution->created_at?->format('Y-m-d') ?? '',
+        ];
     }
 
     /**

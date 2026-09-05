@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::delete('subjects/teachers/{assignment}', [SubjectTeacherController::class, 'destroy'])->name('subject.teachers.destroy');
 
     Route::livewire('subjects', 'subject::index')->name('subject.index');
+    Route::get('subjects/export', [SubjectController::class, 'export'])->name('subject.export');
     Route::livewire('subjects/create', 'subject::form')->name('subject.create');
     // Parameter deliberately not named {subject}: that name triggers
     // implicit route-model binding, which hands mount() a model where it

@@ -5,6 +5,7 @@ namespace Modules\Student\Http\Controllers;
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Export\TableExportService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,9 +19,83 @@ class StudentController extends Controller
 {
     use Sortable;
 
+    private const HEADERS = ['Student Name', 'Admission No', 'Student No', 'Class', 'Gender', 'Guardian', 'Guardian Phone', 'Status'];
+
     public function __construct(
         private readonly SaveStudent $saveStudent,
     ) {}
+
+    /**
+     * Export the student directory (Excel/PDF) with the same filters and
+     * institution/role scoping the Livewire index component applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export student'), 403);
+
+        $query = $this->scopedForExport()
+            ->with(['student', 'schoolClass'])
+            ->when($request->filled('status'), fn ($q) => $q->where('enrollment_status', $request->string('status')->value()))
+            ->when($request->filled('class_id'), fn ($q) => $q->where('class_id', $request->integer('class_id')))
+            ->when($request->filled('gender'), fn ($q) => $q->where('gender', $request->string('gender')->value()))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $term = '%'.$request->string('search')->value().'%';
+
+                $q->where(function ($inner) use ($term) {
+                    $inner->where('admission_number', 'like', $term)
+                        ->orWhere('student_number', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhereHas('student', fn ($q2) => $q2->where('name', 'like', $term)->orWhere('email', 'like', $term));
+                });
+            })
+            ->orderByDesc('created_at');
+
+        $rows = $query->get()->map(fn (StudentDetails $details) => $this->toExportRow($details));
+
+        $filename = 'students-'.now()->format('Y-m-d');
+        $format = $request->string('format')->lower()->value();
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Student Directory')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Student Directory');
+    }
+
+    /**
+     * Same institution/role scoping as the Livewire index component's
+     * scoped() method: a Parent only sees their own children, everyone
+     * else (non-admin) is limited to their current institution.
+     */
+    private function scopedForExport()
+    {
+        $query = StudentDetails::query();
+
+        if (Auth::user()->hasRole('Parent')) {
+            return $query->where('parent_id', Auth::id());
+        }
+
+        if (! isAdmin()) {
+            return $query->where('institution_id', currentInstitutionId() ?? 0);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(StudentDetails $details): array
+    {
+        return [
+            $details->student?->name ?? 'Student',
+            $details->admission_number ?? 'N/A',
+            $details->student_number ?? 'N/A',
+            $details->schoolClass?->name ?? 'Unassigned',
+            $details->gender ? ucfirst($details->gender) : 'Unspecified',
+            $details->guardian_name ?: ($details->parent_name ?: 'Not Listed'),
+            $details->guardian_phone ?: ($details->parent_phone ?: ($details->phone ?: 'N/A')),
+            $details->enrollment_status ? ucfirst($details->enrollment_status) : 'Unknown',
+        ];
+    }
 
     /**
      * Store a newly created resource in storage.

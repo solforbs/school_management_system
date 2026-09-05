@@ -14,6 +14,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::livewire('examinations/timetable', 'examinations::timetable')->name('examinations.timetable');
     Route::get('examinations/timetable/pdf', [ExamTimetableController::class, 'download'])->name('examinations.timetable.pdf');
 
+    Route::get('examinations/export', [ExaminationsController::class, 'export'])->name('examinations.export');
+
     Route::livewire('examinations', 'examinations::index')->name('examinations.index');
     Route::livewire('examinations/create', 'examinations::form')->name('examinations.create');
     // Parameter deliberately not named after the model - implicit binding

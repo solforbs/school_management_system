@@ -150,6 +150,12 @@ new #[Title('Report Cards')] class extends Component
             </div>
 
             <div class="flex items-center gap-3">
+                <x-export-buttons base-route="reportcard.export" module="reportcard" :params="[
+                    'search' => $currentSearch,
+                    'class_id' => $currentClass,
+                    'term_id' => $currentTerm,
+                    'academic_year_id' => $currentYear,
+                ]" />
                 @can('edit reportcard')
                     <x-confirm-form
                         :action="route('reportcard.send-ready')"

@@ -4,6 +4,7 @@ namespace Modules\Classes\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Classes\Actions\SaveSchoolClass;
@@ -14,6 +15,50 @@ use Modules\Student\Models\StudentDetails;
 class ClassesController extends Controller
 {
     use Sortable;
+
+    private const HEADERS = ['Class Name', 'Level', 'Institution', 'Class Teacher', 'Students', 'Capacity'];
+
+    /**
+     * Export classes (Excel or PDF) with the same filters and institution
+     * scoping the index screen applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export classes'), 403);
+
+        $search = (string) $request->query('search', '');
+
+        $classes = SchoolClass::with(['classTeacher', 'institution'])
+            ->withCount('students')
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
+            ->orderBy('name')
+            ->get();
+
+        $rows = $classes->map(fn (SchoolClass $schoolClass) => $this->toExportRow($schoolClass));
+        $filename = 'classes-'.now()->format('Y-m-d');
+
+        return $request->string('format')->lower()->value() === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Classes')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Classes');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(SchoolClass $schoolClass): array
+    {
+        $capacity = (int) ($schoolClass->capacity ?? 0);
+
+        return [
+            $schoolClass->name,
+            $schoolClass->level ?? '—',
+            $schoolClass->institution?->name ?? '—',
+            $schoolClass->classTeacher?->name ?? 'Unassigned',
+            (string) ($schoolClass->students_count ?? $schoolClass->students()->count()),
+            $capacity > 0 ? (string) $capacity : 'No limit',
+        ];
+    }
 
     /**
      * Store a newly created resource in storage.

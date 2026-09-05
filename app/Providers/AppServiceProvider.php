@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Listeners\SendAttendanceSmsListener;
 use App\Listeners\SyncStudentsToDeviceListener;
+use App\Observers\ZktecoAttendanceLogObserver;
 use Athwari\LaravelZktecoAdms\Events\AttendanceReceived;
 use Athwari\LaravelZktecoAdms\Events\DeviceConnected;
+use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -36,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(DeviceConnected::class, SyncStudentsToDeviceListener::class);
         Event::listen(AttendanceReceived::class, SendAttendanceSmsListener::class);
+
+        // Reclassifies each punch into the school's actual check-in/
+        // check-out/overtime schedule before it's saved - see the observer's
+        // own docblock for why this lives here rather than on the event.
+        ZktecoAttendanceLog::observe(ZktecoAttendanceLogObserver::class);
     }
 
     /**

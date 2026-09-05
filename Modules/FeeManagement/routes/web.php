@@ -18,6 +18,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::get('feemanagements/receipts/student-fees', [FeeReceiptController::class, 'studentFees'])->name('feemanagement.receipts.student-fees');
     Route::post('feemanagements/receipts', [FeeReceiptController::class, 'store'])->name('feemanagement.receipts.store');
 
+    Route::get('feemanagements/export', [FeeManagementController::class, 'export'])->name('feemanagement.export');
+
     Route::livewire('feemanagements', 'feemanagement::index')->name('feemanagement.index');
     Route::livewire('feemanagements/create', 'feemanagement::form')->name('feemanagement.create');
     // Parameter deliberately not named after the model - implicit binding

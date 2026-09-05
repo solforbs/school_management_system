@@ -245,6 +245,13 @@ new #[Title('Expenditure')] class extends Component
             <flux:button href="{{ route('expenditure.categories.index') }}" icon="tag" variant="ghost" wire:navigate.hover>
                 Categories
             </flux:button>
+            <x-export-buttons base-route="expenditure.export" module="expenditure" :params="[
+                'search' => $search,
+                'category_id' => $categoryId,
+                'status' => $status,
+                'from' => $from,
+                'to' => $to,
+            ]" />
         </div>
 
         <div class="flex flex-wrap items-end gap-2">

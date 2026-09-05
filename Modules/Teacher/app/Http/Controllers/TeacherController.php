@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TeacherClasses;
 use App\Models\TeacherSubjects;
 use App\Models\User;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,57 @@ use Modules\Teacher\Models\TeacherDetails;
 class TeacherController extends Controller
 {
     use Sortable;
+
+    private const HEADERS = ['Teacher Name', 'Employee No', 'Email', 'Department', 'Qualification', 'Phone', 'Status'];
+
+    /**
+     * Export the teacher directory (Excel/PDF) with the same filters and
+     * institution scoping the Livewire index component applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export teacher'), 403);
+
+        $query = TeacherDetails::with(['teacher', 'institution'])
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $term = '%'.$request->string('search')->value().'%';
+
+                $q->where(function ($sub) use ($term) {
+                    $sub->whereHas('teacher', fn ($userQ) => $userQ->where('name', 'like', $term)->orWhere('email', 'like', $term))
+                        ->orWhere('employee_number', 'like', $term)
+                        ->orWhere('phone', 'like', $term);
+                });
+            })
+            ->when($request->filled('department'), fn ($q) => $q->where('department', $request->string('department')->value()))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')->value()))
+            ->orderByDesc('created_at');
+
+        $rows = $query->get()->map(fn (TeacherDetails $details) => $this->toExportRow($details));
+
+        $filename = 'teachers-'.now()->format('Y-m-d');
+        $format = $request->string('format')->lower()->value();
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Teacher Directory')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Teacher Directory');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(TeacherDetails $details): array
+    {
+        return [
+            $details->teacher?->name ?? 'Unknown Teacher',
+            $details->employee_number ?? 'N/A',
+            $details->teacher?->email ?? 'N/A',
+            $details->department ?? 'N/A',
+            $details->qualification ?? 'N/A',
+            $details->phone ?? 'N/A',
+            $details->status ? ucfirst(str_replace('_', ' ', $details->status)) : 'Unknown',
+        ];
+    }
 
     /**
      * Display a listing of the resource.

@@ -120,6 +120,7 @@ new #[Title('Academic Performance')] class extends Component {
         </div>
 
         <div class="flex items-center gap-3">
+            <x-export-buttons base-route="result.export" module="result" />
             @can('create result')
                 <flux:button href="{{ route('result.create') }}" wire:navigate.hover icon="plus" variant="subtle"
                     class="font-semibold shadow-sm">

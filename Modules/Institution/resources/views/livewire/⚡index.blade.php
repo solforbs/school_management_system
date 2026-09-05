@@ -187,13 +187,14 @@ new #[Title('Institutions')] class extends Component
                 </flux:text>
             </div>
             
-            @hasrole('Director')
-                <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3">
+                <x-export-buttons base-route="institution.export" module="institution" :params="[]" />
+                @hasrole('Director')
                     <flux:button href="{{ route('institution.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Add Institution
                     </flux:button>
-                </div>
-            @endhasrole
+                @endhasrole
+            </div>
         </div>
 
         {{-- Flash Messages --}}

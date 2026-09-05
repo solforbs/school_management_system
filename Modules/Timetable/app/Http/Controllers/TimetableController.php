@@ -3,7 +3,9 @@
 namespace Modules\Timetable\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
@@ -15,6 +17,91 @@ use Modules\Timetable\Services\TimetableImportService;
 class TimetableController extends Controller
 {
     private const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    private const HEADERS = ['Day', 'Start Time', 'End Time', 'Class', 'Subject', 'Teacher', 'Room'];
+
+    /**
+     * Export a timetable (Excel or PDF): a teacher's own schedule, or the
+     * selected class's schedule, with the same institution/role scoping the
+     * index listing applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export timetable'), 403);
+
+        $user = Auth::user();
+
+        if ($user->hasRole('Teacher')) {
+            $entries = TimetableEntry::with(['schoolClass', 'subjectRecord', 'teacher'])
+                ->where('teacher_id', $user->id)
+                ->get();
+        } else {
+            $classId = $request->integer('class_id');
+            $class = $classId ? $this->exportScopedClasses($user)->firstWhere('id', $classId) : null;
+            abort_unless($class, 404, 'No class selected.');
+
+            $entries = TimetableEntry::with(['teacher', 'subjectRecord', 'schoolClass'])
+                ->where('class_id', $class->id)
+                ->get();
+        }
+
+        $rows = $entries->map(fn (TimetableEntry $entry) => $this->toExportRow($entry));
+
+        $format = $request->string('format')->lower()->value();
+        $filename = 'timetable-'.now()->format('Y-m-d');
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Timetable')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Timetable');
+    }
+
+    /**
+     * The classes selectable for export, scoped exactly like the index
+     * listing: a Student/Parent only their own child(ren)'s class(es),
+     * everyone else their institution's (or every institution's, for an
+     * Admin).
+     *
+     * @return Collection<int, SchoolClass>
+     */
+    private function exportScopedClasses($user): Collection
+    {
+        if ($user->hasRole('Student') || $user->hasRole('Parent')) {
+            $classIds = $user->hasRole('Parent')
+                ? StudentDetails::where('parent_id', $user->id)->pluck('class_id')
+                : collect([StudentDetails::where('student_id', $user->id)->value('class_id')]);
+
+            $classIds = $classIds->filter()->map(fn ($id) => (int) $id)->unique()->values();
+
+            return SchoolClass::whereIn('id', $classIds)->orderBy('name')->get();
+        }
+
+        $query = SchoolClass::query();
+
+        if (! isAdmin()) {
+            $query->where('institution_id', currentInstitution()?->id ?? 0);
+        }
+
+        return $query->orderBy('name')->get();
+    }
+
+    /**
+     * Flatten a timetable entry into the row shape shared by the Excel and
+     * PDF exports.
+     *
+     * @return array<int, string>
+     */
+    private function toExportRow(TimetableEntry $entry): array
+    {
+        return [
+            $entry->day_of_week,
+            $entry->start_time?->format('H:i') ?? '',
+            $entry->end_time?->format('H:i') ?? '',
+            $entry->schoolClass?->name ?? $entry->class_name ?? '',
+            $entry->subjectRecord?->name ?? $entry->subject ?? '',
+            $entry->teacher?->name ?? '',
+            $entry->room ?? '',
+        ];
+    }
 
     /**
      * Display a listing of the resource: pick a class, see its timetable as

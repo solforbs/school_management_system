@@ -21,6 +21,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::livewire('results/enter/sheet', 'result::entry')->name('result.entry.create');
     Route::post('results/enter/sheet', [ResultEntryController::class, 'store'])->name('result.entry.store');
 
+    Route::get('results/export', [ResultController::class, 'export'])->name('result.export');
+
     Route::livewire('results', 'result::index')->name('result.index');
     Route::livewire('results/create', 'result::form')->name('result.create');
     Route::livewire('results/class/{classId}', 'result::class-results')->name('result.class');

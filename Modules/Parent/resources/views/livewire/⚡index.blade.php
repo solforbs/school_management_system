@@ -103,13 +103,15 @@ new #[Title('Parent Management')] class extends Component
                 </flux:text>
             </div>
             
-            @can('create parent')
-                <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3">
+                <x-export-buttons base-route="parent.export" module="parent"
+                    :params="['search' => request('search'), 'filter' => request('filter')]" />
+                @can('create parent')
                     <flux:button href="{{ route('parent.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Add Parent
                     </flux:button>
-                </div>
-            @endcan
+                @endcan
+            </div>
         </div>
 
         {{-- Flash Messages --}}

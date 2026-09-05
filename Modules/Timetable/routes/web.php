@@ -12,6 +12,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::post('timetables/import', [TimetableController::class, 'importStore'])->name('timetable.import.store');
     Route::get('timetables/import/template', [TimetableController::class, 'importTemplate'])->name('timetable.import.template');
 
+    Route::get('timetables/export', [TimetableController::class, 'export'])->name('timetable.export');
+
     Route::livewire('timetables', 'timetable::index')->name('timetable.index');
     Route::livewire('timetables/create', 'timetable::form')->name('timetable.create');
     // Parameter deliberately not named after the model - implicit binding

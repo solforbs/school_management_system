@@ -15,6 +15,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     // would hand mount() a model where it expects an id.
     Route::livewire('institutions/{institutionId}/edit', 'institution::form')->name('institution.edit');
 
+    Route::get('institutions/export', [InstitutionController::class, 'export'])->name('institution.export');
+
     Route::resource('institutions', InstitutionController::class)
         ->names('institution')
         ->only(['store', 'show', 'update', 'destroy']);

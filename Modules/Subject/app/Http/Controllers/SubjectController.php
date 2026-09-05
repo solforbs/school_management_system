@@ -4,6 +4,7 @@ namespace Modules\Subject\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Institution\Models\Institution;
@@ -14,6 +15,61 @@ use Modules\Subject\Models\Subject;
 class SubjectController extends Controller
 {
     use Sortable;
+
+    private const HEADERS = ['Subject', 'Code', 'Institution', 'Type', 'Linked Exams'];
+
+    /**
+     * Export subjects (Excel or PDF) with the same filters and institution
+     * scoping the index screen applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export subject'), 403);
+
+        $search = (string) $request->query('search', '');
+        $compulsory = (string) $request->query('compulsory', '');
+
+        $subjects = Subject::with(['institution'])
+            ->withCount('examinations')
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when(isTeacher(), function ($q) {
+                $q->whereIn('id', function ($sub) {
+                    $sub->select('subject_id')
+                        ->from('teacher_subjects')
+                        ->where('teacher_id', auth()->id());
+                });
+            })
+            ->when($search !== '', function ($q) use ($search) {
+                $term = '%'.$search.'%';
+                $q->where('name', 'like', $term)->orWhere('code', 'like', $term);
+            })
+            ->when($compulsory !== '', fn ($q) => $q->where('is_compulsory', $compulsory === 'yes'))
+            ->orderBy('name')
+            ->get();
+
+        $rows = $subjects->map(fn (Subject $subject) => $this->toExportRow($subject));
+        $filename = 'subjects-'.now()->format('Y-m-d');
+
+        return $request->string('format')->lower()->value() === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Subjects')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Subjects');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(Subject $subject): array
+    {
+        $examCount = $subject->examinations_count ?? $subject->examinations()->count();
+
+        return [
+            $subject->name,
+            $subject->code ?? '—',
+            $subject->institution?->name ?? '—',
+            $subject->is_compulsory ? 'Compulsory' : 'Optional',
+            (string) $examCount,
+        ];
+    }
 
     /**
      * Store a newly created resource in storage.

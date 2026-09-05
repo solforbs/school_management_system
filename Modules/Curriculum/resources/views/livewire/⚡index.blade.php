@@ -64,6 +64,7 @@ new #[Title('Curricula & Frameworks')] class extends Component {
         </div>
 
         <div class="flex items-center gap-3">
+            <x-export-buttons base-route="curriculum.export" module="curriculum" :params="['search' => $this->search]" />
             @can('create curriculum')
                 <flux:button href="{{ route('curriculum.create') }}" wire:navigate.hover icon="plus" variant="primary"
                     class="shadow-sm hover:shadow-md transition-all">

@@ -116,6 +116,8 @@ new #[Title('Staff Directory')] class extends Component
             </div>
 
             <div class="flex items-center gap-3">
+                <x-export-buttons base-route="staff.export" module="staff"
+                    :params="['search' => $currentSearch, 'department' => $currentDepartment, 'status' => $currentStatus]" />
                 @can('create staff')
                     <flux:button href="{{ route('staff.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Add Staff Member

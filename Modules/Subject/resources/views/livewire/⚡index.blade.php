@@ -126,6 +126,10 @@ new #[Title('Academic Subjects')] class extends Component {
         </div>
 
         <div class="flex items-center gap-3">
+            <x-export-buttons base-route="subject.export" module="subject" :params="[
+                'search' => $currentSearch,
+                'compulsory' => $currentCompulsory,
+            ]" />
             @can('create subject')
                 <flux:button href="{{ route('subject.create') }}" wire:navigate.hover icon="plus" variant="primary"
                     class="font-semibold shadow-sm px-4">

@@ -6,6 +6,7 @@ use App\Models\ContactMessage;
 use App\Models\Devices;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\Export\Concerns\StylesWorksheets;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,10 +14,7 @@ use Illuminate\Support\Collection;
 use Modules\FeeManagement\Models\Fee;
 use Modules\Institution\Models\Institution;
 use Modules\Student\Models\StudentDetails;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
  * Builds the "export everything" workbook behind the Report page's export
@@ -34,6 +32,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  */
 class AnalyticsExportService
 {
+    use StylesWorksheets;
+
     /**
      * @return array{filename: string, spreadsheet: Spreadsheet}
      */
@@ -88,7 +88,10 @@ class AnalyticsExportService
         $this->addFeesSheet($spreadsheet, $fees, showInstitution: true);
         $this->addPaymentsSheet($spreadsheet, $payments);
         $this->addDevicesSheet($spreadsheet, $devices, showInstitution: true);
-        $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::query(), $from, $to);
+        // Attendance is a Director-only concern - the system-wide workbook
+        // deliberately excludes it so Admin never sees attendance data, even
+        // in bulk-export form. Institution-scoped exports still get their
+        // own attendance sheet below via institutionWorkbook().
         $this->addMessagesSheet($spreadsheet, $messages);
 
         return $spreadsheet;
@@ -389,37 +392,5 @@ class AnalyticsExportService
                 $message->created_at->format('Y-m-d H:i'),
             ]),
         );
-    }
-
-    /**
-     * @param  array<int, string>  $headers
-     * @param  iterable<int, array<int, mixed>>  $rows
-     */
-    private function addSheet(Spreadsheet $spreadsheet, string $title, array $headers, iterable $rows): Worksheet
-    {
-        $sheet = $spreadsheet->createSheet();
-        $sheet->setTitle($title);
-
-        $sheet->fromArray($headers, null, 'A1');
-
-        $rows = $rows instanceof Collection ? $rows->values()->all() : [...$rows];
-        if ($rows !== []) {
-            $sheet->fromArray($rows, null, 'A2');
-        }
-
-        $lastColumn = Coordinate::stringFromColumnIndex(count($headers));
-
-        $sheet->getStyle("A1:{$lastColumn}1")->getFont()->setBold(true);
-        $sheet->getStyle("A1:{$lastColumn}1")->getFill()
-            ->setFillType(Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('E5E7EB');
-
-        for ($i = 1; $i <= count($headers); $i++) {
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
-        }
-
-        $sheet->freezePane('A2');
-
-        return $sheet;
     }
 }

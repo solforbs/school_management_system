@@ -30,6 +30,7 @@ yarn-error.log
 /.zed
 
 /public/*.sql
+/public/sitemap.xml
 
 # Local backup files
 bkp/

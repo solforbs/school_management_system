@@ -33,29 +33,35 @@ class PermissionSeeder extends Seeder
     {
         // Define modules and their permissions
         $modules = [
-            'parent' => ['view', 'create', 'edit', 'update', 'delete'],
-            'student' => ['view', 'create', 'edit', 'update', 'delete'],
-            'teacher' => ['view', 'create', 'edit', 'update', 'delete'],
-            'institution' => ['view', 'create', 'edit', 'update', 'delete'],
-            'curriculum' => ['view', 'create', 'edit', 'update', 'delete'],
-            'attendance' => ['view', 'create', 'edit', 'update', 'delete'],
-            'examination' => ['view', 'create', 'edit', 'update', 'delete'],
-            'feemanagement' => ['view', 'create', 'edit', 'update', 'delete'],
-            'timetable' => ['view', 'create', 'edit', 'update', 'delete'],
-            'classes' => ['view', 'create', 'edit', 'update', 'delete'],
+            'parent' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'student' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'teacher' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'institution' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'curriculum' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'attendance' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'examination' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'feemanagement' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'timetable' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'classes' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
             'lesson' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
-            'result' => ['view', 'create', 'edit', 'update', 'delete'],
-            'subject' => ['view', 'create', 'edit', 'update', 'delete'],
-            'reportcard' => ['view', 'edit'],
-            'staff' => ['view', 'create', 'edit', 'update', 'delete'],
+            'result' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'subject' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
+            'reportcard' => ['view', 'edit', 'export'],
+            'staff' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
             'payroll' => ['view', 'create', 'edit', 'update', 'delete'],
             // What the school spends. The Accountant's to keep, the
             // Director's to read - the outgoing side of fee management.
-            'expenditure' => ['view', 'create', 'edit', 'update', 'delete'],
+            'expenditure' => ['view', 'create', 'edit', 'update', 'delete', 'export'],
             // Enrolling and revoking the offline sync clients. A Director's
             // call, not an Accountant's - a device inherits its account's
             // reach, so handing one out is a security decision.
             'syncdevice' => ['view', 'create', 'delete'],
+            // The ZKTeco biometric terminals themselves - settings, users,
+            // time and on-device log clearing. Distinct from 'syncdevice'
+            // above (offline sync clients) and deliberately never paired
+            // with any attendance permission, so managing a device never
+            // implies seeing what it has recorded.
+            'devices' => ['view', 'manage'],
             'user' => ['view', 'create', 'edit', 'update', 'delete'],
             'role' => ['view', 'create', 'edit', 'update', 'delete'],
             'permission' => ['view', 'create', 'edit', 'update', 'delete'],
@@ -101,9 +107,17 @@ class PermissionSeeder extends Seeder
      */
     private function createRolesAndAssignPermissions(): void
     {
-        // 1. Admin Role (System owner - full access to everything)
+        // 1. Admin Role (System owner - full access to everything, EXCEPT
+        // attendance. Attendance is a Director-only concern: a school's
+        // check-in/check-out records are not the platform owner's business,
+        // so Admin is denied every 'view/create/edit/update/delete/export
+        // attendance' permission below, deliberately, rather than by
+        // omission - see AttendanceLogQuery and the Attendance Livewire
+        // component, which both assume Admin never reaches attendance data.
         $admin = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
-        $admin->syncPermissions(Permission::all());
+        $admin->syncPermissions(
+            Permission::all()->reject(fn (Permission $permission) => str_contains($permission->name, 'attendance'))
+        );
 
         // 2. Director Role (Manages a single school end-to-end)
         $director = Role::firstOrCreate(['name' => 'Director', 'guard_name' => 'web']);
@@ -121,25 +135,30 @@ class PermissionSeeder extends Seeder
             'create institution',
             'edit institution',
             'update institution',
+            'export institution',
 
             // Full CRUD over everything that makes up "their school"
-            'view parent', 'create parent', 'edit parent', 'update parent', 'delete parent',
-            'view student', 'create student', 'edit student', 'update student', 'delete student',
-            'view teacher', 'create teacher', 'edit teacher', 'update teacher', 'delete teacher',
-            'view curriculum', 'create curriculum', 'edit curriculum', 'update curriculum', 'delete curriculum',
-            'view attendance', 'create attendance', 'edit attendance', 'update attendance', 'delete attendance',
-            'view examination', 'create examination', 'edit examination', 'update examination', 'delete examination',
-            'view feemanagement', 'create feemanagement', 'edit feemanagement', 'update feemanagement', 'delete feemanagement',
-            'view timetable', 'create timetable', 'edit timetable', 'update timetable', 'delete timetable',
-            'view classes', 'create classes', 'edit classes', 'update classes', 'delete classes',
+            'view parent', 'create parent', 'edit parent', 'update parent', 'delete parent', 'export parent',
+            'view student', 'create student', 'edit student', 'update student', 'delete student', 'export student',
+            'view teacher', 'create teacher', 'edit teacher', 'update teacher', 'delete teacher', 'export teacher',
+            'view curriculum', 'create curriculum', 'edit curriculum', 'update curriculum', 'delete curriculum', 'export curriculum',
+            'view attendance', 'create attendance', 'edit attendance', 'update attendance', 'delete attendance', 'export attendance',
+            'view examination', 'create examination', 'edit examination', 'update examination', 'delete examination', 'export examination',
+            'view feemanagement', 'create feemanagement', 'edit feemanagement', 'update feemanagement', 'delete feemanagement', 'export feemanagement',
+            'view timetable', 'create timetable', 'edit timetable', 'update timetable', 'delete timetable', 'export timetable',
+            'view classes', 'create classes', 'edit classes', 'update classes', 'delete classes', 'export classes',
             'view lesson', 'create lesson', 'edit lesson', 'update lesson', 'delete lesson', 'export lesson',
-            'view result', 'create result', 'edit result', 'update result', 'delete result',
-            'view subject', 'create subject', 'edit subject', 'update subject', 'delete subject',
-            'view reportcard', 'edit reportcard',
-            'view staff', 'create staff', 'edit staff', 'update staff', 'delete staff',
+            'view result', 'create result', 'edit result', 'update result', 'delete result', 'export result',
+            'view subject', 'create subject', 'edit subject', 'update subject', 'delete subject', 'export subject',
+            'view reportcard', 'edit reportcard', 'export reportcard',
+            'view staff', 'create staff', 'edit staff', 'update staff', 'delete staff', 'export staff',
             'view payroll', 'create payroll', 'edit payroll', 'update payroll', 'delete payroll',
-            'view expenditure', 'create expenditure', 'edit expenditure', 'update expenditure', 'delete expenditure',
+            'view expenditure', 'create expenditure', 'edit expenditure', 'update expenditure', 'delete expenditure', 'export expenditure',
             'view syncdevice', 'create syncdevice', 'delete syncdevice',
+            // The biometric terminals themselves - not the attendance they
+            // record (deliberately absent from this list is anything that
+            // would grant attendance access via a device-management path).
+            'view devices', 'manage devices',
             'view account', 'create account', 'edit account', 'update account',
             'view finance', 'create finance', 'edit finance', 'update finance',
 
@@ -160,6 +179,7 @@ class PermissionSeeder extends Seeder
             'edit feemanagement',
             'update feemanagement',
             'delete feemanagement',
+            'export feemanagement',
 
             // Payroll is theirs end-to-end, but the staff records it pays
             // against belong to the Director - an Accountant can only read
@@ -178,6 +198,7 @@ class PermissionSeeder extends Seeder
             'edit expenditure',
             'update expenditure',
             'delete expenditure',
+            'export expenditure',
 
             'view student',
             'view parent',

@@ -9,6 +9,7 @@ use Modules\Curriculum\Http\Controllers\CurriculumController;
  */
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::livewire('curricula', 'curriculum::index')->name('curriculum.index');
+    Route::get('curricula/export', [CurriculumController::class, 'export'])->name('curriculum.export');
     Route::livewire('curricula/create', 'curriculum::form')->name('curriculum.create');
     // Parameter deliberately not named after the model - see Classes.
     Route::livewire('curricula/{curriculumId}/edit', 'curriculum::form')->name('curriculum.edit');

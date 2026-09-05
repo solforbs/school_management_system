@@ -140,6 +140,9 @@
                                 {{-- Actions --}}
                                 <flux:table.cell>
                                     <div class="flex items-center gap-1">
+                                        @can('manage devices')
+                                            <flux:button wire:navigate href="{{ route('devices.manage', $device->id) }}" icon="cog-6-tooth" size="sm" variant="subtle" tooltip="Manage Device" />
+                                        @endcan
                                         <form action="{{ route('devices.set-time', $device) }}" method="POST" class="inline">
                                             @csrf
                                             <flux:button type="submit" variant="subtle" icon="clock" size="sm"

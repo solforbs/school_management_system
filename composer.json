@@ -28,6 +28,7 @@
         "phpoffice/phpspreadsheet": "*",
         "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^8.3",
+        "spatie/laravel-sitemap": "^8.0",
         "tether/client": "^1.0",
         "tether/server": "^1.0",
         "thiagoalessio/tesseract_ocr": "^2.13"

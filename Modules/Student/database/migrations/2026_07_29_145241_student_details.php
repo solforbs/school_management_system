@@ -11,6 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // This file was renamed (2026_07_29_142708 -> 2026_07_29_145241)
+        // after already running under its old name in some environments -
+        // their `migrations` table still has the old filename, so Laravel
+        // sees no record of "2026_07_29_145241_student_details" and tries
+        // to run this again. Guarding the create makes that a harmless
+        // no-op there while still creating the table normally on a fresh
+        // install where it doesn't exist yet.
+        if (Schema::hasTable('student_details')) {
+            return;
+        }
+
         Schema::create('student_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained('users')->cascadeOnDelete();

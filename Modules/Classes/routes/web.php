@@ -9,6 +9,7 @@ use Modules\Classes\Http\Controllers\ClassesController;
  */
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::livewire('classes', 'classes::index')->name('classes.index');
+    Route::get('classes/export', [ClassesController::class, 'export'])->name('classes.export');
     Route::livewire('classes/create', 'classes::form')->name('classes.create');
     // Parameter deliberately not named after the model: that triggers
     // implicit route-model binding, which hands mount() a model where it

@@ -71,7 +71,7 @@ new #[Title('Site Settings')] class extends Component {
         {{-- Tabs --}}
         <div role="tablist"
             class="mb-6 mt-5 flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
-            @php($tabs = ['features' => __('Features'), 'deployment' => __('Deployment')])
+            @php($tabs = ['features' => __('Features'), 'seo' => __('SEO'), 'deployment' => __('Deployment')])
             @foreach ($tabs as $name => $label)
                 <button type="button" role="tab" @click="select('{{ $name }}')"
                     :aria-selected="tab === '{{ $name }}'"
@@ -115,6 +115,11 @@ new #[Title('Site Settings')] class extends Component {
                     </flux:button>
                 </form>
             </flux:card>
+        </div>
+
+        {{-- SEO --}}
+        <div x-show="tab === 'seo'" role="tabpanel" class="max-w-2xl" style="display: none;">
+            <livewire:generate-sitemap />
         </div>
 
         {{-- Deployment --}}

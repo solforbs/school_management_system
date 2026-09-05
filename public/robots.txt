@@ -1,2 +1,7 @@
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /billing
+Disallow: /.well-known/
+
+Sitemap: http://127.0.0.1:8000/sitemap.xml

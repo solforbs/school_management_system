@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $id
  * @property string|null $serial_number
  * @property CarbonInterface|null $last_activity_at
+ * @property CarbonInterface|null $attendance_logs_cleared_at
  * @property array<string, mixed>|null $options
  * @property string|null $timezone
  */
@@ -41,6 +42,7 @@ class ZktecoDevice extends Model
         'status' => DeviceStatus::class,
         'last_activity_at' => 'datetime',
         'last_sync_at' => 'datetime',
+        'attendance_logs_cleared_at' => 'datetime',
         'options' => 'array',
     ];
 

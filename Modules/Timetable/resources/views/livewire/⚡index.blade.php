@@ -185,6 +185,11 @@ new #[Title('Timetable')] class extends Component
                     Print Schedule
                 </button>
 
+                <x-export-buttons
+                    base-route="timetable.export"
+                    module="timetable"
+                    :params="['class_id' => $selectedClass?->id]" />
+
                 @can('create timetable')
                     <flux:button href="{{ route('timetable.import') }}" wire:navigate.hover icon="arrow-up-tray" variant="subtle" class="font-semibold text-xs">
                         Import CSV

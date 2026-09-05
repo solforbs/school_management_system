@@ -41,8 +41,21 @@ Schedule::command('lesson:generate-daily-reports')->dailyAt('18:00');
 // The timetable only runs Monday-Friday, so Friday evening is "end of week".
 Schedule::command('lesson:generate-weekly-reports')->weeklyOn(5, '18:30');
 
+// Keeps public/sitemap.xml in sync with the public pages for Google
+// Search Console and other crawlers. Hourly is far more often than the
+// marketing pages themselves change - the plans page is the only one with
+// data behind it, and a stale sitemap for an hour costs nothing since
+// crawlers re-fetch it on their own schedule anyway.
+Schedule::command('sitemap:generate')->hourly();
+
 // A terminal stamps every punch with its own clock, so drift files
 // attendance at the wrong hour without ever announcing itself. Hourly is
 // far more often than any device drifts; it is a tiny queued command, and
 // devices that are switched off are caught on reconnect instead.
 Schedule::command('zkteco:sync-clocks')->hourly();
+
+// The database already has every punch the moment a device pushes it - this
+// only protects a terminal's own limited flash storage from filling up.
+// Daily is plenty since nothing is actually cleared until 7 days have
+// passed since the last clear (DeviceAttendanceLogRetention enforces that).
+Schedule::command('zkteco:clear-old-attendance-logs')->dailyAt('02:00');

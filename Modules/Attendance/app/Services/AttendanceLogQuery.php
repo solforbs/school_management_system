@@ -22,9 +22,12 @@ class AttendanceLogQuery
      */
     public static function build(int $institutionId, User $user, array $filters = []): Builder
     {
-        if (! isAdmin()) {
-            abort_unless(self::allowedInstitutionIds($user)->contains($institutionId), 403);
-        }
+        // No isAdmin() bypass here on purpose: attendance is a Director-only
+        // concern, and Admin no longer holds any 'view attendance'-family
+        // permission (see PermissionSeeder), so every caller already aborts
+        // before reaching this method. Institution scoping therefore applies
+        // unconditionally to whoever does get here.
+        abort_unless(self::allowedInstitutionIds($user)->contains($institutionId), 403);
 
         $deviceId = $filters['device_id'] ?? null;
         $search = trim((string) ($filters['search'] ?? ''));

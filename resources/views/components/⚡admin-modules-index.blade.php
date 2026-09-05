@@ -1,9 +1,21 @@
 <?php
 
+use Flux\Flux;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Nwidart\Modules\Facades\Module;
 
+/**
+ * Enable/disable/delete a module's active flag boots (or stops booting) its
+ * service provider on every request across the whole site, not just admin
+ * pages - so any of these three actions can take the entire application
+ * down if something about the module is broken. `enable` in particular used
+ * to just flip the flag with no check at all: re-enabling a module left
+ * over from a failed/partial creation (or manually mangled files) would
+ * reproduce the exact "Class ... not found" site-wide fatal error the
+ * create flow now guards against.
+ */
 new class extends Component {
     /** The module the delete dialog is confirming. */
     public ?string $confirmingModule = null;
@@ -11,21 +23,44 @@ new class extends Component {
     #[On('loadModules')]
     public function modules()
     {
-        $modules = Module::all();
-        return $modules;
+        return Module::all();
     }
+
     public function enableClickedModule($name)
     {
-        Module::enable($name);
-        $this->dispatch('loadModules');
-        Flux::toast(text: $name . ' module enabled!', variant: 'success');
+        $providerClass = "Modules\\{$name}\\Providers\\{$name}ServiceProvider";
+
+        if (! class_exists($providerClass)) {
+            Flux::toast(
+                text: "Can't enable \"{$name}\" - its service provider class ({$providerClass}) isn't loadable. Enabling it would break every page on the site. Try \"composer dump-autoload\", or delete and recreate the module.",
+                variant: 'danger',
+            );
+
+            return;
+        }
+
+        try {
+            Module::enable($name);
+            $this->dispatch('loadModules');
+            Flux::toast(text: $name.' module enabled!', variant: 'success');
+        } catch (Throwable $e) {
+            Log::error('Failed to enable module', ['module' => $name, 'error' => $e->getMessage()]);
+            Flux::toast(text: "Couldn't enable \"{$name}\": ".$e->getMessage(), variant: 'danger');
+        }
     }
+
     public function disableClickedModule($name)
     {
-        Module::disable($name);
-        $this->dispatch('loadModules');
-        Flux::toast(text: $name . ' module disabled!', variant: 'success');
+        try {
+            Module::disable($name);
+            $this->dispatch('loadModules');
+            Flux::toast(text: $name.' module disabled!', variant: 'success');
+        } catch (Throwable $e) {
+            Log::error('Failed to disable module', ['module' => $name, 'error' => $e->getMessage()]);
+            Flux::toast(text: "Couldn't disable \"{$name}\": ".$e->getMessage(), variant: 'danger');
+        }
     }
+
     public function deleteClickedModule($name = null)
     {
         $name ??= $this->confirmingModule;
@@ -37,9 +72,14 @@ new class extends Component {
         $this->confirmingModule = null;
         Flux::modal('confirm-delete-module')->close();
 
-        Module::delete($name);
-        $this->dispatch('loadModules');
-        Flux::toast(text: $name . ' module deleted!', variant: 'success');
+        try {
+            Module::delete($name);
+            $this->dispatch('loadModules');
+            Flux::toast(text: $name.' module deleted!', variant: 'success');
+        } catch (Throwable $e) {
+            Log::error('Failed to delete module', ['module' => $name, 'error' => $e->getMessage()]);
+            Flux::toast(text: "Couldn't delete \"{$name}\": ".$e->getMessage(), variant: 'danger');
+        }
     }
 };
 ?>
@@ -79,9 +119,14 @@ new class extends Component {
                         wire:click="disableClickedModule('{{ $module->getName() }}')">
                         Disable
                     </flux:button>
-                    <flux:button href="{{ route(strtolower($module->getName()) . '.index') }}" icon="eye" wire:navigate>
-                        Visit
-                    </flux:button>
+                    @php
+                        $moduleIndexRoute = strtolower($module->getName()).'.index';
+                    @endphp
+                    @if (Route::has($moduleIndexRoute))
+                        <flux:button href="{{ route($moduleIndexRoute) }}" icon="eye" wire:navigate>
+                            Visit
+                        </flux:button>
+                    @endif
                 @else
                     <flux:button class="flex-1" variant="primary" icon="check-badge"
                         wire:click="enableClickedModule('{{ $module->getName() }}')">

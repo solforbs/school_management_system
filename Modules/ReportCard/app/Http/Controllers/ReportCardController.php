@@ -4,6 +4,8 @@ namespace Modules\ReportCard\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -16,6 +18,72 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ReportCardController extends Controller
 {
     use Sortable;
+
+    private const HEADERS = ['Student Name', 'Admission No', 'Class', 'Term', 'Academic Year', 'Mean %', 'Mean Grade', 'Status'];
+
+    /**
+     * Export the report card list (Excel/PDF) with the same institution
+     * scoping and filters the Livewire index applies, so the file matches
+     * what's currently on screen. This exports the LIST of report cards -
+     * not an individual student's report card PDF (see the pdf()/download()
+     * actions above for that, unrelated feature).
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export reportcard'), 403);
+
+        $search = $request->string('search')->value();
+        $classId = $request->string('class_id')->value();
+        $termId = $request->string('term_id')->value();
+        $academicYearId = $request->string('academic_year_id')->value();
+
+        $query = ReportCard::with(['student.studentUserDetails.schoolClass', 'schoolClass', 'institution'])
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($search !== '', function ($q) use ($search) {
+                $term = '%'.$search.'%';
+
+                $q->where(function ($sub) use ($term) {
+                    $sub->whereHas('student', fn ($sq) => $sq->where('name', 'like', $term)->orWhere('email', 'like', $term))
+                        ->orWhereHas('student.studentUserDetails', fn ($duq) => $duq->where('admission_number', 'like', $term));
+                });
+            })
+            ->when($classId !== '', fn ($q) => $q->where('class_id', $classId))
+            ->when($termId !== '', fn ($q) => $q->where('term', $termId))
+            ->when($academicYearId !== '', fn ($q) => $q->where('academic_year', $academicYearId))
+            ->orderBy('created_at', 'desc');
+
+        $rows = $query->get()->map(fn (ReportCard $reportCard) => $this->toExportRow($reportCard));
+
+        $filename = 'report-cards-'.now()->format('Y-m-d');
+        $format = $request->string('format')->lower()->value();
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Report Cards')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Report Cards');
+    }
+
+    /**
+     * Flatten a report card into the row shape shared by every export
+     * format (Excel, PDF).
+     *
+     * @return array<int, string>
+     */
+    private function toExportRow(ReportCard $reportCard): array
+    {
+        $student = $reportCard->student;
+        $studentDetails = $student?->studentUserDetails;
+
+        return [
+            $student?->name ?? 'Unknown Student',
+            $studentDetails?->admission_number ?? 'N/A',
+            $reportCard->schoolClass?->name ?? $studentDetails?->schoolClass?->name ?? 'Unassigned',
+            $reportCard->term ?: 'Term 1',
+            (string) ($reportCard->academic_year ?: date('Y')),
+            $reportCard->mean_percentage !== null ? number_format((float) $reportCard->mean_percentage, 1).'%' : 'N/A',
+            $reportCard->mean_grade ?? 'N/A',
+            ucfirst(str_replace('_', ' ', (string) ($reportCard->status ?? 'pending'))),
+        ];
+    }
 
     /**
      * Queue every report card that's been ready for a day, scoped the same

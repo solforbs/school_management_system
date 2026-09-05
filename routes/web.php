@@ -46,6 +46,9 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
     Route::resource('/devices', DevicesController::class)->names('devices')->except(['store', 'show']);
     // Queues a clock sync; the terminal applies it on its next check-in.
     Route::post('devices/{device}/set-time', [DevicesController::class, 'setTime'])->name('devices.set-time');
+    // Settings/users/time/on-device log clearing/command queue - one page,
+    // never attendance data (that stays Director-only, see Attendance).
+    Route::livewire('devices/{deviceId}/manage', 'pages::devices.manage')->name('devices.manage');
     // Offline sync clients - distinct from the biometric hardware above.
     Route::resource('sync-devices', SyncDeviceController::class)
         ->names('sync-devices')

@@ -3,6 +3,7 @@
 namespace Modules\Expenditure\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,65 @@ use Modules\Expenditure\Models\Expenditure;
  */
 class ExpenditureController extends Controller
 {
+    private const HEADERS = ['Date', 'Item', 'Category', 'Payee', 'Amount', 'Method', 'Status'];
+
+    /**
+     * Export expenditure records (Excel or PDF) with the same filters and
+     * institution scoping the index screen applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export expenditure'), 403);
+
+        $query = Expenditure::query()->with(['category', 'recordedBy']);
+
+        if (! isAdmin()) {
+            $query->where('institution_id', currentInstitution()?->id ?? 0);
+        }
+
+        $search = (string) $request->query('search', '');
+        $categoryId = (string) $request->query('category_id', '');
+        $status = (string) $request->query('status', '');
+        $from = (string) $request->query('from', '');
+        $to = (string) $request->query('to', '');
+
+        $query->when($search !== '', function ($q) use ($search) {
+            $term = '%'.$search.'%';
+
+            $q->where(fn ($sub) => $sub->where('title', 'like', $term)
+                ->orWhere('payee', 'like', $term)
+                ->orWhere('reference', 'like', $term));
+        })
+            ->when($categoryId !== '', fn ($q) => $q->where('expenditure_category_id', $categoryId))
+            ->when($status !== '', fn ($q) => $q->where('status', $status))
+            ->when($from !== '', fn ($q) => $q->whereDate('spent_on', '>=', $from))
+            ->when($to !== '', fn ($q) => $q->whereDate('spent_on', '<=', $to))
+            ->orderByDesc('spent_on');
+
+        $rows = $query->get()->map(fn (Expenditure $expenditure) => $this->toExportRow($expenditure));
+        $filename = 'expenditure-'.now()->format('Y-m-d');
+
+        return $request->string('format')->lower()->value() === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Expenditure')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Expenditure');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(Expenditure $expenditure): array
+    {
+        return [
+            $expenditure->spent_on?->format('Y-m-d') ?? '',
+            $expenditure->title,
+            $expenditure->category?->name ?? '—',
+            $expenditure->payee ?? '—',
+            number_format((float) $expenditure->amount, 2),
+            ucfirst(str_replace('_', ' ', (string) $expenditure->payment_method)),
+            ucfirst((string) $expenditure->status),
+        ];
+    }
+
     /**
      * Store a newly created resource in storage.
      */

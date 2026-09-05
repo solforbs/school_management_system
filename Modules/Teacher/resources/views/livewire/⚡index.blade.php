@@ -143,6 +143,8 @@ new #[Title('Teacher Management')] class extends Component
             </div>
 
             <div class="flex items-center gap-3">
+                <x-export-buttons base-route="teacher.export" module="teacher"
+                    :params="['search' => $currentSearch, 'department' => $currentDept, 'status' => $currentStatus]" />
                 @can('create teacher')
                     <flux:button href="{{ route('teacher.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Add Teacher

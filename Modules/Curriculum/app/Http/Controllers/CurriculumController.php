@@ -3,6 +3,7 @@
 namespace Modules\Curriculum\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Curriculum\Actions\SaveCurriculum;
@@ -11,6 +12,49 @@ use Modules\Student\Models\StudentDetails;
 
 class CurriculumController extends Controller
 {
+    private const HEADERS = ['Curriculum', 'System', 'Grading', 'Institution'];
+
+    /**
+     * Export curricula (Excel or PDF) with the same filters and institution
+     * scoping the index screen applies.
+     */
+    public function export(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('export curriculum'), 403);
+
+        $search = (string) $request->query('search', '');
+
+        $curricula = Curriculum::with('institution')
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('name', 'like', '%'.$search.'%')->orWhere('system', 'like', '%'.$search.'%');
+                });
+            })
+            ->orderBy('name')
+            ->get();
+
+        $rows = $curricula->map(fn (Curriculum $curriculum) => $this->toExportRow($curriculum));
+        $filename = 'curriculum-'.now()->format('Y-m-d');
+
+        return $request->string('format')->lower()->value() === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Curricula')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Curricula');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function toExportRow(Curriculum $curriculum): array
+    {
+        return [
+            $curriculum->name,
+            $curriculum->systemLabel(),
+            $curriculum->gradingLabel(),
+            $curriculum->institution?->name ?? '—',
+        ];
+    }
+
     /**
      * Store a newly created resource in storage.
      */

@@ -10,6 +10,7 @@ use Modules\Teacher\Http\Controllers\TeacherController;
  */
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::livewire('teachers', 'teacher::index')->name('teacher.index');
+    Route::get('teachers/export', [TeacherController::class, 'export'])->name('teacher.export');
     Route::livewire('teachers/create', 'teacher::form')->name('teacher.create');
     // Parameter deliberately not named after the model - implicit binding
     // would hand mount() a model where it expects an id.

@@ -113,6 +113,10 @@ new #[Title('Fee Invoices')] class extends Component
             </div>
 
             <div class="flex items-center gap-3">
+                <x-export-buttons
+                    base-route="feemanagement.export"
+                    module="feemanagement"
+                    :params="['search' => $currentSearch, 'status' => $currentStatus, 'fee_type' => $currentType, 'class_id' => $currentClass]" />
                 @can('create feemanagement')
                     <flux:button href="{{ route('feemanagement.receipts.create') }}" wire:navigate.hover icon="camera" variant="subtle" class="font-semibold shadow-sm">
                         Scan Receipt

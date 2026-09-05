@@ -20,6 +20,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::delete('expenditures/categories/{category}', [ExpenditureCategoryController::class, 'destroy'])->name('expenditure.categories.destroy');
 
     Route::livewire('expenditures', 'expenditure::index')->name('expenditure.index');
+    Route::get('expenditures/export', [ExpenditureController::class, 'export'])->name('expenditure.export');
     Route::livewire('expenditures/create', 'expenditure::form')->name('expenditure.create');
     // Parameter deliberately not named {expenditure}: that name triggers
     // implicit route-model binding, which hands mount() a model where it

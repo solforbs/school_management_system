@@ -22,6 +22,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
         ->only(['store', 'show', 'update', 'destroy']);
 
     Route::livewire('staff', 'staff::index')->name('staff.index');
+    Route::get('staff/export', [StaffController::class, 'export'])->name('staff.export');
     Route::livewire('staff/create', 'staff::form')->name('staff.create');
     Route::livewire('staff/{staffId}/edit', 'staff::form')->name('staff.edit');
 
