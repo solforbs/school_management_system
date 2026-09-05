@@ -15,10 +15,24 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property int $id
  * @property string|null $serial_number
+ * @property string|null $name
+ * @property string|null $ip_address
+ * @property string|null $model
+ * @property string|null $firmware_version
+ * @property string|null $push_version
+ * @property string|null $device_type
+ * @property string|null $language
+ * @property DeviceStatus $status
  * @property CarbonInterface|null $last_activity_at
+ * @property CarbonInterface|null $last_sync_at
  * @property CarbonInterface|null $attendance_logs_cleared_at
+ * @property int $att_stamp
+ * @property int $op_stamp
  * @property array<string, mixed>|null $options
  * @property string|null $timezone
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
+ * @property CarbonInterface|null $deleted_at
  */
 class ZktecoDevice extends Model
 {

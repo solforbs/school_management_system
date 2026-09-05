@@ -77,13 +77,13 @@ class StudentDataService
 
         return $logs->map(function (ZktecoAttendanceLog $log) {
             $label = match ($log->status) {
+                null => 'Recorded',
                 AttendanceStatus::CheckIn => 'Checked in',
                 AttendanceStatus::CheckOut => 'Checked out',
                 AttendanceStatus::BreakOut => 'Break out',
                 AttendanceStatus::BreakIn => 'Break in',
                 AttendanceStatus::OvertimeIn => 'Overtime in',
                 AttendanceStatus::OvertimeOut => 'Overtime out',
-                default => 'Recorded',
             };
             $when = $log->occurred_at?->format('D, M j g:i A') ?? 'Unknown time';
 

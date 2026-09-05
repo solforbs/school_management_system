@@ -167,6 +167,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         );
     }
 
+    /** @return HasOne<ParentDetails, $this> */
     public function parent(): HasOne
     {
         return $this->hasOne(ParentDetails::class, 'parent_id');

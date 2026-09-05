@@ -6,6 +6,8 @@ use App\Concerns\TetherSyncable;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Modules\Institution\Models\Institution;
@@ -67,22 +69,26 @@ class Fee extends Model
         'due_date' => 'date',
     ];
 
-    public function institution()
+    /** @return BelongsTo<Institution, $this> */
+    public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
 
-    public function student()
+    /** @return BelongsTo<User, $this> */
+    public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_id');
     }
 
-    public function parent()
+    /** @return BelongsTo<User, $this> */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'parent_id');
     }
 
-    public function payments()
+    /** @return HasMany<FeePayment, $this> */
+    public function payments(): HasMany
     {
         return $this->hasMany(FeePayment::class);
     }

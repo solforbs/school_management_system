@@ -97,30 +97,6 @@ parameters:
 			path: app/Http/Controllers/DashboardController.php
 
 		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/DeviceProfileController.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/DeviceProfileController.php
-
-		-
-			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$ip_address\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/DevicesController.php
-
-		-
-			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/DevicesController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\DevicesController\:\:create\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -607,12 +583,6 @@ parameters:
 			path: app/Models/User.php
 
 		-
-			message: '#^Method App\\Models\\User\:\:parent\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOne does not specify its types\: TRelatedModel, TDeclaringModel$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/User.php
-
-		-
 			message: '#^Method App\\Models\\User\:\:parentInstitution\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\HasOneThrough does not specify its types\: TRelatedModel, TIntermediateModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
@@ -775,42 +745,6 @@ parameters:
 			path: app/Providers/TetherServiceProvider.php
 
 		-
-			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$ip_address\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoDevice\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$parent_occupation\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$parent_phone\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\FeeManagement\\Models\\Fee\:\:\$institution\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\FeeManagement\\Models\\Fee\:\:\$student\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
 			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$owner\.$#'
 			identifier: property.notFound
 			count: 2
@@ -903,12 +837,6 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 3
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Relation ''institution'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
-			identifier: larastan.relationExistence
 			count: 1
 			path: app/Services/AnalyticsExportService.php
 
@@ -919,15 +847,9 @@ parameters:
 			path: app/Services/AnalyticsExportService.php
 
 		-
-			message: '#^Relation ''student'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Services/AnalyticsExportService.php
-
-		-
 			message: '#^Return type of call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: method.unresolvableReturnType
-			count: 3
+			count: 1
 			path: app/Services/AnalyticsExportService.php
 
 		-
@@ -1051,22 +973,10 @@ parameters:
 			path: app/Services/AnalyticsService.php
 
 		-
-			message: '#^Relation ''student'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
-			identifier: larastan.relationExistence
-			count: 2
-			path: app/Services/AnalyticsService.php
-
-		-
 			message: '#^Unable to resolve the template type TGroupKey in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:groupBy\(\)$#'
 			identifier: argument.templateType
 			count: 2
 			path: app/Services/AnalyticsService.php
-
-		-
-			message: '#^Access to an undefined property Athwari\\LaravelZktecoAdms\\Models\\ZktecoAttendanceLog\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Chatbot/StudentDataService.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Modules\\Classes\\Models\\SchoolClass\>\|Modules\\Classes\\Models\\SchoolClass\:\:\$classTeacher\.$#'
@@ -1076,12 +986,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, Modules\\Classes\\Models\\SchoolClass\>\|Modules\\Classes\\Models\\SchoolClass\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Chatbot/StudentDataService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Institution\\Models\\Institution\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Services/Chatbot/StudentDataService.php
@@ -1193,18 +1097,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Services/FeePaymentService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\FeeManagement\\Models\\Fee\:\:\$parent\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/FeeReminderService.php
-
-		-
-			message: '#^Relation ''parent'' is not found in Modules\\FeeManagement\\Models\\Fee model\.$#'
-			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/FeeReminderService.php
 
 		-
 			message: '#^Method App\\Services\\GeminiService\:\:extractReceiptDetails\(\) return type has no value type specified in iterable type array\.$#'

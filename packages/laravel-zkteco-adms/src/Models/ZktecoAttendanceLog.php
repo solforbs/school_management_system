@@ -9,7 +9,23 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $device_id
+ * @property string $pin
+ * @property Carbon $recorded_at
+ * @property Carbon|null $occurred_at
+ * @property AttendanceStatus|null $status
+ * @property VerifyMode $verify_mode
+ * @property string $work_code
+ * @property string|null $reserved_1
+ * @property string|null $reserved_2
+ * @property array<string, mixed>|null $raw_data
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class ZktecoAttendanceLog extends Model
 {
     use HasFactory;
