@@ -52,8 +52,12 @@ test('an admin promotes a director, who becomes an admin outright', function () 
 
     Livewire::actingAs($admin)
         ->test('pages::admin.user-roles')
-        ->call('promote', $director->id)
-        ->assertHasNoErrors();
+        // The row's button only stages the id; the confirm modal's button
+        // runs promote() with no argument.
+        ->set('confirmingPromoteId', $director->id)
+        ->call('promote')
+        ->assertHasNoErrors()
+        ->assertSet('confirmingPromoteId', null);
 
     $director->refresh();
 
@@ -97,8 +101,10 @@ test('an admin demotes another admin back to director', function () {
 
     Livewire::actingAs($admin)
         ->test('pages::admin.user-roles')
-        ->call('demote', $promoted->id)
-        ->assertHasNoErrors();
+        ->set('confirmingDemoteId', $promoted->id)
+        ->call('demote')
+        ->assertHasNoErrors()
+        ->assertSet('confirmingDemoteId', null);
 
     $promoted->refresh();
 

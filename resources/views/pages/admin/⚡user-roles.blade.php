@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
@@ -19,6 +20,12 @@ use Spatie\Permission\PermissionRegistrar;
 new #[Title('Admin Access')] class extends Component
 {
     public string $search = '';
+
+    /** The Director the promote dialog is confirming. */
+    public ?int $confirmingPromoteId = null;
+
+    /** The Admin the demote dialog is confirming. */
+    public ?int $confirmingDemoteId = null;
 
     public function mount(): void
     {
@@ -67,11 +74,24 @@ new #[Title('Admin Access')] class extends Component
             ->get(['id', 'name', 'email']);
     }
 
-    public function promote(int $userId): void
+    #[Computed]
+    public function promoteTarget(): ?User
+    {
+        return $this->confirmingPromoteId ? User::find($this->confirmingPromoteId) : null;
+    }
+
+    #[Computed]
+    public function demoteTarget(): ?User
+    {
+        return $this->confirmingDemoteId ? User::find($this->confirmingDemoteId) : null;
+    }
+
+    public function promote(?int $userId = null): void
     {
         abort_unless(isAdmin(), 403);
         abort_unless(auth()->user()->can('update user'), 403);
 
+        $userId ??= $this->confirmingPromoteId;
         $user = User::findOrFail($userId);
 
         abort_unless($user->hasRole('Director'), 422, 'Only a Director can be promoted here.');
@@ -88,14 +108,17 @@ new #[Title('Admin Access')] class extends Component
             'by_user_id' => auth()->id(),
         ]);
 
-        $this->dispatch('role-changed');
-        \Flux\Flux::toast(text: "{$user->name} is now a platform Admin.", variant: 'success');
+        $this->confirmingPromoteId = null;
+        Flux::modal('confirm-promote')->close();
+        Flux::toast(text: "{$user->name} is now a platform Admin.", variant: 'success');
     }
 
-    public function demote(int $userId): void
+    public function demote(?int $userId = null): void
     {
         abort_unless(isAdmin(), 403);
         abort_unless(auth()->user()->can('update user'), 403);
+
+        $userId ??= $this->confirmingDemoteId;
 
         abort_if($userId === auth()->id(), 422, 'You cannot remove your own Admin access.');
 
@@ -116,8 +139,9 @@ new #[Title('Admin Access')] class extends Component
             'by_user_id' => auth()->id(),
         ]);
 
-        $this->dispatch('role-changed');
-        \Flux\Flux::toast(text: "{$user->name} is back to Director access.", variant: 'success');
+        $this->confirmingDemoteId = null;
+        Flux::modal('confirm-demote')->close();
+        Flux::toast(text: "{$user->name} is back to Director access.", variant: 'success');
     }
 }; ?>
 
@@ -164,12 +188,12 @@ new #[Title('Admin Access')] class extends Component
                             <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $director->email }}</td>
                             <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $director->activeInstitution?->name ?? '—' }}</td>
                             <td class="py-3 pr-4 text-right">
-                                <flux:button size="sm" variant="primary" icon="shield-check"
-                                    wire:click="promote({{ $director->id }})"
-                                    wire:confirm="Promote {{ $director->name }} to platform Admin? This replaces their Director role."
-                                    wire:loading.attr="disabled">
-                                    Make Admin
-                                </flux:button>
+                                <flux:modal.trigger name="confirm-promote">
+                                    <flux:button size="sm" variant="primary" icon="shield-check"
+                                        wire:click="$set('confirmingPromoteId', {{ $director->id }})">
+                                        Make Admin
+                                    </flux:button>
+                                </flux:modal.trigger>
                             </td>
                         </tr>
                     @empty
@@ -210,12 +234,12 @@ new #[Title('Admin Access')] class extends Component
                                 @if ($admin->id === auth()->id())
                                     <flux:badge size="sm" color="zinc">You</flux:badge>
                                 @else
-                                    <flux:button size="sm" variant="subtle" icon="shield-exclamation"
-                                        wire:click="demote({{ $admin->id }})"
-                                        wire:confirm="Remove {{ $admin->name }}'s Admin access and return them to Director?"
-                                        wire:loading.attr="disabled">
-                                        Revoke admin
-                                    </flux:button>
+                                    <flux:modal.trigger name="confirm-demote">
+                                        <flux:button size="sm" variant="subtle" icon="shield-exclamation"
+                                            wire:click="$set('confirmingDemoteId', {{ $admin->id }})">
+                                            Revoke admin
+                                        </flux:button>
+                                    </flux:modal.trigger>
                                 @endif
                             </td>
                         </tr>
@@ -224,4 +248,57 @@ new #[Title('Admin Access')] class extends Component
             </table>
         </div>
     </flux:card>
+
+    {{-- Confirm: promote --}}
+    <flux:modal name="confirm-promote" class="max-w-md" wire:close="$set('confirmingPromoteId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Promote to platform Admin?</flux:heading>
+                <flux:subheading>
+                    @if ($this->promoteTarget)
+                        <strong>{{ $this->promoteTarget->name }}</strong> ({{ $this->promoteTarget->email }}) will
+                        lose their Director role and gain full platform Admin access. They will no longer be able to
+                        run a school from this account.
+                    @else
+                        Select a Director to promote.
+                    @endif
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="primary" icon="shield-check" wire:click="promote"
+                    wire:loading.attr="disabled">
+                    Make Admin
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Confirm: demote --}}
+    <flux:modal name="confirm-demote" class="max-w-md" wire:close="$set('confirmingDemoteId', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Revoke Admin access?</flux:heading>
+                <flux:subheading>
+                    @if ($this->demoteTarget)
+                        <strong>{{ $this->demoteTarget->name }}</strong> ({{ $this->demoteTarget->email }}) will
+                        return to Director access and lose every platform Admin permission.
+                    @else
+                        Select an Admin to revoke.
+                    @endif
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" icon="shield-exclamation" wire:click="demote"
+                    wire:loading.attr="disabled">
+                    Revoke admin
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>

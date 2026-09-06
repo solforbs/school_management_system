@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\Plan;
 use App\Models\PlanFeature;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Arr;
 use Livewire\Attributes\Computed;
@@ -29,6 +30,9 @@ class PlanFeatureManager extends Component
     /** Label for a feature the admin is defining on the spot. */
     public string $newLabel = '';
 
+    /** The catalogue key the delete dialog is confirming. */
+    public ?string $confirmingDeleteKey = null;
+
     /**
      * @param  array<int, string>|null  $features  Keys already on the plan.
      */
@@ -42,6 +46,17 @@ class PlanFeatureManager extends Component
             ->unique()
             ->values()
             ->all();
+    }
+
+    /** The label shown in the delete-feature confirmation dialog. */
+    #[Computed]
+    public function deleteTargetLabel(): ?string
+    {
+        if (! is_string($this->confirmingDeleteKey) || $this->confirmingDeleteKey === '') {
+            return null;
+        }
+
+        return $this->catalog()[$this->confirmingDeleteKey] ?? $this->confirmingDeleteKey;
     }
 
     /**
@@ -120,9 +135,18 @@ class PlanFeatureManager extends Component
      * built-in keys and for anything another plan still uses - those can
      * only be unticked from this plan.
      */
-    public function deleteFeature(string $key): void
+    public function deleteFeature(?string $key = null): void
     {
         abort_unless(isAdmin(), 403);
+
+        $key ??= $this->confirmingDeleteKey;
+
+        $this->confirmingDeleteKey = null;
+        Flux::modal('confirm-delete-feature')->close();
+
+        if (! is_string($key) || $key === '') {
+            return;
+        }
 
         $this->selected = array_values(array_diff($this->selected, [$key]));
 

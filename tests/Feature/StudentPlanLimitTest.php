@@ -170,6 +170,38 @@ test('the plan feature manager ticks, adds and detaches features', function () {
     expect(PlanFeature::where('key', 'parent_portal')->value('label'))->toBe('Parent Portal');
 });
 
+test('the feature manager deletes a custom feature through its confirm dialog', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+
+    PlanFeature::create(['key' => 'custom_thing', 'label' => 'Custom Thing', 'is_active' => true]);
+
+    Livewire::actingAs($admin)
+        ->test(PlanFeatureManager::class, ['planId' => null, 'features' => ['custom_thing']])
+        ->assertSet('selected', ['custom_thing'])
+        // The trigger only stages the key; the modal's confirm button runs
+        // the delete with no argument.
+        ->set('confirmingDeleteKey', 'custom_thing')
+        ->call('deleteFeature')
+        ->assertSet('selected', [])
+        ->assertSet('confirmingDeleteKey', null);
+
+    expect(PlanFeature::where('key', 'custom_thing')->exists())->toBeFalse();
+});
+
+test('the feature manager will not delete a built-in feature', function () {
+    $admin = User::factory()->create();
+    $admin->assignRole('Admin');
+
+    Livewire::actingAs($admin)
+        ->test(PlanFeatureManager::class, ['planId' => null, 'features' => ['ai_receipt_scanning']])
+        ->set('confirmingDeleteKey', 'ai_receipt_scanning')
+        ->call('deleteFeature');
+
+    // Still catalogued - only the per-plan tick was cleared.
+    expect(PlanFeature::where('key', 'ai_receipt_scanning')->exists())->toBeTrue();
+});
+
 test('the admin plan create and edit screens render the feature manager', function () {
     $admin = User::factory()->create();
     $admin->assignRole('Admin');

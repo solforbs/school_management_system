@@ -26,11 +26,13 @@
                 </label>
 
                 @unless (array_key_exists($key, \App\Models\Plan::FEATURES))
-                    <button type="button" wire:click="deleteFeature('{{ $key }}')"
-                        title="Delete this feature definition"
-                        class="text-gray-300 hover:text-red-500 shrink-0">
-                        <flux:icon icon="trash" class="size-4" />
-                    </button>
+                    <flux:modal.trigger name="confirm-delete-feature">
+                        <button type="button" wire:click="$set('confirmingDeleteKey', '{{ $key }}')"
+                            title="Delete this feature definition"
+                            class="text-gray-300 hover:text-red-500 shrink-0">
+                            <flux:icon icon="trash" class="size-4" />
+                        </button>
+                    </flux:modal.trigger>
                 @endunless
             </div>
         @endforeach
@@ -50,4 +52,31 @@
     @error('features')
         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
     @enderror
+
+    {{-- Confirm: delete a custom feature definition --}}
+    <flux:modal name="confirm-delete-feature" class="max-w-md" wire:close="$set('confirmingDeleteKey', null)">
+        <div class="space-y-5">
+            <div>
+                <flux:heading size="lg">Delete this feature?</flux:heading>
+                <flux:subheading>
+                    @if ($this->deleteTargetLabel)
+                        <strong>{{ $this->deleteTargetLabel }}</strong> will be removed from this plan and deleted
+                        from the feature catalogue, so it can no longer be added to any plan. Plans that already
+                        include it are left untouched.
+                    @else
+                        This removes the feature from the catalogue.
+                    @endif
+                </flux:subheading>
+            </div>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button type="button" variant="filled">Cancel</flux:button>
+                </flux:modal.close>
+                <flux:button type="button" variant="danger" icon="trash" wire:click="deleteFeature"
+                    wire:loading.attr="disabled">
+                    Delete feature
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
