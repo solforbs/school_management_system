@@ -7,6 +7,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Modules\Institution\Actions\DeleteInstitution;
 use Modules\Institution\Models\Institution;
 
 new #[Title('Institutions')] class extends Component
@@ -104,15 +105,56 @@ new #[Title('Institutions')] class extends Component
         $this->redirectRoute('dashboard', navigate: true);
     }
 
-    public function delete(int $id): void
+    /** The institution the delete dialog is confirming. */
+    public ?int $deletingId = null;
+
+    /**
+     * The institution staged for deletion, with the counts the dialog
+     * spells out before the admin commits to a permanent purge.
+     */
+    #[Computed]
+    public function deletingInstitution(): ?Institution
+    {
+        return $this->deletingId
+            ? Institution::withCount(['studentDetails', 'teacherDetails'])->find($this->deletingId)
+            : null;
+    }
+
+    /**
+     * Permanently delete a school and everything under it - records across
+     * every module, uploaded files, and the logins that existed only for
+     * this school. See Modules\Institution\Actions\DeleteInstitution.
+     */
+    public function delete(?int $id = null): void
     {
         abort_unless(isAdmin() && auth()->user()->can('delete institution'), 403);
 
-        Institution::findOrFail($id)->delete();
+        $id ??= $this->deletingId;
+        abort_unless($id, 404);
 
+        $institution = Institution::findOrFail($id);
+
+        try {
+            $summary = app(DeleteInstitution::class)->handle($institution);
+        } catch (\Throwable $e) {
+            report($e);
+
+            $this->deletingId = null;
+            Flux::modal('confirm-delete-institution')->close();
+            Flux::toast(text: 'Could not delete "'.$institution->name.'". Nothing was removed.', variant: 'danger');
+
+            return;
+        }
+
+        $this->deletingId = null;
+        Flux::modal('confirm-delete-institution')->close();
         unset($this->institutions);
 
-        Flux::toast(text: 'Institution removed.', variant: 'success');
+        $tail = $summary['users_deleted'] > 0
+            ? ' '.$summary['users_deleted'].' user account(s) removed with it.'
+            : '';
+
+        Flux::toast(text: 'Institution "'.$summary['institution'].'" and all its data were permanently deleted.'.$tail, variant: 'success');
     }
 
     #[Computed]
@@ -543,6 +585,14 @@ new #[Title('Institutions')] class extends Component
                                         @if (institutionOwner($institute->owner->id))
                                             <flux:button href="{{ route('institution.edit', $institute->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" />
                                         @endif
+                                        @if (isAdmin())
+                                            <flux:modal.trigger name="confirm-delete-institution">
+                                                <flux:button type="button" size="sm" icon="trash" variant="subtle"
+                                                    wire:click="$set('deletingId', {{ $institute->id }})"
+                                                    class="text-rose-600 hover:text-rose-700"
+                                                    tooltip="Delete institution and all its data" />
+                                            </flux:modal.trigger>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -564,6 +614,44 @@ new #[Title('Institutions')] class extends Component
                             <flux:button type="button" variant="filled">Cancel</flux:button>
                         </flux:modal.close>
                         <flux:button type="button" variant="danger" wire:click="disapprove">Revoke Approval</flux:button>
+                    </div>
+                </div>
+            </flux:modal>
+
+            <flux:modal name="confirm-delete-institution" class="max-w-md" wire:close="$set('deletingId', null)">
+                <div class="space-y-5">
+                    <div>
+                        <flux:heading size="lg">
+                            Permanently delete
+                            @if ($this->deletingInstitution)
+                                "{{ $this->deletingInstitution->name }}"?
+                            @else
+                                this institution?
+                            @endif
+                        </flux:heading>
+                        <flux:subheading>
+                            @if ($this->deletingInstitution)
+                                This removes the school and <strong>everything under it</strong> — classes, subjects,
+                                fees, results, attendance, timetables, report cards, payroll, payments and devices —
+                                across every module. It also deletes
+                                <strong>{{ number_format($this->deletingInstitution->student_details_count) }}</strong>
+                                student and
+                                <strong>{{ number_format($this->deletingInstitution->teacher_details_count) }}</strong>
+                                teacher account(s), plus its accountants and its Director, for anyone with no other
+                                school. This cannot be undone.
+                            @else
+                                This permanently removes the school and all of its data. This cannot be undone.
+                            @endif
+                        </flux:subheading>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close>
+                            <flux:button type="button" variant="filled">Cancel</flux:button>
+                        </flux:modal.close>
+                        <flux:button type="button" variant="danger" icon="trash" wire:click="delete"
+                            wire:loading.attr="disabled">
+                            Delete everything
+                        </flux:button>
                     </div>
                 </div>
             </flux:modal>

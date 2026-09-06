@@ -41,6 +41,12 @@ Schedule::command('lesson:generate-daily-reports')->dailyAt('18:00');
 // The timetable only runs Monday-Friday, so Friday evening is "end of week".
 Schedule::command('lesson:generate-weekly-reports')->weeklyOn(5, '18:30');
 
+// Scheduled parent notices: a "send now" goes straight to the queue from
+// the notifications screen, so this only sweeps up the ones set for a
+// future date. Every five minutes matches the queue worker's own cadence
+// above - a term notice is not to-the-minute business.
+Schedule::command('notifications:send-due')->everyFiveMinutes()->withoutOverlapping(10);
+
 // Keeps public/sitemap.xml in sync with the public pages for Google
 // Search Console and other crawlers. Hourly is far more often than the
 // marketing pages themselves change - the plans page is the only one with

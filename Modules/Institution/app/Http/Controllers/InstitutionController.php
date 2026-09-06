@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Modules\Institution\Actions\DeleteInstitution;
 use Modules\Institution\Actions\SaveInstitution;
 use Modules\Institution\Models\Institution;
 
@@ -154,16 +155,32 @@ class InstitutionController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Permanently de-register a school and everything under it - its
+     * records across every module, the uploaded files they point at, and
+     * the logins that existed only for this school (see DeleteInstitution).
      */
-    public function destroy(Institution $institution)
+    public function destroy(Institution $institution, DeleteInstitution $deleteInstitution)
     {
         // Only the platform owner may de-register a school.
         abort_unless(isAdmin() && $this->user->can('delete institution'), 403);
 
-        $institution->delete();
+        try {
+            $summary = $deleteInstitution->handle($institution);
+        } catch (\Throwable $e) {
+            // The whole delete is one transaction, so a failure here has
+            // changed nothing - the school is still intact.
+            Log::error('Institution delete failed', [
+                'institution_id' => $institution->id,
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
 
-        return redirect()->route('institution.index');
+            return redirect()->route('institution.index')
+                ->with('error', 'Could not delete "'.$institution->name.'". Nothing was removed - please try again or contact support.');
+        }
+
+        return redirect()->route('institution.index')
+            ->with('success', 'Institution "'.$summary['institution'].'" and all its data have been permanently deleted.');
     }
 
     /**

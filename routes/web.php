@@ -57,6 +57,8 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
     Route::resource('admin/plans', PlanController::class)->names('admin.plans')->except(['show']);
     Route::livewire('admin/user-roles', 'pages::admin.user-roles')->name('admin.user-roles.index');
     Route::livewire('admin/payments', 'pages::admin.payments')->name('admin.payments.index');
+    // A Director's notices to the school's parents - term dates, closures.
+    Route::livewire('notifications', 'pages::notifications')->name('notifications.index');
     Route::livewire('admin/settings', 'pages::admin.site-settings')->name('admin.settings.edit');
     Route::resource('messages', ContactMessageController::class)->names('messages');
     Route::get('billing', [BillingController::class, 'show'])->name('billing.show');

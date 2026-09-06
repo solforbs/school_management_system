@@ -52,6 +52,13 @@
                             {{ __('Reports & Analytics') }}
                         </flux:sidebar.item>
                     @endif
+
+                    @can('view notification')
+                        <flux:sidebar.item icon="megaphone" :href="route('notifications.index')"
+                            :current="request()->routeIs('notifications.*')" wire:navigate.hover>
+                            {{ __('Parent Notifications') }}
+                        </flux:sidebar.item>
+                    @endcan
                 @endif
             </flux:sidebar.group>
 

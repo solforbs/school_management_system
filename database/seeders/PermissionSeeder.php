@@ -67,6 +67,10 @@ class PermissionSeeder extends Seeder
             'permission' => ['view', 'create', 'edit', 'update', 'delete'],
             'setting' => ['view', 'create', 'edit', 'update', 'delete'],
             'dashboard' => ['view'],
+            // A Director's notices to the school's parents - term dates,
+            // mid-term start, closures - built as reusable templates and
+            // sent over SMS and/or e-mail, now or on a set date.
+            'notification' => ['view', 'create', 'send', 'delete'],
             'report' => ['view', 'create', 'export'],
             'account' => ['view', 'create', 'edit', 'update', 'delete'],
             'finance' => ['view', 'create', 'edit', 'update', 'delete'],
@@ -164,6 +168,9 @@ class PermissionSeeder extends Seeder
 
             // Subscription/billing - viewing plans and paying for them.
             'view billing', 'create billing',
+
+            // Notices to the school's parents (term dates, closures).
+            'view notification', 'create notification', 'send notification', 'delete notification',
 
             // Reporting and their own dashboard
             'view report', 'create report', 'export report',
