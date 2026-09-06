@@ -179,6 +179,85 @@ class Institution extends Model
     }
 
     /**
+     * The plan whose limits and features apply right now: the one being
+     * paid for, or - during the free trial, before the first subscription
+     * charge - the one picked at onboarding.
+     */
+    public function effectivePlan(): ?Plan
+    {
+        return $this->plan ?? $this->selectedPlan;
+    }
+
+    /**
+     * How many students this institution has on its roster.
+     */
+    public function currentStudentCount(): int
+    {
+        return $this->studentDetails()->count();
+    }
+
+    /**
+     * The student ceiling from the effective plan, or null when nothing
+     * caps it (Enterprise, or no plan resolved at all).
+     */
+    public function studentLimit(): ?int
+    {
+        return $this->effectivePlan()?->studentLimit();
+    }
+
+    /**
+     * Seats left before the ceiling, or null when uncapped. Never negative.
+     */
+    public function remainingStudentSlots(): ?int
+    {
+        $limit = $this->studentLimit();
+
+        if ($limit === null) {
+            return null;
+        }
+
+        return max(0, $limit - $this->currentStudentCount());
+    }
+
+    /**
+     * Whether enrolling this many more students stays within the plan.
+     * Uncapped plans always pass. This is the check SaveStudent enforces
+     * on every enrolment path - there is no flag to switch it off.
+     */
+    public function canAddStudents(int $count = 1): bool
+    {
+        $limit = $this->studentLimit();
+
+        if ($limit === null) {
+            return true;
+        }
+
+        return ($this->currentStudentCount() + max(0, $count)) <= $limit;
+    }
+
+    /**
+     * Everything the student-limit banner needs in one shape, so the view
+     * re-derives none of it.
+     *
+     * @return array{unlimited: bool, limit: ?int, used: int, remaining: ?int, reached: bool, plan: ?Plan}
+     */
+    public function studentLimitStatus(): array
+    {
+        $plan = $this->effectivePlan();
+        $limit = $plan?->studentLimit();
+        $used = $this->currentStudentCount();
+
+        return [
+            'unlimited' => $limit === null,
+            'limit' => $limit,
+            'used' => $used,
+            'remaining' => $limit === null ? null : max(0, $limit - $used),
+            'reached' => $limit !== null && $used >= $limit,
+            'plan' => $plan,
+        ];
+    }
+
+    /**
      * Whether there's a currently-usable plan - has one assigned, and it
      * hasn't expired. Distinct from subscriptionActive(), which alone
      * treats "no expiry date" as active even when no plan has ever been

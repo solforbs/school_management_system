@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Modules\Institution\Models\Institution;
 use Modules\Parent\Models\ParentDetails;
+use Modules\Student\Exceptions\StudentLimitException;
 use Modules\Student\Models\StudentDetails;
 
 /**
@@ -112,6 +114,8 @@ class SaveStudent
      */
     public function create(array $data, int $institutionId, ?UploadedFile $photo = null): User
     {
+        $this->guardStudentLimit($institutionId);
+
         return DB::transaction(function () use ($data, $institutionId, $photo) {
             $parent = $this->resolveParentForCreate($data);
 
@@ -154,6 +158,22 @@ class SaveStudent
 
             return $student;
         });
+    }
+
+    /**
+     * The plan's student ceiling, enforced here because every enrolment
+     * path (form, bulk upload, API) comes through create(). There is
+     * deliberately no argument to skip it: a director cannot get past the
+     * cap, and neither can an admin acting for the institution - the plan
+     * has to change instead.
+     */
+    private function guardStudentLimit(int $institutionId): void
+    {
+        $institution = Institution::find($institutionId);
+
+        if ($institution && ! $institution->canAddStudents(1)) {
+            throw StudentLimitException::forInstitution($institution);
+        }
     }
 
     /**

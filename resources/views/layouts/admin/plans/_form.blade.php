@@ -36,6 +36,16 @@
         @enderror
     </div>
 
+    <div>
+        <flux:input type="number" min="1" step="1" name="max_students" label="Student limit"
+            description="Most students an institution on this plan may enrol. Leave blank for unlimited (Enterprise)."
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            value="{{ old('max_students', $plan->max_students ?? '') }}" placeholder="Unlimited" />
+        @error('max_students')
+            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+        @enderror
+    </div>
+
     <div class="flex items-end gap-6">
         <flux:checkbox name="is_active" value="1" label="Active"
             {{ old('is_active', $plan->is_active ?? true) ? 'checked' : '' }} />
@@ -73,20 +83,5 @@
         @enderror
     </div>
 
-    <div class="md:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Pro features</label>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            @foreach (\App\Models\Plan::FEATURES as $key => $label)
-                <label class="flex items-center gap-2 text-sm text-gray-700">
-                    <input type="checkbox" name="features[]" value="{{ $key }}"
-                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        {{ in_array($key, $selectedFeatures) ? 'checked' : '' }} />
-                    {{ $label }}
-                </label>
-            @endforeach
-        </div>
-        @error('features')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
-    </div>
+    <livewire:admin.plan-feature-manager :plan-id="$plan->id ?? null" :features="$selectedFeatures" />
 </div>

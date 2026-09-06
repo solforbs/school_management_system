@@ -279,6 +279,9 @@ new #[Title('Student Form')] class extends Component
             </div>
         </div>
 
+        {{-- How many students this school's plan allows, and how many are left. --}}
+        <x-student-limit-banner />
+
         @if ($errors->any())
             <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
                 <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />

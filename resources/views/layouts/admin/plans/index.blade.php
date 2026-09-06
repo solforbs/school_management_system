@@ -11,6 +11,7 @@
                     <flux:table.column>Name</flux:table.column>
                     <flux:table.column>Price</flux:table.column>
                     <flux:table.column>Billing Cycle</flux:table.column>
+                    <flux:table.column>Students</flux:table.column>
                     <flux:table.column>Modules</flux:table.column>
                     <flux:table.column>Status</flux:table.column>
                     <flux:table.column>Actions</flux:table.column>
@@ -22,6 +23,7 @@
                             <flux:table.cell>{{ $plan->name }}</flux:table.cell>
                             <flux:table.cell>{{ number_format($plan->price, 2) }}</flux:table.cell>
                             <flux:table.cell>{{ ucfirst($plan->billing_cycle) }}</flux:table.cell>
+                            <flux:table.cell>{{ $plan->hasStudentLimit() ? number_format($plan->studentLimit()) : 'Unlimited' }}</flux:table.cell>
                             <flux:table.cell>{{ count($plan->modules ?? []) }} modules</flux:table.cell>
                             <flux:table.cell>
                                 <flux:badge :color="$plan->is_active ? 'emerald' : 'zinc'">
@@ -47,7 +49,7 @@
                         </flux:table.row>
                     @empty
                         <flux:table.row>
-                            <flux:table.cell colspan="6">No plans yet.</flux:table.cell>
+                            <flux:table.cell colspan="7">No plans yet.</flux:table.cell>
                         </flux:table.row>
                     @endforelse
                 </flux:table.rows>

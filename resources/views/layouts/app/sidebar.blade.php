@@ -75,6 +75,10 @@
                         :current="request()->routeIs('admin.plans.*')" wire:navigate.hover>
                         {{ __('Plans') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="shield-check" :href="route('admin.user-roles.index')"
+                        :current="request()->routeIs('admin.user-roles.*')" wire:navigate.hover>
+                        {{ __('Admin Access') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="banknotes" :href="route('admin.payments.index')"
                         :current="request()->routeIs('admin.payments.*')" wire:navigate.hover>
                         {{ __('Payments') }}

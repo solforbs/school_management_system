@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Modules\Institution\Models\Institution;
 use Modules\Student\Actions\SaveStudent;
+use Modules\Student\Exceptions\StudentLimitException;
 use Modules\Student\Models\StudentDetails;
 
 class StudentController extends Controller
@@ -119,6 +120,15 @@ class StudentController extends Controller
             $this->saveStudent->create($validated, $institutionId, $request->file('profile_image'));
 
             return redirect()->route('student.index')->with('success', 'Student created successfully!');
+        } catch (StudentLimitException $e) {
+            // The plan's student ceiling - a business rule, not a failure.
+            // Surface it as a field error so it lands in the form's error
+            // list rather than as a generic "something went wrong".
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return redirect()->back()->withInput()->withErrors(['name' => $e->getMessage()]);
         } catch (Exception $e) {
             Log::error('Student creation failed: '.$e->getMessage());
 

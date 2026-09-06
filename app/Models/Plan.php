@@ -41,9 +41,14 @@ class Plan extends Model
     /**
      * Pro-tier capabilities *within* a module a plan already has - distinct
      * from MODULES, which grants a whole module or nothing.
+     *
+     * This is only the built-in fallback wording. The live list an admin
+     * picks from lives in the plan_features table (see PlanFeature), which
+     * the plan screen can add to without a deploy.
      */
     public const FEATURES = [
         'ai_receipt_scanning' => 'AI Receipt Scanning (Fee Management)',
+        'bulk_sms' => 'Bulk SMS',
     ];
 
     /**
@@ -62,6 +67,7 @@ class Plan extends Model
         'billing_cycle',
         'modules',
         'features',
+        'max_students',
         'is_active',
         'is_featured',
         'is_custom_priced',
@@ -72,6 +78,7 @@ class Plan extends Model
         return [
             'modules' => 'array',
             'features' => 'array',
+            'max_students' => 'integer',
             'price' => 'decimal:2',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
@@ -116,7 +123,39 @@ class Plan extends Model
 
     public static function featureLabel(string $feature): string
     {
-        return self::FEATURES[$feature] ?? Str::headline($feature);
+        try {
+            return PlanFeature::catalog()[$feature] ?? Str::headline($feature);
+        } catch (\Throwable) {
+            // The catalog table may not exist yet (early migration, a unit
+            // test with no schema) - fall back to the built-in wording.
+            return self::FEATURES[$feature] ?? Str::headline($feature);
+        }
+    }
+
+    /**
+     * How many students an institution on this plan may enrol, or null for
+     * no ceiling (the Enterprise case). Null rather than a huge number so
+     * "unlimited" is a real state, not a magic value callers have to know.
+     */
+    public function studentLimit(): ?int
+    {
+        return $this->max_students !== null ? (int) $this->max_students : null;
+    }
+
+    public function hasStudentLimit(): bool
+    {
+        return $this->max_students !== null;
+    }
+
+    /**
+     * The limit as a line of copy: "Up to 5,000 students" / "Unlimited
+     * students". Used both on the pricing page and in the in-app banner.
+     */
+    public function studentLimitLabel(): string
+    {
+        return $this->hasStudentLimit()
+            ? 'Up to '.number_format((int) $this->max_students).' students'
+            : 'Unlimited students';
     }
 
     /**
@@ -174,9 +213,12 @@ class Plan extends Model
      */
     public function inclusions(): array
     {
-        return collect($this->modules ?? [])
-            ->filter(fn ($key) => is_string($key) && $key !== '')
-            ->map(fn (string $key) => self::moduleLabel($key))
+        return collect([$this->studentLimitLabel()])
+            ->merge(
+                collect($this->modules ?? [])
+                    ->filter(fn ($key) => is_string($key) && $key !== '')
+                    ->map(fn (string $key) => self::moduleLabel($key))
+            )
             ->merge(
                 collect($this->features ?? [])
                     ->filter(fn ($key) => is_string($key) && $key !== '')

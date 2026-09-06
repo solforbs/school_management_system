@@ -186,6 +186,9 @@ new #[Title('Student Directory')] class extends Component {
         </div>
     </div>
 
+    {{-- What the plan allows, and how close this school is to it. --}}
+    <x-student-limit-banner :institution="$institution" />
+
     {{-- Flash Messages --}}
     @if (session('success'))
         <div

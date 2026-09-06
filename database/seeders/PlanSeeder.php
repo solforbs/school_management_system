@@ -20,6 +20,7 @@ class PlanSeeder extends Seeder
                 'is_custom_priced' => false,
                 'is_featured' => false,
                 'is_active' => true,
+                'max_students' => 100,
                 'modules' => [
                     'Institution',
                     'Student',
@@ -48,6 +49,7 @@ class PlanSeeder extends Seeder
                 'is_custom_priced' => false,
                 'is_featured' => true,
                 'is_active' => true,
+                'max_students' => 5000,
                 'modules' => [
                     'Institution',
                     'Student',
@@ -67,7 +69,7 @@ class PlanSeeder extends Seeder
                     'ReportCard',
                     'Staff',
                 ],
-                'features' => ['ai_receipt_scanning'],
+                'features' => ['ai_receipt_scanning', 'bulk_sms'],
             ]
         );
 
@@ -82,6 +84,7 @@ class PlanSeeder extends Seeder
                 'is_custom_priced' => true,
                 'is_featured' => false,
                 'is_active' => true,
+                'max_students' => null,
                 'modules' => [
                     'Institution',
                     'Student',
@@ -102,7 +105,7 @@ class PlanSeeder extends Seeder
                     'Staff',
                     'Expenditure',
                 ],
-                'features' => ['ai_receipt_scanning'],
+                'features' => ['ai_receipt_scanning', 'bulk_sms'],
             ]
         );
     }
