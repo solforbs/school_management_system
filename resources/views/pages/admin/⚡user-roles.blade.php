@@ -126,6 +126,9 @@ new #[Title('Admin Access')] class extends Component
 
         abort_unless($user->hasRole('Admin'), 422, 'That account is not an Admin.');
 
+        // The platform owner's access is not another admin's to remove.
+        abort_if($user->isProtectedAdmin(), 422, 'This account owns the platform and cannot have its Admin access removed here.');
+
         // Never leave the platform with no Admin at all.
         abort_if(User::role('Admin')->count() <= 1, 422, 'This is the only Admin account - promote someone else first.');
 
@@ -231,7 +234,9 @@ new #[Title('Admin Access')] class extends Component
                             </td>
                             <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $admin->email }}</td>
                             <td class="py-3 pr-4 text-right">
-                                @if ($admin->id === auth()->id())
+                                @if ($admin->isProtectedAdmin())
+                                    <flux:badge size="sm" color="amber" icon="lock-closed">Platform owner</flux:badge>
+                                @elseif ($admin->id === auth()->id())
                                     <flux:badge size="sm" color="zinc">You</flux:badge>
                                 @else
                                     <flux:modal.trigger name="confirm-demote">

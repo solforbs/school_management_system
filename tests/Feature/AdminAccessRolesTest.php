@@ -113,6 +113,41 @@ test('an admin demotes another admin back to director', function () {
         ->and($promoted->can('update user'))->toBeFalse();
 });
 
+test('the protected platform-owner account can never have admin revoked', function () {
+    $admin = makeAdmin('Ops Admin');
+    $owner = User::factory()->create(['name' => 'Real Owner', 'email' => 'jablessions76@gmail.com']);
+    $owner->assignRole('Admin');
+
+    Livewire::actingAs($admin)
+        ->test('pages::admin.user-roles')
+        ->set('confirmingDemoteId', $owner->id)
+        ->call('demote')
+        ->assertStatus(422);
+
+    expect($owner->refresh()->hasRole('Admin'))->toBeTrue();
+
+    // The row shows a locked "Platform owner" badge instead of a revoke
+    // trigger for that account.
+    $this->actingAs($admin)->get(route('admin.user-roles.index'))
+        ->assertOk()
+        ->assertSee('Platform owner')
+        ->assertDontSee('$set(\'confirmingDemoteId\', '.$owner->id.')', false);
+});
+
+test('the protected email is matched regardless of case', function () {
+    $admin = makeAdmin();
+    $owner = User::factory()->create(['email' => 'JABlessions76@GMAIL.com']);
+    $owner->assignRole('Admin');
+
+    Livewire::actingAs($admin)
+        ->test('pages::admin.user-roles')
+        ->set('confirmingDemoteId', $owner->id)
+        ->call('demote')
+        ->assertStatus(422);
+
+    expect($owner->refresh()->hasRole('Admin'))->toBeTrue();
+});
+
 test('an admin cannot remove their own admin access', function () {
     $admin = makeAdmin();
     makeAdmin('Second Admin'); // so the "last admin" guard is not what trips

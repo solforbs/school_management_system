@@ -48,6 +48,18 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     use HasApiTokens, HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TetherSyncable, TwoFactorAuthenticatable;
 
     /**
+     * Accounts that own the platform outright. Their Admin access is not
+     * something another admin can take away from the Admin Access screen -
+     * see App\Livewire (pages::admin.user-roles) - so a fallout among
+     * admins can never lock the real owner out.
+     *
+     * @var list<string>
+     */
+    public const PROTECTED_ADMIN_EMAILS = [
+        'jablessions76@gmail.com',
+    ];
+
+    /**
      * What a device is allowed to learn about a person. Credentials are
      * absent by design - see TetherServiceProvider::stripCredentials(),
      * which also blanks them on the way out.
@@ -71,6 +83,24 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * A platform-owner account whose Admin access no other admin may
+     * revoke. Matched case-insensitively so a differently-cased sign-up
+     * can't slip past it.
+     */
+    public function isProtectedAdmin(): bool
+    {
+        $email = Str::lower((string) $this->email);
+
+        foreach (self::PROTECTED_ADMIN_EMAILS as $protected) {
+            if ($email === Str::lower($protected)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
