@@ -193,13 +193,17 @@ class BillingController extends Controller
         $plan = $payment->plan;
         $hadActiveSubscription = $institution->hasActiveSubscription();
 
-        // A fresh window - first ever subscription, or renewing after the
-        // previous one lapsed - starts the "amount paid so far" clock over
-        // and sets a new expiry. A same-window upgrade just swaps the
-        // plan; the institution keeps the expiry date it already paid
-        // for, and this payment's amount keeps accumulating toward the
-        // next upgrade via amountPaidThisWindow().
-        if (! $hadActiveSubscription) {
+        // Did this payment cover (near enough) the plan's full price? If so
+        // it buys a whole new period - a first subscription, a renewal
+        // after a lapse, or an upgrade taken when the old window had almost
+        // run out and little credit was left to apply. A payment that only
+        // covered the *difference* (a mid-window upgrade with real days
+        // still on the clock) is not a fresh window: the school keeps the
+        // expiry it already paid for and just moves onto the better plan.
+        $coversFullPrice = (float) $plan->price > 0
+            && (float) $payment->amount >= (float) $plan->price * 0.95;
+
+        if (! $hadActiveSubscription || $coversFullPrice) {
             $institution->subscription_started_at = $now;
             $institution->subscription_expires_at = match ($plan->billing_cycle) {
                 'termly' => $now->copy()->addMonths(4),
@@ -210,9 +214,9 @@ class BillingController extends Controller
             };
         } elseif (! $institution->subscription_started_at) {
             // An institution whose plan was assigned manually before this
-            // feature existed has no window to accumulate against yet -
+            // feature existed has no window to measure against yet -
             // bootstrap it now, without touching the expiry it already
-            // has, so this (and future) payments start counting.
+            // has, so proration has something to work from.
             $institution->subscription_started_at = $now;
         }
 

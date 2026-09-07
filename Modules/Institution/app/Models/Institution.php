@@ -335,17 +335,97 @@ class Institution extends Model
     }
 
     /**
-     * What's left to pay to reach the given plan: its price, minus
-     * whatever's already been paid this window. Only counts prior payments
-     * while the current subscription is still active - a lapsed
-     * subscription always owes the plan's full price to start a fresh
-     * window (see BillingController::finalize()).
+     * The full length of the current paid subscription window, in days.
+     * Null when there's no window to measure (never subscribed, or a
+     * lifetime plan with no expiry).
+     */
+    public function subscriptionWindowDays(): ?int
+    {
+        if (! $this->subscription_started_at || ! $this->subscription_expires_at) {
+            return null;
+        }
+
+        return max(1, (int) $this->subscription_started_at->copy()->startOfDay()
+            ->diffInDays($this->subscription_expires_at->copy()->startOfDay()));
+    }
+
+    /**
+     * Whole days from today until the subscription expires. Zero once the
+     * date is reached or passed, and for a plan with no expiry.
+     */
+    public function subscriptionDaysRemaining(): int
+    {
+        if (! $this->subscription_expires_at) {
+            return 0;
+        }
+
+        return max(0, (int) now()->startOfDay()
+            ->diffInDays($this->subscription_expires_at->copy()->startOfDay(), false));
+    }
+
+    /**
+     * The unused value still sitting on the current plan: its price scaled
+     * by how much of the paid window is still ahead. This is what an
+     * upgrade credits against the new plan's price.
+     *
+     * Zero when there's no active paid window, no current plan, or the
+     * window has effectively run out - so "the remaining days are almost
+     * up" falls out of the same formula as "pay the new plan in full".
+     */
+    public function unusedPlanCredit(): float
+    {
+        if (! $this->hasActiveSubscription() || ! $this->plan) {
+            return 0.0;
+        }
+
+        $windowDays = $this->subscriptionWindowDays();
+
+        if (! $windowDays) {
+            return 0.0;
+        }
+
+        $remaining = min($this->subscriptionDaysRemaining(), $windowDays);
+
+        return round((float) $this->plan->price * $remaining / $windowDays, 2);
+    }
+
+    /**
+     * What's left to pay to move onto the given plan.
+     *
+     *  - The plan the school is already on this window: nothing.
+     *  - Otherwise: the plan's price minus the unused value of the days
+     *    still left on the current plan. A cheaper plan already covered by
+     *    that credit also comes to nothing.
+     *
+     * A school with no active subscription has no credit, so it owes the
+     * full price to open a fresh window (see BillingController::finalize()).
      */
     public function amountDueForPlan(Plan $plan): float
     {
-        $alreadyPaid = $this->hasActiveSubscription() ? $this->amountPaidThisWindow() : 0.0;
+        if ($this->hasActiveSubscription() && (int) $this->subscription_plan === (int) $plan->id) {
+            return 0.0;
+        }
 
-        return max(0.0, (float) $plan->price - $alreadyPaid);
+        return max(0.0, round((float) $plan->price - $this->unusedPlanCredit(), 2));
+    }
+
+    /**
+     * The upgrade sum broken out for the billing screen, so the view adds
+     * nothing up itself.
+     *
+     * @return array{plan_price: float, credit: float, due: float, days_remaining: int, is_change: bool}
+     */
+    public function upgradeQuoteFor(Plan $plan): array
+    {
+        $credit = $this->unusedPlanCredit();
+
+        return [
+            'plan_price' => round((float) $plan->price, 2),
+            'credit' => $credit,
+            'due' => $this->amountDueForPlan($plan),
+            'days_remaining' => $this->subscriptionDaysRemaining(),
+            'is_change' => ! ($this->hasActiveSubscription() && (int) $this->subscription_plan === (int) $plan->id),
+        ];
     }
 
     public function devices()

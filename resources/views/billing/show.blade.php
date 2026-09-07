@@ -17,11 +17,25 @@
             </div>
         </flux:card>
 
+        @php
+            $credit = $institution->unusedPlanCredit();
+        @endphp
+        @if ($credit > 0)
+            <flux:text class="text-sm text-gray-500">
+                You have <span class="font-semibold text-gray-700 dark:text-gray-300">KES
+                    {{ number_format($credit, 2) }}</span> of unused value on your current plan
+                ({{ $institution->subscriptionDaysRemaining() }} day(s) left). Upgrading applies it against the new
+                plan's price — you pay only the difference.
+            </flux:text>
+        @endif
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             @foreach ($plans as $plan)
                 @php
-                    $isCurrent = $institution->hasActiveSubscription() && $institution->subscription_plan === $plan->id;
-                    $amountDue = $institution->amountDueForPlan($plan);
+                    $isCurrent = $institution->hasActiveSubscription() && (int) $institution->subscription_plan === (int) $plan->id;
+                    $quote = $institution->upgradeQuoteFor($plan);
+                    $amountDue = $quote['due'];
+                    $showsCredit = ! $isCurrent && $credit > 0 && $amountDue < (float) $plan->price;
                 @endphp
                 <flux:card class="p-6 flex flex-col {{ $isCurrent ? 'ring-2 ring-emerald-500' : '' }}">
                     <flux:heading size="md">{{ $plan->name }}</flux:heading>
@@ -38,6 +52,11 @@
                     @if ($isCurrent)
                         <flux:badge color="emerald" class="w-fit">Current Plan</flux:badge>
                     @elseif ($amountDue > 0)
+                        @if ($showsCredit)
+                            <flux:text class="text-xs text-gray-500 mb-1">
+                                KES {{ number_format($plan->price, 2) }} &minus; KES {{ number_format($credit, 2) }} credit
+                            </flux:text>
+                        @endif
                         <form action="{{ route('billing.initiate') }}" method="POST">
                             @csrf
                             <input type="hidden" name="plan_id" value="{{ $plan->id }}">
@@ -46,7 +65,9 @@
                             </flux:button>
                         </form>
                     @else
-                        <flux:button disabled variant="filled" class="w-full">Not available</flux:button>
+                        <flux:button disabled variant="filled" class="w-full">
+                            {{ $credit > 0 ? 'Covered by your credit' : 'Not available' }}
+                        </flux:button>
                     @endif
                 </flux:card>
             @endforeach
