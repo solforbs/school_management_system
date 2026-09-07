@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static string getQueuedCommand(int $commandId)
  * @method static int sendInfoCommand(string $serialNumber)
  * @method static int sendCheckCommand(string $serialNumber)
- * @method static int sendUserAddCommand(string $serialNumber, string $pin, string $name, int $privilege = 0, string $card = '')
+ * @method static int sendUserAddCommand(string $serialNumber, string $pin, string $name, int $privilege = 0, string $card = '', string $password = '')
  * @method static int sendUserDeleteCommand(string $serialNumber, string $pin)
  * @method static int sendQueryUsersCommand(string $serialNumber)
  * @method static int sendClearLogsCommand(string $serialNumber)

@@ -78,9 +78,9 @@ class DeviceCommandBuilder
     /**
      * Send a DATA UPDATE USERINFO command to add/update a user.
      */
-    public function addUser(string $serialNumber, string $pin, string $name, int $privilege = 0, string $card = ''): int
+    public function addUser(string $serialNumber, string $pin, string $name, int $privilege = 0, string $card = '', string $password = ''): int
     {
-        return $this->commandManager->sendUserAddCommand($serialNumber, $pin, $name, $privilege, $card);
+        return $this->commandManager->sendUserAddCommand($serialNumber, $pin, $name, $privilege, $card, $password);
     }
 
     /**

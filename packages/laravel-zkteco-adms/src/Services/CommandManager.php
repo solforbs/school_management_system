@@ -24,6 +24,14 @@ use InvalidArgumentException;
 class CommandManager
 {
     /**
+     * Keypad verification password written to the device when a user is
+     * added without an explicit one. Numeric, <= 6 digits (K40 Pro limit).
+     * Without it the enrolled user has no password and can only verify by
+     * fingerprint/card.
+     */
+    public const DEFAULT_USER_PASSWORD = '1234';
+
+    /**
      * Queue a command to be sent to a device on its next poll.
      *
      * @return int The assigned command ID
@@ -217,7 +225,12 @@ class CommandManager
     /**
      * Queue a DATA UPDATE USERINFO command.
      *
-     * Wire format: DATA UPDATE USERINFO PIN=<pin>\tName=<name>\tPrivilege=<priv>\tCard=<card>
+     * Wire format:
+     *   DATA UPDATE USERINFO PIN=<pin>\tName=<name>\tPrivilege=<priv>\tCard=<card>\tPasswd=<pwd>
+     *
+     * `$password` is the keypad verification password. Left empty, it
+     * defaults to self::DEFAULT_USER_PASSWORD so every added user still has
+     * one; it is reduced to digits and capped at 6 for the device.
      */
     public function sendUserAddCommand(
         string $serialNumber,
@@ -225,12 +238,26 @@ class CommandManager
         string $name,
         int $privilege = 0,
         string $card = '',
+        string $password = '',
     ): int {
-        foreach (['pin' => $pin, 'name' => $name, 'card' => $card] as $field => $value) {
+        foreach (['pin' => $pin, 'name' => $name, 'card' => $card, 'password' => $password] as $field => $value) {
             $this->validateCommandField($field, $value);
         }
 
-        $cmd = sprintf("DATA UPDATE USERINFO PIN=%s\tName=%s\tPrivilege=%d\tCard=%s", $pin, $name, $privilege, $card);
+        $passwd = substr((string) preg_replace('/\D/', '', $password), 0, 6);
+
+        if ($passwd === '') {
+            $passwd = self::DEFAULT_USER_PASSWORD;
+        }
+
+        $cmd = sprintf(
+            "DATA UPDATE USERINFO PIN=%s\tName=%s\tPrivilege=%d\tCard=%s\tPasswd=%s",
+            $pin,
+            $name,
+            $privilege,
+            $card,
+            $passwd,
+        );
 
         return $this->queueCommand($serialNumber, $cmd);
     }

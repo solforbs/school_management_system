@@ -30,7 +30,8 @@ use Livewire\WithPagination;
  * Deliberately absent: anything about what the device has recorded - this
  * page manages hardware, never attendance data.
  */
-new #[Title('Manage Device')] class extends Component {
+new #[Title('Manage Device')] class extends Component
+{
     use WithPagination;
 
     public Devices $device;
@@ -45,6 +46,9 @@ new #[Title('Manage Device')] class extends Component {
     public string $newPrivilege = '0';
 
     public string $newCard = '';
+
+    /** Keypad password for the added user - defaults to 1234, digits only, max 6. */
+    public string $newPassword = '1234';
 
     public function mount(int $deviceId): void
     {
@@ -165,6 +169,7 @@ new #[Title('Manage Device')] class extends Component {
             'newName' => ['required', 'string', 'max:100'],
             'newPrivilege' => ['required', 'in:0,14'],
             'newCard' => ['nullable', 'string', 'max:20'],
+            'newPassword' => ['nullable', 'string', 'max:6'],
         ]);
 
         $this->runCommand(fn () => ZktecoAdms::sendUserAddCommand(
@@ -173,9 +178,11 @@ new #[Title('Manage Device')] class extends Component {
             $this->newName,
             (int) $this->newPrivilege,
             $this->newCard,
+            $this->newPassword,
         ), "User \"{$this->newName}\" queued to be added to the device");
 
         $this->reset('newPin', 'newName', 'newPrivilege', 'newCard');
+        $this->newPassword = '1234';
     }
 
     public function deleteDeviceUser(string $pin): void
@@ -302,7 +309,7 @@ new #[Title('Manage Device')] class extends Component {
                 <flux:button wire:click="refreshUsers" icon="arrow-path" variant="ghost" size="sm" :disabled="! $zktecoDevice">Refresh from Device</flux:button>
             </div>
 
-            <form wire:submit="addUser" class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+            <form wire:submit="addUser" class="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
                 <flux:input wire:model="newPin" label="PIN" placeholder="1024" />
                 <flux:input wire:model="newName" label="Name" placeholder="Jane Doe" />
                 <flux:select wire:model="newPrivilege" label="Privilege">
@@ -310,7 +317,9 @@ new #[Title('Manage Device')] class extends Component {
                     <flux:select.option value="14">Admin</flux:select.option>
                 </flux:select>
                 <flux:input wire:model="newCard" label="Card (optional)" />
-                <div class="sm:col-span-4">
+                <flux:input wire:model="newPassword" label="Password" placeholder="1234"
+                    description="Keypad password, digits only (max 6). Defaults to 1234." />
+                <div class="sm:col-span-5">
                     <flux:button type="submit" icon="plus" variant="primary" :disabled="! $zktecoDevice">Add User to Device</flux:button>
                 </div>
             </form>

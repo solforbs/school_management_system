@@ -132,8 +132,9 @@ class LaravelZktecoAdms
         string $name,
         int $privilege = 0,
         string $card = '',
+        string $password = '',
     ): int {
-        return $this->commandManager->sendUserAddCommand($serialNumber, $pin, $name, $privilege, $card);
+        return $this->commandManager->sendUserAddCommand($serialNumber, $pin, $name, $privilege, $card, $password);
     }
 
     public function sendUserDeleteCommand(string $serialNumber, string $pin): int
