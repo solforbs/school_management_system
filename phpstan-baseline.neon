@@ -1153,36 +1153,6 @@ parameters:
 			path: app/Services/ReceiptOcrService.php
 
 		-
-			message: '#^Access to constant CHANGE_FREQUENCY_MONTHLY on an unknown class Spatie\\Sitemap\\Tags\\Url\.$#'
-			identifier: class.notFound
-			count: 3
-			path: app/Services/SitemapGenerator.php
-
-		-
-			message: '#^Access to constant CHANGE_FREQUENCY_WEEKLY on an unknown class Spatie\\Sitemap\\Tags\\Url\.$#'
-			identifier: class.notFound
-			count: 2
-			path: app/Services/SitemapGenerator.php
-
-		-
-			message: '#^Call to static method create\(\) on an unknown class Spatie\\Sitemap\\Sitemap\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/SitemapGenerator.php
-
-		-
-			message: '#^Call to static method create\(\) on an unknown class Spatie\\Sitemap\\Tags\\Url\.$#'
-			identifier: class.notFound
-			count: 5
-			path: app/Services/SitemapGenerator.php
-
-		-
-			message: '#^Method App\\Services\\SitemapGenerator\:\:urls\(\) has invalid return type Spatie\\Sitemap\\Tags\\Url\.$#'
-			identifier: class.notFound
-			count: 1
-			path: app/Services/SitemapGenerator.php
-
-		-
 			message: '#^Method App\\Services\\SmsService\:\:formatMobile\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -1223,9 +1193,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Services/ZKTecoUserSyncService.php
-
-		-
-			message: '#^Class Spatie\\Sitemap\\Crawler\\Profile not found\.$#'
-			identifier: class.notFound
-			count: 1
-			path: config/sitemap.php

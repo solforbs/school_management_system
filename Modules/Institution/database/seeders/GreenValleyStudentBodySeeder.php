@@ -3,6 +3,7 @@
 namespace Modules\Institution\Database\Seeders;
 
 use App\Models\User;
+use Faker\Factory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -51,6 +52,7 @@ class GreenValleyStudentBodySeeder extends Seeder
         }
 
         $password = Hash::make('password');
+        $faker = Factory::create();
 
         // 1. Create 400 Parents with registration dates spread across 2024-2026
         $parentUsersData = [];
@@ -209,11 +211,20 @@ class GreenValleyStudentBodySeeder extends Seeder
                     'class_id' => (string) $class->id,
                     'admission_number' => $admNo,
                     'student_number' => $stdNo,
+                    'phone' => '+254 7'.rand(10000000, 99999999),
                     'gender' => $gender,
                     'date_of_birth' => now()->subYears(rand(6, 17))->subDays(rand(1, 300))->toDateString(),
+                    'address' => $faker->streetAddress(),
+                    'city' => $faker->randomElement(['Nairobi', 'Mombasa', 'Nakuru', 'Eldoret', 'Kisumu']),
+                    'state' => $faker->randomElement(['Nairobi County', 'Kiambu County', 'Machakos County', 'Kajiado County']),
+                    'country' => 'Kenya',
                     'guardian_name' => 'Guardian of Student '.$sIdx,
                     'guardian_email' => 'guardian'.$sIdx.'@greenvalley.ac.ke',
                     'guardian_phone' => '+254 7'.rand(10000000, 99999999),
+                    'guardian_relationship' => $faker->randomElement(['Father', 'Mother', 'Uncle', 'Aunt', 'Grandparent', 'Legal Guardian']),
+                    'medical_conditions' => $faker->randomElement(['None', 'None', 'None', 'Asthma', 'Mild Allergies']),
+                    'allergies' => $faker->randomElement(['None', 'None', 'Dust', 'Peanuts', 'Penicillin']),
+                    'special_needs' => 'None',
                     'is_active' => true,
                     'enrollment_status' => 'active',
                     'created_at' => $admDate,

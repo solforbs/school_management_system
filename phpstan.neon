@@ -12,3 +12,6 @@ parameters:
         - routes/
 
     level: 7
+
+    scanDirectories:
+        - vendor/spatie/laravel-sitemap/src
