@@ -13,35 +13,137 @@ use Modules\Institution\Models\Institution;
 class GreenValleyStudentBodySeeder extends Seeder
 {
     private const FIRST_NAMES_MALE = [
-        'Brian', 'Kevin', 'Eric', 'Dennis', 'Ian', 'Victor', 'Collins', 'Felix', 'Emmanuel', 'Geoffrey',
-        'Mark', 'Anthony', 'Alvin', 'Alex', 'Chris', 'Allan', 'Austin', 'Caleb', 'Derrick', 'Ethan',
-        'Gideon', 'Ian', 'Jason', 'Joel', 'Joshua', 'Kelvin', 'Liam', 'Michael', 'Nathan', 'Noah',
+        'Brian',
+        'Kevin',
+        'Eric',
+        'Dennis',
+        'Ian',
+        'Victor',
+        'Collins',
+        'Felix',
+        'Emmanuel',
+        'Geoffrey',
+        'Mark',
+        'Anthony',
+        'Alvin',
+        'Alex',
+        'Chris',
+        'Allan',
+        'Austin',
+        'Caleb',
+        'Derrick',
+        'Ethan',
+        'Gideon',
+        'Ian',
+        'Jason',
+        'Joel',
+        'Joshua',
+        'Kelvin',
+        'Liam',
+        'Michael',
+        'Nathan',
+        'Noah',
     ];
 
     private const FIRST_NAMES_FEMALE = [
-        'Sharon', 'Brenda', 'Faith', 'Joy', 'Mercy', 'Anita', 'Cynthia', 'Daisy', 'Ivy', 'Phyllis',
-        'Stacy', 'Tracy', 'Vanessa', 'Winnie', 'Abigail', 'Angel', 'Beatrice', 'Caroline', 'Diana', 'Elsa',
-        'Fiona', 'Grace', 'Hope', 'Irene', 'Jacqueline', 'Karen', 'Laura', 'Maureen', 'Nicole', 'Patricia',
+        'Sharon',
+        'Brenda',
+        'Faith',
+        'Joy',
+        'Mercy',
+        'Anita',
+        'Cynthia',
+        'Daisy',
+        'Ivy',
+        'Phyllis',
+        'Stacy',
+        'Tracy',
+        'Vanessa',
+        'Winnie',
+        'Abigail',
+        'Angel',
+        'Beatrice',
+        'Caroline',
+        'Diana',
+        'Elsa',
+        'Fiona',
+        'Grace',
+        'Hope',
+        'Irene',
+        'Jacqueline',
+        'Karen',
+        'Laura',
+        'Maureen',
+        'Nicole',
+        'Patricia',
     ];
 
     private const LAST_NAMES = [
-        'Mwangi', 'Maina', 'Kamau', 'Kariuki', 'Njoroge', 'Kimani', 'Wanjiku', 'Otieno', 'Ochieng', 'Oduor',
-        'Omondi', 'Anyango', 'Achieng', 'Kipchirchir', 'Kipkorir', 'Kipchumba', 'Chebet', 'Cherono', 'Mutua', 'Musyoka',
-        'Wambua', 'Kilonzo', 'Wekesa', 'Wafula', 'Nekesa', 'Barasa', 'Juma', 'Nyongesa', 'Ouma', 'Okoth',
-        'Mutiso', 'Kithinji', 'Mbae', 'Gichuru', 'Kagwe', 'Kinyua', 'Macharia', 'Mugo', 'Ndegwa', 'Nyaga',
+        'Mwangi',
+        'Maina',
+        'Kamau',
+        'Kariuki',
+        'Njoroge',
+        'Kimani',
+        'Wanjiku',
+        'Otieno',
+        'Ochieng',
+        'Oduor',
+        'Omondi',
+        'Anyango',
+        'Achieng',
+        'Kipchirchir',
+        'Kipkorir',
+        'Kipchumba',
+        'Chebet',
+        'Cherono',
+        'Mutua',
+        'Musyoka',
+        'Wambua',
+        'Kilonzo',
+        'Wekesa',
+        'Wafula',
+        'Nekesa',
+        'Barasa',
+        'Juma',
+        'Nyongesa',
+        'Ouma',
+        'Okoth',
+        'Mutiso',
+        'Kithinji',
+        'Mbae',
+        'Gichuru',
+        'Kagwe',
+        'Kinyua',
+        'Macharia',
+        'Mugo',
+        'Ndegwa',
+        'Nyaga',
     ];
 
     private const OCCUPATIONS = [
-        'Software Engineer', 'Civil Engineer', 'Doctor', 'High School Teacher', 'Banker',
-        'Accountant', 'Business Owner', 'Architect', 'Pharmacist', 'University Lecturer',
-        'Marketing Manager', 'Human Resource Officer', 'Project Manager', 'Lawyer', 'Agronomist',
+        'Software Engineer',
+        'Civil Engineer',
+        'Doctor',
+        'High School Teacher',
+        'Banker',
+        'Accountant',
+        'Business Owner',
+        'Architect',
+        'Pharmacist',
+        'University Lecturer',
+        'Marketing Manager',
+        'Human Resource Officer',
+        'Project Manager',
+        'Lawyer',
+        'Agronomist',
     ];
 
     public function run(): void
     {
-        $institution = Institution::where('code', 'GVA001')->first();
+        $institution = Institution::where('code', '424518654')->first();
 
-        if (! $institution) {
+        if (!$institution) {
             return;
         }
 
@@ -111,7 +213,7 @@ class GreenValleyStudentBodySeeder extends Seeder
 
             $parentDetailsData[] = [
                 'parent_id' => $pId,
-                'parent_phone' => '+254 7'.rand(10000000, 99999999),
+                'parent_phone' => '+254 7' . rand(10000000, 99999999),
                 'parent_occupation' => self::OCCUPATIONS[($pIdx - 1) % count(self::OCCUPATIONS)],
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,
@@ -190,7 +292,7 @@ class GreenValleyStudentBodySeeder extends Seeder
                 $email = "student{$sIdx}@greenvalley.ac.ke";
                 $sId = $studentUsersMap[$email] ?? null;
 
-                if (! $sId) {
+                if (!$sId) {
                     $sIdx++;
 
                     continue;
@@ -201,8 +303,8 @@ class GreenValleyStudentBodySeeder extends Seeder
                 $admYear = ($sIdx <= 350) ? 2024 : (($sIdx <= 700) ? 2025 : 2026);
                 $admDate = now()->setYear($admYear)->setMonth(1)->setDay(rand(5, 25));
 
-                $admNo = "GVA/{$admYear}/".sprintf('%04d', $sIdx);
-                $stdNo = 'STD-'.(10000 + $sIdx);
+                $admNo = "GVA/{$admYear}/" . sprintf('%04d', $sIdx);
+                $stdNo = 'STD-' . (10000 + $sIdx);
 
                 $studentDetailsData[] = [
                     'student_id' => $sId,
@@ -211,16 +313,16 @@ class GreenValleyStudentBodySeeder extends Seeder
                     'class_id' => (string) $class->id,
                     'admission_number' => $admNo,
                     'student_number' => $stdNo,
-                    'phone' => '+254 7'.rand(10000000, 99999999),
+                    'phone' => '+254 7' . rand(10000000, 99999999),
                     'gender' => $gender,
                     'date_of_birth' => now()->subYears(rand(6, 17))->subDays(rand(1, 300))->toDateString(),
                     'address' => $faker->streetAddress(),
                     'city' => $faker->randomElement(['Nairobi', 'Mombasa', 'Nakuru', 'Eldoret', 'Kisumu']),
                     'state' => $faker->randomElement(['Nairobi County', 'Kiambu County', 'Machakos County', 'Kajiado County']),
                     'country' => 'Kenya',
-                    'guardian_name' => 'Guardian of Student '.$sIdx,
-                    'guardian_email' => 'guardian'.$sIdx.'@greenvalley.ac.ke',
-                    'guardian_phone' => '+254 7'.rand(10000000, 99999999),
+                    'guardian_name' => 'Guardian of Student ' . $sIdx,
+                    'guardian_email' => 'guardian' . $sIdx . '@greenvalley.ac.ke',
+                    'guardian_phone' => '+254 7' . rand(10000000, 99999999),
                     'guardian_relationship' => $faker->randomElement(['Father', 'Mother', 'Uncle', 'Aunt', 'Grandparent', 'Legal Guardian']),
                     'medical_conditions' => $faker->randomElement(['None', 'None', 'None', 'Asthma', 'Mild Allergies']),
                     'allergies' => $faker->randomElement(['None', 'None', 'Dust', 'Peanuts', 'Penicillin']),
