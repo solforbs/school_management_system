@@ -14,6 +14,15 @@ use Illuminate\Support\Facades\Log;
  */
 class ZKTecoUserSyncService
 {
+    /**
+     * The verification password written to the device when the caller
+     * hasn't supplied a usable one (e.g. a student with no admission
+     * number). Without it the device user has no keypad password at all,
+     * so a PIN + password punch-in is impossible. Numeric and <= 6 digits,
+     * per the K40 Pro's limits.
+     */
+    public const DEFAULT_DEVICE_PASSWORD = '1234';
+
     private DeviceManager $deviceManager;
 
     private CommandManager $commandManager;
@@ -66,25 +75,31 @@ class ZKTecoUserSyncService
                 $paramParts[] = sprintf('Card=%s', (string) $userData['card']);
             }
 
-            // Add Password if provided. The ZKTeco push protocol field for the
-            // verification password is "Passwd" (not "Password") -- devices
-            // silently ignore unrecognized fields and still ACK the command,
-            // which is why a wrong field name here looks like a successful sync
-            // even though the password was never actually written to the device.
-            if (isset($userData['password']) && $userData['password'] !== '') {
-                // K40 Pro (and most ZKTeco keypad devices) only accept a numeric
-                // password of up to 6 digits, so non-digit characters are stripped.
-                $cleanPassword = substr(preg_replace('/\D/', '', $userData['password']), 0, 6);
+            // Verification password. The ZKTeco push protocol field for it is
+            // "Passwd" (not "Password") -- devices silently ignore unrecognized
+            // fields and still ACK the command, which is why a wrong field name
+            // here looks like a successful sync even though nothing was written.
+            //
+            // K40 Pro (and most ZKTeco keypad devices) only accept a numeric
+            // password of up to 6 digits, so non-digit characters are stripped.
+            // When the caller gave nothing usable, fall back to the default so
+            // every device user still has a password to punch in with.
+            $rawPassword = isset($userData['password']) && $userData['password'] !== ''
+                ? (string) $userData['password']
+                : self::DEFAULT_DEVICE_PASSWORD;
 
-                if (! empty($cleanPassword)) {
-                    $paramParts[] = sprintf('Passwd=%s', $cleanPassword);
-                } else {
-                    Log::warning('Password could not be synced to device: no digits found after cleaning', [
-                        'device' => $deviceSerial,
-                        'pin' => $userData['pin'],
-                    ]);
-                }
+            $cleanPassword = substr((string) preg_replace('/\D/', '', $rawPassword), 0, 6);
+
+            if ($cleanPassword === '') {
+                $cleanPassword = self::DEFAULT_DEVICE_PASSWORD;
+
+                Log::warning('Device password had no digits after cleaning; using the default', [
+                    'device' => $deviceSerial,
+                    'pin' => $userData['pin'],
+                ]);
             }
+
+            $paramParts[] = sprintf('Passwd=%s', $cleanPassword);
             // FIX: Put a SPACE after the action verb, and separate parameters with tabs (\t)
             // Correct format: DATA UPDATE USERINFO PIN=101\tName=John\tPri=0
             $commandString = 'DATA UPDATE USERINFO '.implode("\t", $paramParts);
@@ -93,7 +108,7 @@ class ZKTecoUserSyncService
                 'device' => $deviceSerial,
                 'command' => $commandString,
                 'pin' => $userData['pin'],
-                'password' => isset($userData['password']) && $userData['password'] !== '' ? 'set' : 'not set',
+                'password' => isset($userData['password']) && $userData['password'] !== '' ? 'from caller' : 'default',
             ]);
 
             // Queue the command
