@@ -2,6 +2,7 @@
 
 use Athwari\LaravelZktecoAdms\Enums\AttendanceStatus;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
+use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
@@ -13,7 +14,8 @@ use Modules\Attendance\Services\AttendanceLogQuery;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 
-new #[Title('Attendance Logs')] class extends Component {
+new #[Title('Attendance Logs')] class extends Component
+{
     use WithPagination;
 
     #[Url]
@@ -36,6 +38,9 @@ new #[Title('Attendance Logs')] class extends Component {
 
     public bool $selectAllOnPage = false;
 
+    /** Set once the operator opts into "every matching record", not just this page. */
+    public bool $selectAllMatching = false;
+
     public ?int $confirmingId = null;
 
     public function mount(): void
@@ -49,6 +54,7 @@ new #[Title('Attendance Logs')] class extends Component {
             $this->resetPage();
             $this->selected = [];
             $this->selectAllOnPage = false;
+            $this->selectAllMatching = false;
         }
     }
 
@@ -172,6 +178,18 @@ new #[Title('Attendance Logs')] class extends Component {
     }
 
     /**
+     * How many records match the filters currently applied - what
+     * "Delete all" will actually remove.
+     */
+    #[Computed]
+    public function filteredCount(): int
+    {
+        $query = $this->filteredQuery();
+
+        return $query === null ? 0 : (clone $query)->count();
+    }
+
+    /**
      * Toggle every row on the current page. Only ids from this page are
      * ever added, so "select all" never silently reaches beyond what the
      * Director can actually see confirmed on screen.
@@ -183,6 +201,10 @@ new #[Title('Attendance Logs')] class extends Component {
         $this->selected = $value
             ? array_values(array_unique([...$this->selected, ...$pageIds]))
             : array_values(array_diff($this->selected, $pageIds));
+
+        if (! $value) {
+            $this->selectAllMatching = false;
+        }
     }
 
     public function confirmDelete(int $id): void
@@ -194,41 +216,80 @@ new #[Title('Attendance Logs')] class extends Component {
     {
         abort_unless(auth()->user()->can('delete attendance'), 403);
 
-        if ($this->confirmingId === null) {
-            return;
+        $id = $this->confirmingId;
+        $this->confirmingId = null;
+
+        if ($id !== null) {
+            $this->purge($this->baseQuery, [$id]);
         }
 
-        $this->deleteIds([$this->confirmingId]);
-        $this->confirmingId = null;
+        Flux::modal('confirm-delete-log')->close();
     }
 
     public function deleteSelected(): void
     {
         abort_unless(auth()->user()->can('delete attendance'), 403);
 
-        $this->deleteIds($this->selected);
+        $this->purge($this->baseQuery, $this->selected);
+
         $this->selected = [];
         $this->selectAllOnPage = false;
+        $this->selectAllMatching = false;
+
+        Flux::modal('confirm-delete-selected')->close();
     }
 
     /**
-     * Delete only ids that fall inside this user's own permission-scoped
-     * query - a crafted id for another institution's log simply never
-     * matches and is silently skipped, rather than trusted at face value.
+     * Remove every record that matches the filters on screen - not just
+     * the current page - within this user's own permission scope.
+     */
+    public function deleteAll(): void
+    {
+        abort_unless(auth()->user()->can('delete attendance'), 403);
+
+        $query = $this->filteredQuery();
+
+        if ($query !== null) {
+            (clone $query)
+                ->pluck('id')
+                ->chunk(500)
+                ->each(fn ($chunk) => ZktecoAttendanceLog::whereKey($chunk->all())->delete());
+        }
+
+        $this->selected = [];
+        $this->selectAllOnPage = false;
+        $this->selectAllMatching = false;
+        $this->resetPage();
+        $this->forgetCounts();
+
+        Flux::modal('confirm-delete-all')->close();
+    }
+
+    /**
+     * Hard-delete the given ids, but only those that fall inside this
+     * user's permission-scoped query - a crafted id for another
+     * institution's log never matches and is silently skipped.
      *
      * @param  array<int, int>  $ids
      */
-    private function deleteIds(array $ids): void
+    private function purge(?Builder $scope, array $ids): void
     {
-        $query = $this->baseQuery;
-
-        if ($query === null || $ids === []) {
+        if ($scope === null || $ids === []) {
             return;
         }
 
-        (clone $query)->whereIn('id', $ids)->delete();
+        $scopedIds = (clone $scope)->whereIn('id', $ids)->pluck('id');
 
-        unset($this->logs, $this->totalLogs, $this->todayLogs, $this->presentToday);
+        if ($scopedIds->isNotEmpty()) {
+            ZktecoAttendanceLog::whereKey($scopedIds->all())->delete();
+        }
+
+        $this->forgetCounts();
+    }
+
+    private function forgetCounts(): void
+    {
+        unset($this->logs, $this->totalLogs, $this->todayLogs, $this->presentToday, $this->filteredCount);
     }
 }; ?>
 
@@ -243,6 +304,8 @@ new #[Title('Attendance Logs')] class extends Component {
 
     $canTakeAttendance = Route::has('attendance.take') && auth()->user()->can('create attendance');
     $canDelete = auth()->user()->can('delete attendance');
+    $filteredCount = $canDelete ? $this->filteredCount : 0;
+    $hasActiveFilters = $search !== '' || $status !== '' || $class_id !== '' || $from !== '' || $to !== '';
 
     $todayStr = now()->toDateString();
     $yesterdayStr = now()->subDay()->toDateString();
@@ -285,6 +348,14 @@ new #[Title('Attendance Logs')] class extends Component {
                 'from' => $from,
                 'to' => $to,
             ]" />
+            @if ($canDelete && $filteredCount > 0)
+                <flux:modal.trigger name="confirm-delete-all">
+                    <flux:button type="button" icon="trash" variant="ghost"
+                        class="text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                        {{ $hasActiveFilters ? 'Delete Filtered' : 'Delete All' }}
+                    </flux:button>
+                </flux:modal.trigger>
+            @endif
             @if ($canTakeAttendance)
                 <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover icon="clipboard-document-check"
                     variant="primary" class="shadow-sm hover:shadow-md transition-all">
@@ -379,13 +450,31 @@ new #[Title('Attendance Logs')] class extends Component {
 
         {{-- Bulk action bar --}}
         @if ($canDelete && count($selected) > 0)
-            <div class="flex items-center justify-between bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl px-4 py-2.5">
                 <flux:text class="text-red-700 dark:text-red-400 text-sm font-medium">
-                    {{ count($selected) }} {{ Str::plural('record', count($selected)) }} selected
+                    @if ($selectAllMatching)
+                        All {{ number_format($filteredCount) }} matching {{ Str::plural('record', $filteredCount) }} selected.
+                        <button type="button" wire:click="$set('selectAllMatching', false)"
+                            class="underline hover:no-underline">Select page only</button>
+                    @else
+                        {{ count($selected) }} {{ Str::plural('record', count($selected)) }} selected.
+                        @if ($selectAllOnPage && $filteredCount > count($selected))
+                            <button type="button" wire:click="$set('selectAllMatching', true)"
+                                class="underline hover:no-underline font-semibold">Select all {{ number_format($filteredCount) }} matching</button>
+                        @endif
+                    @endif
                 </flux:text>
-                <flux:modal.trigger name="confirm-delete-selected">
-                    <flux:button type="button" size="sm" variant="danger" icon="trash">Delete Selected</flux:button>
-                </flux:modal.trigger>
+                @if ($selectAllMatching)
+                    <flux:modal.trigger name="confirm-delete-all">
+                        <flux:button type="button" size="sm" variant="danger" icon="trash">
+                            Delete all {{ number_format($filteredCount) }}
+                        </flux:button>
+                    </flux:modal.trigger>
+                @else
+                    <flux:modal.trigger name="confirm-delete-selected">
+                        <flux:button type="button" size="sm" variant="danger" icon="trash">Delete Selected</flux:button>
+                    </flux:modal.trigger>
+                @endif
             </div>
         @endif
 
@@ -517,15 +606,14 @@ new #[Title('Attendance Logs')] class extends Component {
             <div class="space-y-5">
                 <div>
                     <flux:heading size="lg">Delete this attendance record?</flux:heading>
-                    <flux:subheading>This permanently removes it from your records. It does not affect anything stored on the device.</flux:subheading>
+                    <flux:subheading>This permanently removes it from the database. It does not affect anything stored on the device.</flux:subheading>
                 </div>
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>
                         <flux:button type="button" variant="filled">Cancel</flux:button>
                     </flux:modal.close>
-                    <flux:modal.close>
-                        <flux:button type="button" variant="danger" wire:click="deleteLog">Delete Record</flux:button>
-                    </flux:modal.close>
+                    <flux:button type="button" variant="danger" icon="trash" wire:click="deleteLog"
+                        wire:loading.attr="disabled">Delete Record</flux:button>
                 </div>
             </div>
         </flux:modal>
@@ -534,15 +622,43 @@ new #[Title('Attendance Logs')] class extends Component {
             <div class="space-y-5">
                 <div>
                     <flux:heading size="lg">Delete {{ count($selected) }} selected {{ Str::plural('record', count($selected)) }}?</flux:heading>
-                    <flux:subheading>This permanently removes them from your records. It does not affect anything stored on the device.</flux:subheading>
+                    <flux:subheading>This permanently removes them from the database. It does not affect anything stored on the device.</flux:subheading>
                 </div>
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>
                         <flux:button type="button" variant="filled">Cancel</flux:button>
                     </flux:modal.close>
+                    <flux:button type="button" variant="danger" icon="trash" wire:click="deleteSelected"
+                        wire:loading.attr="disabled">Delete Selected</flux:button>
+                </div>
+            </div>
+        </flux:modal>
+
+        <flux:modal name="confirm-delete-all" class="max-w-md">
+            <div class="space-y-5">
+                <div>
+                    <flux:heading size="lg">
+                        Delete {{ number_format($filteredCount) }} attendance {{ Str::plural('record', $filteredCount) }}?
+                    </flux:heading>
+                    <flux:subheading>
+                        @if ($hasActiveFilters)
+                            This permanently removes <strong>every record matching the current filters</strong> — not
+                            just this page — from the database. It cannot be undone.
+                        @else
+                            This permanently removes <strong>every attendance record for this institution</strong> from
+                            the database. It cannot be undone.
+                        @endif
+                        It does not affect anything stored on the device.
+                    </flux:subheading>
+                </div>
+                <div class="flex justify-end gap-2">
                     <flux:modal.close>
-                        <flux:button type="button" variant="danger" wire:click="deleteSelected">Delete Selected</flux:button>
+                        <flux:button type="button" variant="filled">Cancel</flux:button>
                     </flux:modal.close>
+                    <flux:button type="button" variant="danger" icon="trash" wire:click="deleteAll"
+                        wire:loading.attr="disabled">
+                        Delete {{ $hasActiveFilters ? 'filtered' : 'all' }}
+                    </flux:button>
                 </div>
             </div>
         </flux:modal>
