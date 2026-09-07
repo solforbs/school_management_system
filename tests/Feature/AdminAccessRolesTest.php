@@ -3,25 +3,33 @@
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
+    config(['app.protected_admin_emails' => 'solforbs@gmail.com']);
 });
 
-function makeAdmin(string $name = 'Platform Owner'): User
-{
-    $admin = User::factory()->create(['name' => $name]);
-    $admin->assignRole('Admin');
+if (! function_exists('makeAdmin')) {
+    function makeAdmin(string $name = 'Platform Owner'): User
+    {
+        Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
 
-    return $admin;
+        $admin = User::factory()->create(['name' => $name]);
+        $admin->assignRole('Admin');
+
+        return $admin;
+    }
 }
 
-function makeDirector(string $name = 'School Head', ?string $email = null): User
-{
-    $director = User::factory()->create(['name' => $name, 'email' => $email ?? fake()->unique()->safeEmail()]);
-    $director->assignRole('Director');
+if (! function_exists('makeDirector')) {
+    function makeDirector(string $name = 'School Head', ?string $email = null): User
+    {
+        $director = User::factory()->create(['name' => $name, 'email' => $email ?? fake()->unique()->safeEmail()]);
+        $director->assignRole('Director');
 
-    return $director;
+        return $director;
+    }
 }
 
 test('the screen is closed to anyone who is not an admin', function () {
@@ -115,7 +123,7 @@ test('an admin demotes another admin back to director', function () {
 
 test('the protected platform-owner account can never have admin revoked', function () {
     $admin = makeAdmin('Ops Admin');
-    $owner = User::factory()->create(['name' => 'Real Owner', 'email' => 'jablessions76@gmail.com']);
+    $owner = User::factory()->create(['name' => 'Real Owner', 'email' => 'solforbs@gmail.com']);
     $owner->assignRole('Admin');
 
     Livewire::actingAs($admin)
@@ -136,7 +144,7 @@ test('the protected platform-owner account can never have admin revoked', functi
 
 test('the protected email is matched regardless of case', function () {
     $admin = makeAdmin();
-    $owner = User::factory()->create(['email' => 'JABlessions76@GMAIL.com']);
+    $owner = User::factory()->create(['email' => 'SOLforbs@GMAIL.com']);
     $owner->assignRole('Admin');
 
     Livewire::actingAs($admin)

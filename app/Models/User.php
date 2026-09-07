@@ -56,7 +56,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      * @var list<string>
      */
     public const PROTECTED_ADMIN_EMAILS = [
-        'jablessions76@gmail.com',
+        'solforbs@gmail.com',
     ];
 
     /**
@@ -87,15 +87,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
     /**
      * A platform-owner account whose Admin access no other admin may
-     * revoke. Matched case-insensitively so a differently-cased sign-up
-     * can't slip past it.
+     * revoke. Strictly configured via PROTECTED_ADMIN_EMAILS in .env (comma-separated).
+     * Matched case-insensitively.
      */
     public function isProtectedAdmin(): bool
     {
-        $email = Str::lower((string) $this->email);
+        $raw = config('app.protected_admin_emails', '');
+        if (empty($raw)) {
+            return false;
+        }
 
-        foreach (self::PROTECTED_ADMIN_EMAILS as $protected) {
-            if ($email === Str::lower($protected)) {
+        $emails = is_array($raw) ? $raw : array_map('trim', explode(',', (string) $raw));
+        $currentEmail = Str::lower((string) $this->email);
+
+        foreach ($emails as $protected) {
+            if ($protected !== '' && $currentEmail === Str::lower($protected)) {
                 return true;
             }
         }

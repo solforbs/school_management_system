@@ -4,14 +4,16 @@ use App\Models\ContactMessage;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
 
-function makeAdmin(): User
-{
-    Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
+if (! function_exists('makeAdmin')) {
+    function makeAdmin(): User
+    {
+        Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
 
-    $user = User::factory()->create();
-    $user->assignRole('Admin');
+        $user = User::factory()->create();
+        $user->assignRole('Admin');
 
-    return $user;
+        return $user;
+    }
 }
 
 test('guests are redirected to the login page', function () {

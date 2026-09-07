@@ -136,4 +136,15 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Protected Platform Owner Emails
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated list of root platform owner emails that cannot be
+    | demoted or have their Admin role revoked in the UI.
+    |
+    */
+    'protected_admin_emails' => env('PROTECTED_ADMIN_EMAILS', ''),
+
 ];

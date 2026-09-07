@@ -10,6 +10,7 @@ use App\Models\User;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Modules\FeeManagement\Models\Fee;
 use Modules\Institution\Models\Institution;
 use Modules\Staff\Models\StaffDetails;
@@ -177,24 +178,26 @@ class AnalyticsService
 
     /**
      * Month-by-month row counts for the last N months (oldest first),
-     * including months with zero rows, keyed by a display label. Grouped in
-     * PHP rather than a SQL date-format function so it behaves identically
-     * across the app's MySQL and test-suite SQLite connections.
+     * including months with zero rows, keyed by a display label.
      */
     private function monthlyCounts(Builder $query, int $months = 6): array
     {
         $start = now()->subMonths($months - 1)->startOfMonth();
 
+        $driver = DB::connection()->getDriverName();
+        $dateFormat = $driver === 'sqlite' ? "strftime('%Y-%m', created_at)" : 'DATE_FORMAT(created_at, "%Y-%m")';
+
         $counts = (clone $query)
             ->where('created_at', '>=', $start)
-            ->get(['created_at'])
-            ->groupBy(fn ($row) => $row->created_at->format('Y-m'))
-            ->map->count();
+            ->toBase()
+            ->selectRaw("{$dateFormat} as month, COUNT(*) as total")
+            ->groupBy('month')
+            ->pluck('total', 'month');
 
         $trend = [];
         for ($i = $months - 1; $i >= 0; $i--) {
             $month = now()->subMonths($i);
-            $trend[$month->format('M Y')] = $counts->get($month->format('Y-m'), 0);
+            $trend[$month->format('M Y')] = (int) ($counts->get($month->format('Y-m'), 0));
         }
 
         return $trend;
@@ -208,18 +211,25 @@ class AnalyticsService
     {
         $start = now()->subMonths($months - 1)->startOfMonth();
 
-        $grouped = $query->where('created_at', '>=', $start)
-            ->get(['created_at', 'amount', 'amount_paid'])
-            ->groupBy(fn ($row) => $row->created_at->format('Y-m'));
+        $driver = DB::connection()->getDriverName();
+        $dateFormat = $driver === 'sqlite' ? "strftime('%Y-%m', created_at)" : 'DATE_FORMAT(created_at, "%Y-%m")';
+
+        $grouped = (clone $query)
+            ->where('created_at', '>=', $start)
+            ->toBase()
+            ->selectRaw("{$dateFormat} as month, SUM(amount) as billed, SUM(amount_paid) as collected")
+            ->groupBy('month')
+            ->get()
+            ->keyBy('month');
 
         $trend = [];
         for ($i = $months - 1; $i >= 0; $i--) {
             $month = now()->subMonths($i);
-            $bucket = $grouped->get($month->format('Y-m'), collect());
+            $row = $grouped->get($month->format('Y-m'));
 
             $trend[$month->format('M Y')] = [
-                'billed' => (float) $bucket->sum('amount'),
-                'collected' => (float) $bucket->sum('amount_paid'),
+                'billed' => (float) ($row->billed ?? 0),
+                'collected' => (float) ($row->collected ?? 0),
             ];
         }
 
@@ -228,16 +238,37 @@ class AnalyticsService
 
     /**
      * Fee counts by their computed status (paid/partial/overdue/pending).
-     * `status` is a PHP accessor, not a column, so this groups in memory
-     * rather than via SQL - acceptable at this app's scale, and consistent
-     * with how the rest of this service already aggregates fees.
      */
     private function feesByStatus(Builder $query): array
     {
-        return $query->get(['amount', 'amount_paid', 'due_date'])
-            ->groupBy('status')
-            ->map->count()
+        $today = today()->toDateString();
+        $driver = DB::connection()->getDriverName();
+
+        $dueCondition = $driver === 'sqlite'
+            ? "due_date IS NOT NULL AND date(due_date) < date('{$today}')"
+            : "due_date IS NOT NULL AND due_date < '{$today}'";
+
+        $counts = (clone $query)
+            ->toBase()
+            ->selectRaw("
+                CASE 
+                    WHEN amount_paid >= amount THEN 'paid'
+                    WHEN amount_paid > 0 THEN 'partial'
+                    WHEN {$dueCondition} THEN 'overdue'
+                    ELSE 'pending'
+                END as fee_status,
+                COUNT(*) as total
+            ")
+            ->groupBy('fee_status')
+            ->pluck('total', 'fee_status')
             ->toArray();
+
+        return [
+            'paid' => (int) ($counts['paid'] ?? 0),
+            'partial' => (int) ($counts['partial'] ?? 0),
+            'overdue' => (int) ($counts['overdue'] ?? 0),
+            'pending' => (int) ($counts['pending'] ?? 0),
+        ];
     }
 
     /**
@@ -455,10 +486,12 @@ class AnalyticsService
      */
     private function usersByRole(): Collection
     {
-        return User::with('roles')
-            ->get()
-            ->flatMap(fn (User $user) => $user->getRoleNames())
-            ->countBy()
-            ->sortDesc();
+        return DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_type', User::class)
+            ->selectRaw('roles.name, COUNT(*) as total')
+            ->groupBy('roles.name')
+            ->orderByDesc('total')
+            ->pluck('total', 'roles.name');
     }
 }

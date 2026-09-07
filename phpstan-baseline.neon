@@ -853,12 +853,6 @@ parameters:
 			path: app/Services/AnalyticsExportService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/AnalyticsService.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$institution\.$#'
 			identifier: property.notFound
 			count: 2
@@ -961,6 +955,12 @@ parameters:
 			path: app/Services/AnalyticsService.php
 
 		-
+			message: '#^Parameter \#1 \$expression of method Illuminate\\Database\\Query\\Builder\:\:selectRaw\(\) expects literal\-string, non\-falsy\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
 			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -969,12 +969,6 @@ parameters:
 		-
 			message: '#^Relation ''owner'' is not found in Modules\\Institution\\Models\\Institution model\.$#'
 			identifier: larastan.relationExistence
-			count: 2
-			path: app/Services/AnalyticsService.php
-
-		-
-			message: '#^Unable to resolve the template type TGroupKey in call to method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:groupBy\(\)$#'
-			identifier: argument.templateType
 			count: 2
 			path: app/Services/AnalyticsService.php
 
@@ -1159,6 +1153,36 @@ parameters:
 			path: app/Services/ReceiptOcrService.php
 
 		-
+			message: '#^Access to constant CHANGE_FREQUENCY_MONTHLY on an unknown class Spatie\\Sitemap\\Tags\\Url\.$#'
+			identifier: class.notFound
+			count: 3
+			path: app/Services/SitemapGenerator.php
+
+		-
+			message: '#^Access to constant CHANGE_FREQUENCY_WEEKLY on an unknown class Spatie\\Sitemap\\Tags\\Url\.$#'
+			identifier: class.notFound
+			count: 2
+			path: app/Services/SitemapGenerator.php
+
+		-
+			message: '#^Call to static method create\(\) on an unknown class Spatie\\Sitemap\\Sitemap\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/SitemapGenerator.php
+
+		-
+			message: '#^Call to static method create\(\) on an unknown class Spatie\\Sitemap\\Tags\\Url\.$#'
+			identifier: class.notFound
+			count: 5
+			path: app/Services/SitemapGenerator.php
+
+		-
+			message: '#^Method App\\Services\\SitemapGenerator\:\:urls\(\) has invalid return type Spatie\\Sitemap\\Tags\\Url\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Services/SitemapGenerator.php
+
+		-
 			message: '#^Method App\\Services\\SmsService\:\:formatMobile\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1
@@ -1199,3 +1223,9 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Services/ZKTecoUserSyncService.php
+
+		-
+			message: '#^Class Spatie\\Sitemap\\Crawler\\Profile not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: config/sitemap.php
