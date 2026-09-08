@@ -214,6 +214,7 @@ class ExamTimetableBuilder
     private function query(User $viewer, array $filters)
     {
         return $this->scoped($viewer)
+            ->when(filled($filters['sitting_id'] ?? null), fn ($query) => $query->where('sitting_id', $filters['sitting_id']))
             ->when(filled($filters['term'] ?? null), fn ($query) => $query->where('term', $filters['term']))
             ->when(filled($filters['academic_year'] ?? null), fn ($query) => $query->where('academic_year', $filters['academic_year']))
             ->when(filled($filters['exam_type'] ?? null), fn ($query) => $query->where('exam_type', $filters['exam_type']))

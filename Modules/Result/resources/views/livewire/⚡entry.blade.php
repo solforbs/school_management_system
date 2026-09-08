@@ -7,6 +7,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Modules\Examinations\Models\Examination;
+use Modules\Examinations\Models\ExamSitting;
 use Modules\Institution\Models\Institution;
 use Modules\Result\Actions\SaveResult;
 use Modules\Result\Models\Result;
@@ -14,17 +15,21 @@ use Modules\Result\Services\ResultAccessService;
 use Modules\Student\Models\StudentDetails;
 
 /**
- * The marks sheet: one exam sitting, one subject, a whole class on one
+ * The marks sheet: one exam paper, one subject, a whole class on one
  * screen.
  *
- * The teacher arrives here from the sitting picker with `examination_id`
- * already set. They choose a subject they teach, then one of their
- * classes; the class roll loads and they enter every mark in one go.
+ * The teacher normally arrives from the sitting picker with `sitting_id`
+ * and `class_id` set - they pick a subject (auto-selected when they teach
+ * only one in that class) and the concrete paper is resolved from that.
+ * A Director-pinned paper still opens straight here with `examination_id`.
  * Saving happens in place - the sheet stays open with the grades filled in.
  */
 new #[Title('Enter Marks')] class extends Component {
     #[Url(as: 'examination_id')]
     public string $examinationId = '';
+
+    #[Url(as: 'sitting_id')]
+    public string $sittingId = '';
 
     #[Url(as: 'subject_id')]
     public string $subjectId = '';
@@ -32,7 +37,7 @@ new #[Title('Enter Marks')] class extends Component {
     #[Url(as: 'class_id')]
     public string $classId = '';
 
-    /** A Director-pinned sitting fixes its subject/class - the picker locks. */
+    /** A pinned paper, or a sitting reached with a class already chosen. */
     public bool $subjectLocked = false;
 
     public bool $classLocked = false;
@@ -51,31 +56,55 @@ new #[Title('Enter Marks')] class extends Component {
             $this->examinationId = $examinationId;
         }
 
-        // No sitting chosen yet - send them back to the picker.
-        if ($this->examinationId === '') {
-            $this->redirectRoute('result.entry.exams', navigate: true);
+        // Path 1: opened straight on a paper (a Director-pinned one, or the
+        // test suite). The paper decides its own subject/class.
+        if ($this->examinationId !== '') {
+            abort_unless($this->examination, 403, 'That exam paper is not available to you.');
+
+            if ($this->examination->subject_id) {
+                $this->subjectId = (string) $this->examination->subject_id;
+                $this->subjectLocked = true;
+            }
+
+            if ($this->examination->class_id) {
+                $this->classId = (string) $this->examination->class_id;
+                $this->classLocked = true;
+            }
+
+            if ($this->classId !== '') {
+                $this->loadSheet();
+            }
 
             return;
         }
 
-        // The sitting must be one this viewer may record for; anything else
-        // - a hand-typed id, a crafted request - is refused outright.
-        abort_unless($this->examination, 403, 'That exam sitting is not available to you.');
+        // Path 2: came through the sitting -> class pickers. Lock the class,
+        // and if the teacher has just one subject in it, lock that too and
+        // resolve the paper.
+        if ($this->sitting && $this->classId !== '') {
+            abort_unless(
+                ResultAccessService::classesForSitting(auth()->user(), $this->sitting)
+                    ->contains('id', (int) $this->classId),
+                403,
+                'That class is not yours to mark in this exam.',
+            );
 
-        // A pinned sitting decides its own subject/class.
-        if ($this->examination->subject_id) {
-            $this->subjectId = (string) $this->examination->subject_id;
-            $this->subjectLocked = true;
-        }
-
-        if ($this->examination->class_id) {
-            $this->classId = (string) $this->examination->class_id;
             $this->classLocked = true;
+
+            $subjects = $this->subjects;
+
+            if ($subjects->count() === 1) {
+                $this->subjectId = (string) $subjects->first()->id;
+                $this->subjectLocked = true;
+                $this->resolvePaper();
+                $this->loadSheet();
+            }
+
+            return;
         }
 
-        if ($this->classId !== '') {
-            $this->loadSheet();
-        }
+        // Nothing to go on - back to the start.
+        $this->redirectRoute('result.entry.exams', navigate: true);
     }
 
     public function updatedSubjectId(): void
@@ -87,9 +116,28 @@ new #[Title('Enter Marks')] class extends Component {
         $this->reset(['marks', 'remarks']);
         $this->resetValidation();
 
+        // Sitting mode: which paper is being marked depends on the subject
+        // just chosen.
+        if ($this->sitting && $this->classId !== '') {
+            $this->resolvePaper();
+        }
+
         if ($this->classId !== '') {
             $this->loadSheet();
         }
+    }
+
+    /**
+     * In sitting mode, pin `examinationId` to the one paper the sitting
+     * holds for the chosen class and subject.
+     */
+    private function resolvePaper(): void
+    {
+        unset($this->examination);
+
+        $this->examinationId = $this->sitting && $this->classId !== '' && $this->subjectId !== ''
+            ? (string) (ResultAccessService::resolvePaper($this->sitting, (int) $this->classId, (int) $this->subjectId)?->id ?? '')
+            : '';
     }
 
     public function updatedClassId(): void
@@ -194,13 +242,32 @@ new #[Title('Enter Marks')] class extends Component {
     }
 
     /**
-     * The subjects this viewer may record for.
+     * The sitting being marked, when the teacher came through the pickers.
+     */
+    #[Computed]
+    public function sitting(): ?ExamSitting
+    {
+        if ($this->sittingId === '') {
+            return null;
+        }
+
+        return ResultAccessService::selectableSittings(auth()->user())
+            ->firstWhere('id', (int) $this->sittingId);
+    }
+
+    /**
+     * The subjects this viewer may record for - narrowed to the ones this
+     * sitting examines in the chosen class when in sitting mode.
      *
      * @return Collection<int, \Modules\Subject\Models\Subject>
      */
     #[Computed]
     public function subjects(): Collection
     {
+        if ($this->sitting && $this->classId !== '') {
+            return ResultAccessService::subjectsForSittingClass(auth()->user(), $this->sitting, (int) $this->classId);
+        }
+
         return ResultAccessService::selectableSubjects(auth()->user());
     }
 
@@ -357,27 +424,39 @@ new #[Title('Enter Marks')] class extends Component {
 }; ?>
 
 <div class="p-4">
-    @if ($this->examination)
+    @php($sitting = $this->sitting)
+    @php($heading = $this->examination?->title ?? $sitting?->displayName() ?? 'Enter Marks')
+    @php($lockedClassName = $classLocked ? $this->classes->firstWhere('id', (int) $classId)?->name : null)
+    @if ($this->examination || $sitting)
         <flux:card class="mb-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <flux:heading size="lg" class="mb-1">{{ $this->examination->title }}</flux:heading>
+                    <flux:heading size="lg" class="mb-1">{{ $heading }}</flux:heading>
                     <flux:text class="text-zinc-500">
-                        out of {{ $this->examination->total_marks }}
-                        @if ($this->examination->term)
-                            · {{ $this->examination->term }} {{ $this->examination->academic_year }}
+                        @if ($this->examination)
+                            out of {{ $this->examination->total_marks }} ·
+                            pass mark {{ number_format($this->passingMarks, 1) }}
+                            @if ($this->examination->term)
+                                · {{ $this->examination->term }} {{ $this->examination->academic_year }}
+                            @endif
+                        @elseif ($sitting)
+                            {{ $sitting->periodLabel() }}@if ($lockedClassName) · {{ $lockedClassName }}@endif
                         @endif
-                        · pass mark {{ number_format($this->passingMarks, 1) }}
                     </flux:text>
                 </div>
-                <flux:button href="{{ route('result.entry.exams') }}" wire:navigate size="sm" variant="subtle"
-                    icon="arrow-left">
-                    Change sitting
+                <flux:button
+                    href="{{ $sitting ? route('result.entry.classes', ['sitting_id' => $sitting->id]) : route('result.entry.exams') }}"
+                    wire:navigate size="sm" variant="subtle" icon="arrow-left">
+                    {{ $sitting ? 'Change class' : 'Change exam' }}
                 </flux:button>
             </div>
 
             <flux:text class="mt-4 mb-3 text-sm text-zinc-500">
-                Choose the subject, then the class. The class roll loads below and you enter every mark in one go.
+                @if ($sitting)
+                    Pick the subject you're marking for {{ $lockedClassName ?? 'this class' }}. The class roll loads below and you enter every mark in one go.
+                @else
+                    Choose the subject, then the class. The class roll loads below and you enter every mark in one go.
+                @endif
             </flux:text>
 
             <div class="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
@@ -399,9 +478,13 @@ new #[Title('Enter Marks')] class extends Component {
                 </flux:select>
             </div>
 
-            @if ($subjectLocked || $classLocked)
+            @if ($sitting && $classLocked)
                 <flux:text class="mt-3 text-xs text-amber-600 dark:text-amber-400">
-                    This sitting is pinned{{ $subjectLocked ? ' to a subject' : '' }}{{ $subjectLocked && $classLocked ? ' and' : '' }}{{ $classLocked ? ' to a class' : '' }},
+                    Class chosen on the previous screen.{{ $subjectLocked ? ' Only one subject here is yours, so it is fixed.' : '' }}
+                </flux:text>
+            @elseif ($subjectLocked || $classLocked)
+                <flux:text class="mt-3 text-xs text-amber-600 dark:text-amber-400">
+                    This paper is pinned{{ $subjectLocked ? ' to a subject' : '' }}{{ $subjectLocked && $classLocked ? ' and' : '' }}{{ $classLocked ? ' to a class' : '' }},
                     so that choice is fixed.
                 </flux:text>
             @endif

@@ -16,6 +16,9 @@ use Modules\Examinations\Services\ExamTimetableBuilder;
  * builds every class, one grid (and one printed page) per class.
  */
 new #[Title('Exam Timetable')] class extends Component {
+    #[Url(as: 'sitting_id')]
+    public string $sittingId = '';
+
     #[Url]
     public string $term = '';
 
@@ -32,6 +35,11 @@ new #[Title('Exam Timetable')] class extends Component {
     {
         abort_unless(auth()->user()->can('view examination'), 403);
 
+        // Landed on one exam: let it speak for itself, no other filters.
+        if ($this->sittingId !== '') {
+            return;
+        }
+
         // Open on the most recent year the school actually has papers in,
         // rather than an empty screen.
         if ($this->academicYear === '') {
@@ -44,6 +52,15 @@ new #[Title('Exam Timetable')] class extends Component {
      */
     public function filters(): array
     {
+        // A chosen exam is the whole filter - term/year/type come from it;
+        // a class can still narrow it to one page.
+        if ($this->sittingId !== '') {
+            return array_filter([
+                'sitting_id' => $this->sittingId,
+                'class_id' => $this->classId,
+            ], fn ($value) => $value !== '');
+        }
+
         return array_filter(
             [
                 'term' => $this->term,
@@ -53,6 +70,16 @@ new #[Title('Exam Timetable')] class extends Component {
             ],
             fn ($value) => $value !== '',
         );
+    }
+
+    #[Computed]
+    public function sittings(): Collection
+    {
+        return \Modules\Examinations\Models\ExamSitting::query()
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitution()?->id ?? 0))
+            ->orderByDesc('academic_year')
+            ->orderByDesc('id')
+            ->get();
     }
 
     /**
@@ -175,14 +202,9 @@ new #[Title('Exam Timetable')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 shadow-2xs hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
-                <flux:icon icon="printer" class="size-3.5 text-zinc-400" />
-                Print
-            </button>
-
-            <flux:button href="{{ route('examinations.timetable.pdf', $this->filters()) }}" icon="arrow-down-tray"
+            <flux:button href="{{ route('examinations.timetable.pdf', $this->filters()) }}" icon="printer"
                 variant="primary" class="font-semibold text-xs shadow-sm" :disabled="$this->paperCount === 0">
-                Download Timetable
+                Print / Download PDF
             </flux:button>
 
             <flux:button href="{{ route('examinations.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle"
@@ -230,22 +252,33 @@ new #[Title('Exam Timetable')] class extends Component {
         </div>
 
         <div class="flex flex-wrap items-end gap-2 border-t border-zinc-100 dark:border-zinc-800 pt-3">
-            <flux:select wire:model.live="academicYear" label="Academic Year" size="sm">
+            @if ($this->sittings->isNotEmpty())
+                <flux:select wire:model.live="sittingId" label="Exam" size="sm">
+                    <flux:select.option value="">All exams</flux:select.option>
+                    @foreach ($this->sittings as $sitting)
+                        <flux:select.option value="{{ $sitting->id }}">
+                            {{ $sitting->displayName() }} — {{ $sitting->periodLabel() }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
+
+            <flux:select wire:model.live="academicYear" label="Academic Year" size="sm" :disabled="$sittingId !== ''">
                 <flux:select.option value="">All years</flux:select.option>
                 @foreach ($this->academicYears as $year)
                     <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:select wire:model.live="term" label="Term" size="sm">
+            <flux:select wire:model.live="term" label="Term" size="sm" :disabled="$sittingId !== ''">
                 <flux:select.option value="">All terms</flux:select.option>
                 @foreach ($this->terms as $termOption)
                     <flux:select.option value="{{ $termOption }}">{{ $termOption }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:select wire:model.live="examType" label="Sitting" size="sm">
-                <flux:select.option value="">All sittings</flux:select.option>
+            <flux:select wire:model.live="examType" label="Type" size="sm" :disabled="$sittingId !== ''">
+                <flux:select.option value="">All types</flux:select.option>
                 @foreach (\Modules\Examinations\Models\Examination::EXAM_TYPES as $value => $label)
                     <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
                 @endforeach

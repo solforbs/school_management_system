@@ -11,6 +11,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
+use Modules\Examinations\Models\ExamSitting;
 use Modules\Subject\Models\Subject;
 
 new #[Title('Examinations')] class extends Component {
@@ -91,6 +92,23 @@ new #[Title('Examinations')] class extends Component {
             ->when($this->status === 'today', fn($q) => $q->where('exam_date', $today))
             ->orderBy('exam_date', 'desc')
             ->paginate(15);
+    }
+
+    /**
+     * The exam sittings - the events a school runs, each fanning out into a
+     * paper per subject per class. This is the headline list; the table
+     * below is the per-paper detail.
+     *
+     * @return Collection<int, ExamSitting>
+     */
+    #[Computed]
+    public function sittings(): Collection
+    {
+        return ExamSitting::withCount('papers')
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->orderByDesc('academic_year')
+            ->orderByDesc('id')
+            ->get();
     }
 
     #[Computed]
@@ -194,10 +212,44 @@ new #[Title('Examinations')] class extends Component {
             subtext="curriculum subjects" :href="route('subject.index')" />
     </div>
 
-    {{-- Filter and Search Toolbar --}}
+    {{-- Exam sittings: the events, each fanning out into a paper per subject per class. --}}
+    @if ($this->sittings->isNotEmpty())
+        <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+                <flux:heading size="lg" class="font-bold">Exams</flux:heading>
+                <flux:text class="text-xs text-zinc-500">Each exam covers every subject; open one to see or print its timetable.</flux:text>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach ($this->sittings as $sitting)
+                    <a href="{{ route('examinations.timetable', ['sitting_id' => $sitting->id]) }}" wire:navigate.hover
+                        class="group flex flex-col gap-2 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-xs transition hover:border-amber-300 hover:shadow-sm">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="font-bold text-zinc-900 dark:text-white truncate group-hover:text-amber-600 transition">
+                                    {{ $sitting->displayName() }}
+                                </div>
+                                <div class="text-[11px] text-zinc-400 mt-0.5">{{ $sitting->periodLabel() }}</div>
+                            </div>
+                            <flux:icon icon="chevron-right" class="size-4 text-zinc-300 group-hover:text-amber-500 shrink-0" />
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-medium border border-zinc-200/60 dark:border-zinc-700">
+                                {{ $sitting->papers_count }} {{ Str::plural('paper', $sitting->papers_count) }}
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md {{ $sitting->class_id ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200/60' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/60' }} font-medium border">
+                                {{ $sitting->class_id ? ('Targeted: '.($sitting->schoolClass?->name ?? 'one class')) : 'All classes' }}
+                            </span>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- Filter and Search Toolbar (per-paper detail) --}}
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <flux:input wire:model.live.debounce.300ms="search" placeholder="Search exams..." icon="magnifying-glass"
+            <flux:input wire:model.live.debounce.300ms="search" placeholder="Search papers..." icon="magnifying-glass"
                 class="w-full sm:w-64" />
 
             <flux:select wire:model.live="class_id" placeholder="All Classes" class="w-full sm:w-44">
@@ -234,7 +286,7 @@ new #[Title('Examinations')] class extends Component {
     <div
         class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
         <div class="overflow-x-auto">
-            <flux:table class="p-2">
+            <flux:table class="p-4">
                 <flux:table.columns>
                     <flux:table.column>Assessment Details</flux:table.column>
                     <flux:table.column>Subject &amp; Stream</flux:table.column>

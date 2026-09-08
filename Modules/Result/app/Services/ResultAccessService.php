@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
+use Modules\Examinations\Models\ExamSitting;
 use Modules\Student\Models\StudentDetails;
 use Modules\Subject\Models\Subject;
 use Modules\Subject\Models\SubjectTeacher;
@@ -287,5 +288,104 @@ class ResultAccessService
         }
 
         return $query->when($classId, fn ($q) => $q->where('class_id', $classId))->get();
+    }
+
+    /**
+     * Exam sittings a viewer records marks for: every sitting at their
+     * school, and for a Teacher only those that actually hold a paper they
+     * may grade - one in a class/subject they're assigned, or any paper in
+     * a class they are class teacher of.
+     *
+     * @return Collection<int, ExamSitting>
+     */
+    public static function selectableSittings(User $user): Collection
+    {
+        $query = ExamSitting::query()->withCount('papers');
+
+        if ($user->hasRole('Teacher')) {
+            $query->where('institution_id', $user->teacherUserDetails?->institution_id ?? 0);
+
+            $pairs = self::subjectPairs($user);
+            $classTeacherClassIds = self::classTeacherClassIds($user);
+
+            if ($pairs->isEmpty() && $classTeacherClassIds->isEmpty()) {
+                return collect();
+            }
+
+            $query->whereHas('papers', function ($papers) use ($pairs, $classTeacherClassIds) {
+                $papers->where(function ($gradable) use ($pairs, $classTeacherClassIds) {
+                    foreach ($pairs as $pair) {
+                        $gradable->orWhere(fn ($p) => $p
+                            ->where('class_id', $pair->class_id)
+                            ->where('subject_id', $pair->subject_id));
+                    }
+
+                    if ($classTeacherClassIds->isNotEmpty()) {
+                        $gradable->orWhereIn('class_id', $classTeacherClassIds->all());
+                    }
+                });
+            });
+        } elseif (! isAdmin()) {
+            $query->where('institution_id', currentInstitution()?->id ?? 0);
+        }
+
+        return $query->orderByDesc('academic_year')->orderByDesc('id')->get();
+    }
+
+    /**
+     * The classes a viewer picks from once inside a sitting: the classes it
+     * has papers for, narrowed for a Teacher to the ones they teach.
+     *
+     * @return Collection<int, SchoolClass>
+     */
+    public static function classesForSitting(User $user, ExamSitting $sitting): Collection
+    {
+        $classIds = $sitting->papers()
+            ->whereNotNull('class_id')
+            ->distinct()
+            ->pluck('class_id')
+            ->map(fn ($id) => (int) $id);
+
+        if ($user->hasRole('Teacher')) {
+            $allowed = self::classIds($user);
+            $classIds = $classIds->filter(fn ($id) => $allowed->contains($id));
+        }
+
+        return SchoolClass::whereIn('id', $classIds->unique()->values())
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * The subjects a viewer may enter for one class of a sitting: the
+     * subjects that sitting examines in that class, intersected with what
+     * the viewer is allowed to grade there.
+     *
+     * @return Collection<int, Subject>
+     */
+    public static function subjectsForSittingClass(User $user, ExamSitting $sitting, int $classId): Collection
+    {
+        $sittingSubjectIds = $sitting->papers()
+            ->where('class_id', $classId)
+            ->whereNotNull('subject_id')
+            ->distinct()
+            ->pluck('subject_id')
+            ->map(fn ($id) => (int) $id);
+
+        return self::selectableSubjects($user, $classId)
+            ->whereIn('id', $sittingSubjectIds->all())
+            ->values();
+    }
+
+    /**
+     * The one paper a sitting holds for a given class and subject - the
+     * concrete Examination the mark sheet then saves against.
+     */
+    public static function resolvePaper(ExamSitting $sitting, int $classId, int $subjectId): ?Examination
+    {
+        return $sitting->papers()
+            ->where('class_id', $classId)
+            ->where('subject_id', $subjectId)
+            ->first();
     }
 }

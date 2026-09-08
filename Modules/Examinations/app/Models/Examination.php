@@ -14,18 +14,24 @@ class Examination extends Model
     use HasFactory;
 
     /**
-     * The sittings a term is split into. A term holds more than one round of
-     * papers, and this is what an exam timetable is organised around.
+     * The kinds of sitting a term is split into. A term holds more than one
+     * round of papers, and this is what an exam timetable is organised
+     * around. Stored as a plain string, so this map is for display and for
+     * the create form's dropdown - not a schema constraint.
      *
      * @var array<string, string>
      */
     public const EXAM_TYPES = [
+        'opening' => 'Opening Exam',
+        'cat' => 'CAT',
         'mid_term' => 'Mid Term',
         'end_term' => 'End Term',
+        'mock' => 'Mock Exam',
     ];
 
     protected $fillable = [
         'institution_id',
+        'sitting_id',
         'class_id',
         'title',
         'subject_id',
@@ -52,6 +58,15 @@ class Examination extends Model
     public function institution()
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    /**
+     * The sitting this paper belongs to ("Mock Exam", "End Term"). Null only
+     * for rows that predate sittings and haven't been backfilled.
+     */
+    public function sitting()
+    {
+        return $this->belongsTo(ExamSitting::class, 'sitting_id');
     }
 
     public function schoolClass()

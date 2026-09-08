@@ -8,6 +8,7 @@ use App\Services\Export\TableExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Examinations\Actions\SaveExamination;
+use Modules\Examinations\Actions\SaveExamSitting;
 use Modules\Examinations\Models\Examination;
 use Modules\Student\Models\StudentDetails;
 
@@ -82,16 +83,20 @@ class ExaminationsController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     *
+     * Creating an examination creates a sitting, which fans out into one
+     * paper per subject per class - a school never enters a subject at a
+     * time.
      */
     public function store(Request $request)
     {
         abort_unless(Auth::user()->can('create examination'), 403);
 
-        $validated = $request->validate(SaveExamination::rules());
+        $validated = $request->validate(SaveExamSitting::rules());
 
-        SaveExamination::handle($validated, $this->institutionId($request));
+        SaveExamSitting::handle($validated, $this->institutionId($request));
 
-        return redirect()->route('examinations.index')->with('success', 'Examination created successfully!');
+        return redirect()->route('examinations.index')->with('success', 'Examination created — a paper was scheduled for every subject and class.');
     }
 
     /**
