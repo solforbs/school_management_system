@@ -16,6 +16,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     // binding would hand mount() a model where it expects an id.
     Route::livewire('staff-payments/{paymentId}/edit', 'staff::payments.form')->name('staff.payments.edit');
 
+    Route::get('staff-payments/{payment}/payslip', [StaffPaymentController::class, 'payslip'])
+        ->name('staff.payments.payslip');
+
     Route::resource('staff-payments', StaffPaymentController::class)
         ->names('staff.payments')
         ->parameters(['staff-payments' => 'payment'])

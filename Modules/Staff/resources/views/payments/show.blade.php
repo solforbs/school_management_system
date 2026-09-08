@@ -28,11 +28,11 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <button onclick="window.print()"
+                <a href="{{ route('staff.payments.payslip', $payment->id) }}" target="_blank"
                     class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition">
                     <flux:icon icon="printer" class="size-3.5" />
                     <span>Print Payslip</span>
-                </button>
+                </a>
                 @can('edit payroll')
                     <flux:button href="{{ route('staff.payments.edit', $payment->id) }}" icon="pencil-square"
                         variant="primary" class="font-semibold shadow-sm">

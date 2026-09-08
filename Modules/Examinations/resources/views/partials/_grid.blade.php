@@ -11,7 +11,7 @@
     <x-empty-state icon="calendar" color="amber" title="No papers for this class"
         description="This class has no examinations under the current filters." />
 @else
-    <div class="overflow-x-auto p-4 sm:p-5">
+    <div class="overflow-x-auto p-4">
         <table class="w-full border-collapse text-center min-w-[640px]">
             <thead>
                 <tr class="bg-zinc-100 dark:bg-zinc-800">

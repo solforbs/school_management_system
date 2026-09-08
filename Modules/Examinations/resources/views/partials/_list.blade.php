@@ -2,7 +2,7 @@
     /** @var array<string, mixed> $group */
 @endphp
 
-<flux:table>
+<flux:table class="p-4">
     <flux:table.columns>
         <flux:table.column>Date</flux:table.column>
         <flux:table.column>Time</flux:table.column>

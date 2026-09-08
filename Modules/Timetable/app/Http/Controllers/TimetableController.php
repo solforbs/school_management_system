@@ -29,8 +29,40 @@ class TimetableController extends Controller
     {
         abort_unless(Auth::user()->can('export timetable'), 403);
 
-        $user = Auth::user();
+        $rows = $this->scheduleRows($request, Auth::user());
 
+        $format = $request->string('format')->lower()->value();
+        $filename = 'timetable-'.now()->format('Y-m-d');
+
+        return $format === 'pdf'
+            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Timetable')
+            : $exporter->excel($rows, self::HEADERS, $filename, 'Timetable');
+    }
+
+    /**
+     * The printable timetable: the same schedule the export produces, always
+     * as a PDF. Gated on viewing rather than exporting, so the "Print"
+     * button works for a student or parent printing their own timetable -
+     * they can see it, so they may print it.
+     */
+    public function printable(Request $request, TableExportService $exporter)
+    {
+        abort_unless(Auth::user()->can('view timetable'), 403);
+
+        $rows = $this->scheduleRows($request, Auth::user());
+
+        return $exporter->pdf($rows, self::HEADERS, 'timetable-'.now()->format('Y-m-d'), 'Timetable');
+    }
+
+    /**
+     * The schedule rows shared by the Excel export and the printable PDF: a
+     * teacher's own lessons, or the selected class's, with the same
+     * institution/role scoping the index listing applies.
+     *
+     * @return Collection<int, array<int, string>>
+     */
+    private function scheduleRows(Request $request, $user): Collection
+    {
         if ($user->hasRole('Teacher')) {
             $entries = TimetableEntry::with(['schoolClass', 'subjectRecord', 'teacher'])
                 ->where('teacher_id', $user->id)
@@ -45,14 +77,7 @@ class TimetableController extends Controller
                 ->get();
         }
 
-        $rows = $entries->map(fn (TimetableEntry $entry) => $this->toExportRow($entry));
-
-        $format = $request->string('format')->lower()->value();
-        $filename = 'timetable-'.now()->format('Y-m-d');
-
-        return $format === 'pdf'
-            ? $exporter->pdf($rows, self::HEADERS, $filename, 'Timetable')
-            : $exporter->excel($rows, self::HEADERS, $filename, 'Timetable');
+        return $entries->map(fn (TimetableEntry $entry) => $this->toExportRow($entry));
     }
 
     /**

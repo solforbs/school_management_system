@@ -4,10 +4,13 @@ namespace Modules\Staff\Http\Controllers;
 
 use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Modules\Institution\Models\Institution;
 use Modules\Staff\Actions\SaveStaffPayment;
 use Modules\Staff\Models\StaffDetails;
 use Modules\Staff\Models\StaffPayment;
@@ -61,6 +64,31 @@ class StaffPaymentController extends Controller
         $payment->load(['staff', 'institution', 'recordedBy']);
 
         return view('staff::payments.show', compact('payment'));
+    }
+
+    /**
+     * The payslip as a PDF - what the "Print Payslip" button hands over, so
+     * a printed copy is the voucher itself rather than a screenshot of the
+     * browser window. Gated exactly like show(): if you may view the
+     * payslip, you may print it.
+     */
+    public function payslip(StaffPayment $payment)
+    {
+        abort_unless(Auth::user()->can('view payroll'), 403);
+
+        $this->authorizeAccessTo($payment);
+
+        $payment->load(['staff', 'institution', 'recordedBy']);
+
+        $pdf = Pdf::loadView('staff::pdf.payslip', [
+            'payment' => $payment,
+            'institution' => $payment->institution,
+            'logoDataUri' => $this->logoDataUri($payment->institution),
+        ])->setPaper('a4');
+
+        $reference = str_pad((string) $payment->id, 5, '0', STR_PAD_LEFT);
+
+        return $pdf->download("payslip-{$reference}-{$payment->period->format('Y-m')}.pdf");
     }
 
     /**
@@ -135,5 +163,20 @@ class StaffPaymentController extends Controller
         }
 
         abort_unless($payment->institution_id === currentInstitution()?->id, 403);
+    }
+
+    /**
+     * The institution logo inlined for the PDF letterhead - dompdf can't
+     * reach the storage disk over HTTP, so the bytes travel with the view.
+     */
+    private function logoDataUri(?Institution $institution): ?string
+    {
+        if (! $institution?->logo || ! Storage::disk('public')->exists($institution->logo)) {
+            return null;
+        }
+
+        $mime = Storage::disk('public')->mimeType($institution->logo);
+
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($institution->logo));
     }
 }

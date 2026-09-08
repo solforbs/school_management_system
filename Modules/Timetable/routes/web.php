@@ -13,6 +13,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::get('timetables/import/template', [TimetableController::class, 'importTemplate'])->name('timetable.import.template');
 
     Route::get('timetables/export', [TimetableController::class, 'export'])->name('timetable.export');
+    Route::get('timetables/print', [TimetableController::class, 'printable'])->name('timetable.print');
 
     Route::livewire('timetables', 'timetable::index')->name('timetable.index');
     Route::livewire('timetables/create', 'timetable::form')->name('timetable.create');
