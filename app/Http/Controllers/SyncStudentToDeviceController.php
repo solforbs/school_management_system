@@ -6,6 +6,8 @@ use App\Models\Devices;
 use App\Models\User;
 use App\Services\ProfilePhotoResolver;
 use App\Services\ZKTecoUserSyncService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Student\Models\StudentDetails;
@@ -18,6 +20,21 @@ class SyncStudentToDeviceController extends Controller
     ) {}
 
     /**
+     * Reply to the sync trigger: a redirect back with a flash toast for the
+     * student page, or JSON for a programmatic caller that asked for it.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function respond(Request $request, bool $success, string $message, int $status = 200, array $data = []): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['success' => $success, 'message' => $message, 'data' => $data], $status);
+        }
+
+        return redirect()->back()->with($success ? 'success' : 'error', $message);
+    }
+
+    /**
      * Manually sync a student to all active devices.
      */
     public function syncStudent(Request $request, $studentId)
@@ -25,19 +42,13 @@ class SyncStudentToDeviceController extends Controller
         $student = User::findOrFail($studentId);
 
         if (! $student->hasRole('Student')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User is not a student',
-            ], 422);
+            return $this->respond($request, false, 'That account is not a student.', 422);
         }
 
         $studentDetails = StudentDetails::where('student_id', $student->id)->first();
 
         if (! $studentDetails) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Student profile not found',
-            ], 404);
+            return $this->respond($request, false, 'This student has no profile to sync yet.', 404);
         }
 
         abort_unless(isAdmin() || $studentDetails->institution_id === currentInstitution()?->id, 403);
@@ -47,13 +58,10 @@ class SyncStudentToDeviceController extends Controller
             ->get();
 
         if ($devices->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No active devices found',
-            ], 404);
+            return $this->respond($request, false, 'No active hardware devices are set up for this school.', 404);
         }
 
-        return $this->photoResolver->withLocalPath($studentDetails->profile_photo, function (?string $photoPath) use ($student, $studentDetails, $devices) {
+        return $this->photoResolver->withLocalPath($studentDetails->profile_photo, function (?string $photoPath) use ($request, $student, $studentDetails, $devices) {
             $deviceUserData = $this->buildDeviceUserData($student, $studentDetails, $photoPath);
 
             Log::debug('Manual sync data', [
@@ -116,7 +124,13 @@ class SyncStudentToDeviceController extends Controller
                 }
             }
 
-            if ($syncedCount > 0) {
+            $existsCount = collect($results)->where('status', 'exists')->count();
+            $total = $devices->count();
+
+            // "Already on every device" is a success, not a failure - only
+            // flip the flag negative when a sync was actually attempted and
+            // failed everywhere.
+            if ($syncedCount > 0 || $existsCount === $total) {
                 $student->update([
                     'zkteco_synced' => true,
                     'zkteco_synced_at' => now(),
@@ -129,16 +143,19 @@ class SyncStudentToDeviceController extends Controller
                 ]);
             }
 
-            return response()->json([
-                'success' => $syncedCount > 0,
-                'message' => $syncedCount > 0 ? "Student synced to {$syncedCount} device(s)" : 'Failed to sync to any device',
-                'data' => [
-                    'student' => $student,
-                    'devices_synced' => $syncedCount,
-                    'total_devices' => $devices->count(),
-                    'results' => $results,
-                ],
-            ]);
+            $message = match (true) {
+                $syncedCount > 0 => "Synced to {$syncedCount} of {$total} hardware device(s).",
+                $existsCount === $total => "Already synced to all {$total} hardware device(s).",
+                default => "Couldn't reach any hardware device. Check they're online and try again.",
+            };
+
+            return $this->respond(
+                $request,
+                $syncedCount > 0 || $existsCount === $total,
+                $message,
+                200,
+                ['devices_synced' => $syncedCount, 'total_devices' => $total, 'results' => $results],
+            );
         });
     }
 

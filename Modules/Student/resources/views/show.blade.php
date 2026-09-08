@@ -281,12 +281,13 @@
                             @endif
                         </div>
 
-                        <div class="pt-2">
-                            <a href="{{ route('students.sync-device', $student->id) }}" class="inline-flex items-center justify-center gap-2 w-full px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition shadow-sm">
+                        <form method="POST" action="{{ route('students.sync-device', $student->id) }}" class="pt-2">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center justify-center gap-2 w-full px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition shadow-sm">
                                 <flux:icon icon="arrow-path" class="size-3.5" />
                                 <span>Sync to Hardware</span>
-                            </a>
-                        </div>
+                            </button>
+                        </form>
                     </div>
                 </div>
 

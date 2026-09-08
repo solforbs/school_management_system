@@ -81,7 +81,7 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
     Route::get('billing', [BillingController::class, 'show'])->name('billing.show');
     Route::post('billing/pay', [BillingController::class, 'initiate'])->name('billing.initiate');
     Route::get('billing/callback', [BillingController::class, 'callback'])->name('billing.callback');
-    Route::get('students/{studentId}/sync-device', [SyncStudentToDeviceController::class, 'syncStudent'])->name('students.sync-device');
+    Route::post('students/{studentId}/sync-device', [SyncStudentToDeviceController::class, 'syncStudent'])->name('students.sync-device');
 });
 Route::get('subjects-available', function () {
     return institutionSubjects()->map(fn ($subject) => [
