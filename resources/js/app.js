@@ -37,8 +37,64 @@ document.addEventListener('livewire:navigated', initScrollReveal);
 // Register Alpine.js components
 const registerAlpineComponents = () => {
     if (typeof window.Alpine === 'undefined') return;
-    if (window.Alpine._animatedCounterRegistered) return;
-    window.Alpine._animatedCounterRegistered = true;
+    if (window.Alpine._appAlpineComponentsRegistered) return;
+    window.Alpine._appAlpineComponentsRegistered = true;
+
+    // Scroll-spy stepper used by every multi-step form (student, teacher,
+    // parent, exam, ...). Registered here rather than in an inline
+    // `alpine:init` listener because that event only fires on a full page
+    // load - after a `wire:navigate` swap Alpine is already running, so the
+    // component would be undefined and `activeSection` would throw.
+    window.Alpine.data('stepperScrollSpy', (defaultActive) => ({
+        activeSection: defaultActive,
+        sections: [],
+
+        get activeIndex() {
+            return this.sections.indexOf(this.activeSection);
+        },
+
+        isCompleted(id) {
+            const index = this.sections.indexOf(id);
+            return index !== -1 && index <= this.activeIndex;
+        },
+
+        initObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                let maxRatio = 0;
+                let activeId = null;
+
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+                        maxRatio = entry.intersectionRatio;
+                        activeId = entry.target.id;
+                    }
+                });
+
+                if (activeId) {
+                    this.activeSection = activeId;
+                }
+            }, {
+                rootMargin: '-10% 0px -70% 0px',
+                threshold: [0, 0.25, 0.5, 0.75, 1],
+            });
+
+            this.$nextTick(() => {
+                const sectionEls = Array.from(this.$root.querySelectorAll('.stepper-section'));
+                this.sections = sectionEls.map((el) => el.id);
+
+                sectionEls.forEach((el) => observer.observe(el));
+
+                if (!this.activeSection && this.sections.length > 0) {
+                    this.activeSection = this.sections[0];
+                }
+            });
+        },
+
+        scrollTo(id) {
+            this.activeSection = id;
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        },
+    }));
 
     window.Alpine.data('animatedCounter', (targetValue = 0, decimals = 0, prefix = '', suffix = '') => ({
         target: parseFloat(targetValue) || 0,

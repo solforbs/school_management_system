@@ -30,61 +30,6 @@
     </div>
 </div>
 
-@once
-<script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('stepperScrollSpy', (defaultActive) => ({
-            activeSection: defaultActive,
-            sections: [],
-            
-            get activeIndex() {
-                return this.sections.indexOf(this.activeSection);
-            },
-
-            isCompleted(id) {
-                const index = this.sections.indexOf(id);
-                return index !== -1 && index <= this.activeIndex;
-            },
-            
-            initObserver() {
-                const observer = new IntersectionObserver((entries) => {
-                    let maxRatio = 0;
-                    let activeId = null;
-                    
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
-                            maxRatio = entry.intersectionRatio;
-                            activeId = entry.target.id;
-                        }
-                    });
-
-                    if (activeId) {
-                        this.activeSection = activeId;
-                    }
-                }, { 
-                    rootMargin: '-10% 0px -70% 0px',
-                    threshold: [0, 0.25, 0.5, 0.75, 1]
-                });
-
-                this.$nextTick(() => {
-                    const sectionEls = Array.from(this.$root.querySelectorAll('.stepper-section'));
-                    this.sections = sectionEls.map(el => el.id);
-                    
-                    sectionEls.forEach((el) => {
-                        observer.observe(el);
-                    });
-                    
-                    if (!this.activeSection && this.sections.length > 0) {
-                        this.activeSection = this.sections[0];
-                    }
-                });
-            },
-            
-            scrollTo(id) {
-                this.activeSection = id;
-                document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
-            }
-        }))
-    });
-</script>
-@endonce
+{{-- The `stepperScrollSpy` Alpine component is registered in
+     resources/js/app.js so it survives wire:navigate (an inline
+     `alpine:init` listener only fires on a full page load). --}}
