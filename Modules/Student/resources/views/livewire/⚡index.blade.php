@@ -81,7 +81,7 @@ new #[Title('Student Directory')] class extends Component {
         $direction = $this->direction === 'asc' ? 'asc' : 'desc';
 
         return $this->scoped()
-            ->with(['student', 'institution', 'schoolClass'])
+            ->with(['student.roles', 'institution', 'schoolClass'])
             ->when($this->status !== '', fn($query) => $query->where('enrollment_status', $this->status))
             ->when($this->classId !== '', fn($query) => $query->where('class_id', $this->classId))
             ->when($this->gender !== '', fn($query) => $query->where('gender', $this->gender))
@@ -412,6 +412,7 @@ new #[Title('Student Directory')] class extends Component {
                                                 <flux:button href="{{ route('student.show', $user->id) }}"
                                                     wire:navigate.hover size="sm" icon="eye"
                                                     variant="subtle" tooltip="View Dossier" />
+                                                <x-impersonate-button :user="$user" />
                                                 @can('edit student')
                                                     <flux:button href="{{ route('student.edit', $user->id) }}"
                                                         wire:navigate.hover size="sm" icon="pencil-square"

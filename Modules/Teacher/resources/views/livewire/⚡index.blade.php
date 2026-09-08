@@ -29,7 +29,7 @@ new #[Title('Teacher Management')] class extends Component
     #[Computed]
     public function teachers(): LengthAwarePaginator
     {
-        return TeacherDetails::with(['teacher', 'institution'])
+        return TeacherDetails::with(['teacher.roles', 'institution'])
             ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
@@ -364,6 +364,7 @@ new #[Title('Teacher Management')] class extends Component
                                             @endif
 
                                             <flux:button href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" title="View Profile" />
+                                            <x-impersonate-button :user="$teacherDetails->teacher" />
                                         </div>
                                     </td>
                                 </tr>

@@ -4,6 +4,7 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DevicesController;
+use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PlanController;
@@ -46,8 +47,17 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::get('onboarding/callback', [OnboardingController::class, 'callback'])->name('onboarding.callback');
 });
 
+// Stepping back out of an impersonated session. Kept off the /dashboard
+// prefix (and its approval/payment gates) so the way back is always
+// reachable - even while impersonating a Director whose school is unpaid.
+Route::post('impersonate/leave', [ImpersonationController::class, 'leave'])
+    ->middleware('auth')->name('impersonate.leave');
+
 Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboard')->group(function () {
     Route::get('', DashboardController::class)->name('dashboard');
+    // Sign in as another user. Who may do this to whom is enforced in
+    // Impersonation::canImpersonate().
+    Route::post('impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
     // store/show aren't implemented - device creation and viewing are
     // handled entirely by the create/edit Livewire components.
     Route::resource('/devices', DevicesController::class)->names('devices')->except(['store', 'show']);

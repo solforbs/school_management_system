@@ -27,7 +27,7 @@ new #[Title('Parent Management')] class extends Component
     public function parents(): LengthAwarePaginator
     {
         return User::role('Parent')
-            ->with(['parent', 'children.student', 'children.institution'])
+            ->with(['parent', 'roles', 'children.student', 'children.institution'])
             ->when(! isAdmin(), function ($q) {
                 $q->where(function ($sq) {
                     $sq->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()))
@@ -302,6 +302,7 @@ new #[Title('Parent Management')] class extends Component
                                     <td class="py-4 px-5 text-right">
                                         <div class="flex items-center justify-end gap-1">
                                             <flux:button href="{{ route('parent.show', $parent->id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" title="View Profile" />
+                                            <x-impersonate-button :user="$parent" />
                                             @can('edit parent')
                                                 <flux:button href="{{ route('parent.edit', $parent->id) }}" wire:navigate.hover size="sm" icon="pencil-square" variant="subtle" title="Edit Profile" />
                                             @endcan

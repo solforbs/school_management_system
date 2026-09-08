@@ -55,10 +55,10 @@ new #[Title('Admin Access')] class extends Component
                     }
                 });
             })
-            ->with('activeInstitution:id,name')
+            ->with(['activeInstitution:id,name', 'roles'])
             ->orderByDesc('id')
             ->limit(50)
-            ->get(['id', 'name', 'email', 'active_institution_id']);
+            ->get(['id', 'name', 'email', 'status', 'active_institution_id']);
     }
 
     /**
@@ -190,13 +190,16 @@ new #[Title('Admin Access')] class extends Component
                             </td>
                             <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $director->email }}</td>
                             <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $director->activeInstitution?->name ?? '—' }}</td>
-                            <td class="py-3 pr-4 text-right">
-                                <flux:modal.trigger name="confirm-promote">
-                                    <flux:button size="sm" variant="primary" icon="shield-check"
-                                        wire:click="$set('confirmingPromoteId', {{ $director->id }})">
-                                        Make Admin
-                                    </flux:button>
-                                </flux:modal.trigger>
+                            <td class="py-3 pr-4">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <x-impersonate-button :user="$director" />
+                                    <flux:modal.trigger name="confirm-promote">
+                                        <flux:button size="sm" variant="primary" icon="shield-check"
+                                            wire:click="$set('confirmingPromoteId', {{ $director->id }})">
+                                            Make Admin
+                                        </flux:button>
+                                    </flux:modal.trigger>
+                                </div>
                             </td>
                         </tr>
                     @empty

@@ -300,6 +300,8 @@
         </flux:dropdown>
     </flux:header>
 
+    <x-impersonation-banner />
+
     {{ $slot }}
 
     @persist('toast')
