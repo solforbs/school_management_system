@@ -49,7 +49,7 @@ class ExamTimetableController extends Controller
             'heading' => $this->heading($filters),
             'subheading' => $this->subheading($filters, $groups),
             'logoDataUri' => $this->logoDataUri($institution),
-        ]);
+        ])->setPaper('a4', 'landscape');
 
         $filename = $this->filename($filters);
         $path = $this->storagePath($institution, $filename);

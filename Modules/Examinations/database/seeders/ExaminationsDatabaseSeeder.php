@@ -11,6 +11,8 @@ class ExaminationsDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            ExamTimetableSeeder::class,
+        ]);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -10,8 +11,9 @@ use Modules\Examinations\Models\Examination;
 use Modules\Examinations\Services\ExamTimetableBuilder;
 
 /**
- * Build an examination timetable for a term's sitting, check it on screen,
- * then print it. Leaving the class unset prints every class, one per page.
+ * Build an examination timetable for a term's sitting, check it on screen as
+ * a week-by-week calendar grid, then print it. Leaving the class unset
+ * builds every class, one grid (and one printed page) per class.
  */
 new #[Title('Exam Timetable')] class extends Component {
     #[Url]
@@ -49,7 +51,7 @@ new #[Title('Exam Timetable')] class extends Component {
                 'exam_type' => $this->examType,
                 'class_id' => $this->classId,
             ],
-            fn($value) => $value !== '',
+            fn ($value) => $value !== '',
         );
     }
 
@@ -65,7 +67,43 @@ new #[Title('Exam Timetable')] class extends Component {
     #[Computed]
     public function paperCount(): int
     {
-        return $this->groups->sum(fn(array $group) => $group['examinations']->count());
+        return $this->groups->sum(fn (array $group) => $group['examinations']->count());
+    }
+
+    #[Computed]
+    public function examDayCount(): int
+    {
+        return $this->groups
+            ->flatMap(fn (array $group) => $group['examinations']->pluck('exam_date')->filter())
+            ->map(fn (CarbonInterface $date) => $date->toDateString())
+            ->unique()
+            ->count();
+    }
+
+    /**
+     * The longest single-class run, in weeks - the headline number for "this
+     * is more than a week".
+     */
+    #[Computed]
+    public function weekSpan(): int
+    {
+        return (int) $this->groups->max('week_count');
+    }
+
+    /**
+     * The full sitting window across every class on screen.
+     *
+     * @return array{start: Carbon|null, end: Carbon|null}
+     */
+    #[Computed]
+    public function dateRange(): array
+    {
+        $dates = $this->groups
+            ->flatMap(fn (array $group) => $group['examinations']->pluck('exam_date')->filter())
+            ->sort()
+            ->values();
+
+        return ['start' => $dates->first(), 'end' => $dates->last()];
     }
 
     /**
@@ -94,8 +132,10 @@ new #[Title('Exam Timetable')] class extends Component {
     {
         $query = SchoolClass::query();
 
-        if (!isAdmin()) {
-            $institutionId = auth()->user()->hasRole('Teacher') ? auth()->user()->teacherUserDetails?->institution_id ?? 0 : currentInstitution()?->id ?? 0;
+        if (! isAdmin()) {
+            $institutionId = auth()->user()->hasRole('Teacher')
+                ? auth()->user()->teacherUserDetails?->institution_id ?? 0
+                : currentInstitution()?->id ?? 0;
 
             $query->where('institution_id', $institutionId);
         }
@@ -104,117 +144,166 @@ new #[Title('Exam Timetable')] class extends Component {
     }
 }; ?>
 
-<div class="p-4">
-    <flux:card class="mb-4">
-        <flux:heading size="lg" class="mb-2">Exam Timetable</flux:heading>
-        <flux:text class="mb-4 text-zinc-500">
-            Pick a term and sitting to build the timetable, then print it. Leave the class on "All classes" and
-            every class prints on its own page.
-        </flux:text>
+@php
+    $groups = $this->groups;
+    $range = $this->dateRange;
+    $rangeLabel = $range['start']
+        ? $range['start']->format('d M') . ' – ' . $range['end']->format('d M Y')
+        : 'Not scheduled';
+@endphp
 
-        <div class="flex flex-wrap items-end gap-2">
-            <flux:select wire:model.live="academicYear" label="Academic Year">
+<div class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" x-data="{ viewMode: 'grid' }">
+
+    {{-- Header --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/60 flex items-center gap-1.5">
+                    <span class="size-1.5 rounded-full bg-amber-500"></span>
+                    Examination Schedule
+                </span>
+                <span class="text-xs text-zinc-400">&bull;</span>
+                <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? __('Institution') }}</span>
+            </div>
+
+            <flux:heading size="xl" class="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">
+                Examination Timetable
+            </flux:heading>
+            <flux:text class="text-zinc-500 text-xs sm:text-sm">
+                A week-by-week calendar of every paper each class sits. Runs longer than a week are split into weeks; each class prints on its own page.
+            </flux:text>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 shadow-2xs hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+                <flux:icon icon="printer" class="size-3.5 text-zinc-400" />
+                Print
+            </button>
+
+            <flux:button href="{{ route('examinations.timetable.pdf', $this->filters()) }}" icon="arrow-down-tray"
+                variant="primary" class="font-semibold text-xs shadow-sm" :disabled="$this->paperCount === 0">
+                Download Timetable
+            </flux:button>
+
+            <flux:button href="{{ route('examinations.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle"
+                class="font-semibold text-xs">
+                Back
+            </flux:button>
+        </div>
+    </div>
+
+    {{-- Metric tiles --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <x-kpi-card title="Papers" icon="document-text" color="amber" :count="$this->paperCount . ' Papers'"
+            subtext="scheduled across all classes" />
+        <x-kpi-card title="Classes" icon="rectangle-group" color="sky" :count="$groups->count() . ' Classes'"
+            subtext="each on its own page" />
+        <x-kpi-card title="Exam Days" icon="calendar-days" color="emerald" :count="$this->examDayCount . ' Days'"
+            subtext="distinct sitting dates" />
+        <x-kpi-card title="Longest Run" icon="clock" color="indigo"
+            :count="$this->weekSpan . ' ' . Str::plural('Week', max($this->weekSpan, 1))" subtext="{{ $rangeLabel }}" />
+    </div>
+
+    {{-- Toolbar: view switch + filters --}}
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-3 sm:p-4 flex flex-col gap-3 shadow-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                <button type="button" @click="viewMode = 'grid'"
+                    :class="viewMode === 'grid' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-medium'"
+                    class="px-3.5 py-1.5 rounded-lg text-xs transition-all inline-flex items-center gap-1.5">
+                    <flux:icon icon="table-cells" class="size-3.5" />
+                    Calendar Grid
+                </button>
+                <button type="button" @click="viewMode = 'list'"
+                    :class="viewMode === 'list' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-medium'"
+                    class="px-3.5 py-1.5 rounded-lg text-xs transition-all inline-flex items-center gap-1.5">
+                    <flux:icon icon="list-bullet" class="size-3.5" />
+                    List
+                </button>
+            </div>
+
+            @if ($this->paperCount > 0)
+                <flux:text class="text-xs text-zinc-500">
+                    {{ $this->paperCount }} paper(s) · {{ $groups->count() }} class(es) · {{ $rangeLabel }}
+                </flux:text>
+            @endif
+        </div>
+
+        <div class="flex flex-wrap items-end gap-2 border-t border-zinc-100 dark:border-zinc-800 pt-3">
+            <flux:select wire:model.live="academicYear" label="Academic Year" size="sm">
                 <flux:select.option value="">All years</flux:select.option>
                 @foreach ($this->academicYears as $year)
                     <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:select wire:model.live="term" label="Term">
+            <flux:select wire:model.live="term" label="Term" size="sm">
                 <flux:select.option value="">All terms</flux:select.option>
                 @foreach ($this->terms as $termOption)
                     <flux:select.option value="{{ $termOption }}">{{ $termOption }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:select wire:model.live="examType" label="Sitting">
+            <flux:select wire:model.live="examType" label="Sitting" size="sm">
                 <flux:select.option value="">All sittings</flux:select.option>
                 @foreach (\Modules\Examinations\Models\Examination::EXAM_TYPES as $value => $label)
                     <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:select wire:model.live="classId" label="Class">
+            <flux:select wire:model.live="classId" label="Class" size="sm">
                 <flux:select.option value="">All classes</flux:select.option>
                 @foreach ($this->classes as $schoolClass)
                     <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
                 @endforeach
             </flux:select>
-
-            {{-- Generates the PDF on click, replacing the copy stored for
-            these same filters. A file download, so no wire:navigate. --}}
-            <flux:button href="{{ route('examinations.timetable.pdf', $this->filters()) }}" icon="arrow-down-tray"
-                variant="primary" :disabled="$this->paperCount === 0">
-                Download Timetable
-            </flux:button>
         </div>
+    </div>
 
-        @if ($this->paperCount > 0)
-            <flux:text class="mt-3 block text-xs text-zinc-500">
-                {{ $this->paperCount }} paper(s) across {{ $this->groups->count() }} class(es).
-            </flux:text>
-        @endif
-    </flux:card>
+    {{-- Class grids --}}
+    @forelse ($groups as $group)
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs"
+            wire:key="class-{{ $group['class']?->id ?? $group['class_name'] }}" wire:loading.class="opacity-60">
 
-    @forelse ($this->groups as $group)
-        <flux:card class="mb-4" wire:key="class-{{ $group['class']?->id ?? $group['class_name'] }}"
-            wire:loading.class="opacity-60">
-            <flux:heading size="lg" class="mb-3">{{ $group['class_name'] }}</flux:heading>
+            {{-- Class header band --}}
+            <div class="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 bg-gradient-to-r from-amber-50/60 to-transparent dark:from-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="space-y-0.5">
+                    <flux:heading size="lg" class="font-bold">{{ $group['class_name'] }}</flux:heading>
+                    <flux:text class="text-xs text-zinc-500">
+                        {{ $group['examinations']->count() }} paper(s)
+                        @if ($group['starts_on'])
+                            · {{ $group['starts_on']->format('d M') }} – {{ $group['ends_on']->format('d M Y') }}
+                        @endif
+                        @if ($group['week_count'] > 1)
+                            · <span class="font-semibold text-amber-700 dark:text-amber-400">{{ $group['week_count'] }} weeks</span>
+                        @endif
+                    </flux:text>
+                </div>
 
-            <flux:table class="p-2">
-                <flux:table.columns>
-                    <flux:table.column>Date</flux:table.column>
-                    <flux:table.column>Time</flux:table.column>
-                    <flux:table.column>Duration</flux:table.column>
-                    <flux:table.column>Subject</flux:table.column>
-                    <flux:table.column>Paper</flux:table.column>
-                    <flux:table.column>Sitting</flux:table.column>
-                    <flux:table.column>Marks</flux:table.column>
-                </flux:table.columns>
-                <flux:table.rows>
-                    @foreach ($group['examinations'] as $examination)
-                        <flux:table.row :key="$examination->id">
-                            <flux:table.cell>
-                                @if ($examination->exam_date)
-                                    {{ $examination->exam_date->format('D, d M Y') }}
-                                @else
-                                    <flux:text class="text-zinc-500">Not scheduled</flux:text>
-                                @endif
-                            </flux:table.cell>
-                            <flux:table.cell>
-                                @if ($examination->start_time && $examination->end_time)
-                                    {{ $examination->start_time->format('H:i') }} –
-                                    {{ $examination->end_time->format('H:i') }}
-                                @elseif ($examination->start_time)
-                                    From {{ $examination->start_time->format('H:i') }}
-                                @else
-                                    —
-                                @endif
-                            </flux:table.cell>
-                            <flux:table.cell>{{ $examination->durationLabel() ?? '—' }}</flux:table.cell>
-                            <flux:table.cell>
-                                {{ $examination->subject?->name ?? ($examination->subject_name ?? '—') }}
-                            </flux:table.cell>
-                            <flux:table.cell>{{ $examination->title }}</flux:table.cell>
-                            <flux:table.cell>
-                                <flux:badge :color="$examination->exam_type ? 'blue' : 'zinc'" size="sm">
-                                    {{ $examination->examTypeLabel() }}
-                                </flux:badge>
-                            </flux:table.cell>
-                            <flux:table.cell>{{ $examination->total_marks }}</flux:table.cell>
-                        </flux:table.row>
-                    @endforeach
-                </flux:table.rows>
-            </flux:table>
-        </flux:card>
+                <flux:button size="sm" variant="subtle" icon="arrow-down-tray" class="font-semibold text-xs shrink-0"
+                    href="{{ route('examinations.timetable.pdf', array_merge($this->filters(), ['class_id' => $group['class']?->id])) }}">
+                    Download {{ $group['class_name'] }}
+                </flux:button>
+            </div>
+
+            <div x-show="viewMode === 'grid'">
+                @include('examinations::partials._grid', ['group' => $group])
+            </div>
+
+            <div x-show="viewMode === 'list'" style="display: none;">
+                @include('examinations::partials._list', ['group' => $group])
+            </div>
+        </div>
     @empty
-        <flux:card class="py-10 text-center">
-            <flux:text class="text-zinc-500">
-                No examinations match this term and sitting yet.
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
+            <x-empty-state icon="calendar" color="amber" title="No papers scheduled yet"
+                description="No examinations match this year, term and sitting. Adjust the filters above, or schedule a paper.">
                 @can('create examination')
-                    <a href="{{ route('examinations.create') }}" class="underline" wire:navigate>Schedule one</a>.
+                    <flux:button href="{{ route('examinations.create') }}" wire:navigate.hover icon="plus" variant="primary">
+                        Schedule an exam
+                    </flux:button>
                 @endcan
-            </flux:text>
-        </flux:card>
+            </x-empty-state>
+        </div>
     @endforelse
 </div>

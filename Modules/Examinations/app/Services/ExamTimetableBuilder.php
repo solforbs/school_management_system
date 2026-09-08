@@ -3,6 +3,8 @@
 namespace Modules\Examinations\Services;
 
 use App\Models\User;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\Examination;
@@ -12,16 +14,38 @@ use Modules\Student\Models\StudentDetails;
  * The examination timetable: which papers a class sits, in what order, for
  * one sitting of one term.
  *
+ * An examination run is not a single week - end-of-term papers routinely
+ * stretch across a fortnight or more - so the timetable is laid out as a
+ * date-by-session calendar grid (rows are exam days, grouped into weeks;
+ * columns are the sitting times), one grid per class.
+ *
  * Shared by the on-screen preview and the printed PDF so what a Director
  * checks is exactly what the school hands out.
  */
 class ExamTimetableBuilder
 {
     /**
-     * Papers grouped by class, each class's papers in the order they're sat.
+     * The label given to papers that have a date but no sitting time yet, so
+     * they still land on the grid instead of dropping off it.
+     */
+    public const UNSCHEDULED_SESSION = 'Time TBA';
+
+    /**
+     * Papers grouped by class: each class carries its papers, the distinct
+     * sitting times that become the grid's columns, and the exam days -
+     * numbered by week - that become its rows.
      *
      * @param  array{term?: string|null, academic_year?: int|string|null, exam_type?: string|null, class_id?: int|string|null}  $filters
-     * @return Collection<int, array{class: SchoolClass|null, class_name: string, examinations: Collection<int, Examination>}>
+     * @return Collection<int, array{
+     *     class: SchoolClass|null,
+     *     class_name: string,
+     *     examinations: Collection<int, Examination>,
+     *     sessions: Collection<int, string>,
+     *     days: Collection<int, array<string, mixed>>,
+     *     week_count: int,
+     *     starts_on: CarbonInterface|null,
+     *     ends_on: CarbonInterface|null,
+     * }>
      */
     public function build(User $viewer, array $filters = []): Collection
     {
@@ -39,15 +63,116 @@ class ExamTimetableBuilder
 
         return $examinations
             ->groupBy(fn (Examination $examination) => (int) $examination->class_id)
-            ->map(fn (Collection $group) => [
-                'class' => $group->first()->schoolClass,
-                'class_name' => $group->first()->schoolClass?->name
-                    ?? $group->first()->class_name
-                    ?? 'Unassigned class',
-                'examinations' => $group->values(),
-            ])
+            ->map(function (Collection $group) {
+                $group = $group->values();
+                $days = $this->days($group);
+
+                return [
+                    'class' => $group->first()->schoolClass,
+                    'class_name' => $group->first()->schoolClass?->name
+                        ?? $group->first()->class_name
+                        ?? 'Unassigned class',
+                    'examinations' => $group,
+                    'sessions' => $this->sessions($group),
+                    'days' => $days,
+                    'week_count' => (int) $days->max('week'),
+                    'starts_on' => $this->firstExamDate($group),
+                    'ends_on' => $group->pluck('exam_date')->filter()->sort()->last(),
+                ];
+            })
             ->sortBy('class_name')
             ->values();
+    }
+
+    /**
+     * How a paper's sitting time reads as a grid column heading.
+     */
+    public function sessionLabel(Examination $examination): string
+    {
+        if (! $examination->start_time) {
+            return self::UNSCHEDULED_SESSION;
+        }
+
+        return $examination->end_time
+            ? $examination->start_time->format('H:i').' – '.$examination->end_time->format('H:i')
+            : $examination->start_time->format('H:i');
+    }
+
+    /**
+     * The distinct sitting times across a class's papers, earliest first,
+     * with the "time TBA" column (if any) kept last. These are the grid's
+     * columns.
+     *
+     * @param  Collection<int, Examination>  $examinations
+     * @return Collection<int, string>
+     */
+    private function sessions(Collection $examinations): Collection
+    {
+        $scheduled = $examinations
+            ->filter(fn (Examination $examination) => $examination->start_time !== null)
+            ->map(fn (Examination $examination) => $this->sessionLabel($examination))
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($examinations->contains(fn (Examination $examination) => $examination->start_time === null)) {
+            $scheduled->push(self::UNSCHEDULED_SESSION);
+        }
+
+        return $scheduled->values();
+    }
+
+    /**
+     * One entry per exam day, in date order, each numbered by which week of
+     * the run it falls in (week 1 being the week the first paper sits) and
+     * carrying its papers bucketed by sitting time. Undated papers collapse
+     * into a single trailing "not scheduled" row.
+     *
+     * @param  Collection<int, Examination>  $examinations
+     * @return Collection<int, array{
+     *     date: CarbonInterface|null,
+     *     date_key: string,
+     *     week: int,
+     *     is_today: bool,
+     *     paper_count: int,
+     *     cells: Collection<string, Collection<int, Examination>>,
+     * }>
+     */
+    private function days(Collection $examinations): Collection
+    {
+        $firstWeekStart = $this->firstExamDate($examinations)?->toImmutable()->startOfWeek();
+
+        return $examinations
+            ->groupBy(fn (Examination $examination) => $examination->exam_date?->format('Y-m-d') ?? 'unscheduled')
+            ->map(function (Collection $dayExaminations, string $dateKey) use ($firstWeekStart) {
+                $date = $dateKey === 'unscheduled' ? null : Carbon::parse($dateKey);
+
+                $week = $date && $firstWeekStart
+                    ? intdiv((int) $firstWeekStart->diffInDays($date->toImmutable()->startOfWeek(), absolute: true), 7) + 1
+                    : 0;
+
+                return [
+                    'date' => $date,
+                    'date_key' => $dateKey,
+                    'week' => $week,
+                    'is_today' => (bool) $date?->isToday(),
+                    'paper_count' => $dayExaminations->count(),
+                    'cells' => $dayExaminations
+                        ->groupBy(fn (Examination $examination) => $this->sessionLabel($examination))
+                        ->map(fn (Collection $cell) => $cell->values()),
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * The earliest dated paper in the set, or null when nothing is dated.
+     *
+     * @param  Collection<int, Examination>  $examinations
+     */
+    private function firstExamDate(Collection $examinations): ?CarbonInterface
+    {
+        return $examinations->pluck('exam_date')->filter()->sort()->first();
     }
 
     /**

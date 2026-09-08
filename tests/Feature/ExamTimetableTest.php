@@ -155,6 +155,45 @@ test('papers sat on the same day are ordered by the time they start', function (
         ->and($papers->first()->durationLabel())->toBe('2h');
 });
 
+test('a run spanning more than a week is split into numbered weeks', function () {
+    [$director, $institution] = makeTimetableSchool();
+
+    $class = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 4']);
+
+    // Three sittings across three calendar weeks.
+    makeSitting($institution, $class, 'English', ['exam_date' => '2026-08-03']);
+    makeSitting($institution, $class, 'Mathematics', ['exam_date' => '2026-08-13']);
+    makeSitting($institution, $class, 'Biology', ['exam_date' => '2026-08-18']);
+
+    $group = Livewire::actingAs($director)
+        ->test('examinations::timetable')
+        ->instance()->groups[0];
+
+    expect($group['week_count'])->toBe(3)
+        ->and($group['days'])->toHaveCount(3)
+        ->and($group['days']->pluck('week')->all())->toBe([1, 2, 3])
+        ->and($group['starts_on']->toDateString())->toBe('2026-08-03')
+        ->and($group['ends_on']->toDateString())->toBe('2026-08-18');
+});
+
+test('the grid columns are the distinct sitting times, earliest first', function () {
+    [$director, $institution] = makeTimetableSchool();
+
+    $class = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 4']);
+
+    makeSitting($institution, $class, 'History', ['exam_date' => '2026-08-10', 'start_time' => '14:00', 'end_time' => '16:00']);
+    makeSitting($institution, $class, 'Geography', ['exam_date' => '2026-08-11', 'start_time' => '08:00', 'end_time' => '10:00']);
+    makeSitting($institution, $class, 'Art', ['exam_date' => '2026-08-12', 'start_time' => null, 'end_time' => null]);
+
+    $group = Livewire::actingAs($director)
+        ->test('examinations::timetable')
+        ->instance()->groups[0];
+
+    expect($group['sessions']->all())->toBe(['08:00 – 10:00', '14:00 – 16:00', 'Time TBA'])
+        // The undated/untimed paper still lands in a cell.
+        ->and($group['days']->last()['cells']->get('Time TBA'))->toHaveCount(1);
+});
+
 test('the timetable downloads as a pdf', function () {
     Storage::fake('public');
 
