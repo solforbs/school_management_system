@@ -1,7 +1,0 @@
-User-agent: *
-Disallow: /dashboard
-Disallow: /settings
-Disallow: /billing
-Disallow: /.well-known/
-
-Sitemap: https://sms.solforbs.com/sitemap.xml
