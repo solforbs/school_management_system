@@ -55,7 +55,7 @@ it('does nothing at all while switched off', function () {
 
 it('refuses to pull over uncommitted work on the server', function () {
     Process::fake([
-        '*rev-parse HEAD*' => Process::result('abc123'),
+        '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(' M app/Http/Controllers/DevicesController.php'),
     ]);
 
@@ -145,7 +145,7 @@ it('passes a configured token to the fetch as an auth header, scoped to the remo
     config()->set('deploy.token', 'ghp_secrettoken');
 
     Process::fake([
-        '*remote get-url*' => Process::result('https://github.com/solforbs/school_management_system.git'),
+        '*remote*get-url*' => Process::result('https://github.com/solforbs/school_management_system.git'),
         '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
@@ -366,7 +366,7 @@ function deployFake(array $changed = []): void
         '*status*' => Process::result(''),
         '*fetch*' => Process::result(''),
         '*rev-parse*origin*' => Process::result('def456'),
-        '*diff --name-only*' => Process::result(implode("\n", $changed)),
+        '*diff*--name-only*' => Process::result(implode("\n", $changed)),
         '*rev-list*' => Process::result('1'),
         '*log*' => Process::result('a release'),
         '*' => Process::result(''),
@@ -495,15 +495,15 @@ it('the deploy:pull command exits non-zero when the pull is refused', function (
 
 it('lists tags newest first with their relation to the running commit', function () {
     Process::fake([
-        '*fetch --tags*' => Process::result(''),
+        '*fetch*--tags*' => Process::result(''),
         '*rev-parse*HEAD*' => Process::result('head123'),
-        '*tag --list*' => Process::result("v2.0.0\nv1.0.0"),
-        '*rev-list -n 1 refs/tags/v2.0.0*' => Process::result('newer456'),
-        '*rev-list -n 1 refs/tags/v1.0.0*' => Process::result('head123'),
-        '*merge-base --is-ancestor newer456 head123*' => Process::result(exitCode: 1),
-        '*merge-base --is-ancestor head123 newer456*' => Process::result(exitCode: 0),
-        '*log -1 --pretty=%s*' => Process::result('a release'),
-        '*log -1 --format=%ci*' => Process::result('2026-01-01 00:00:00 +0000'),
+        '*tag*--list*' => Process::result("v2.0.0\nv1.0.0"),
+        '*rev-list*v2.0.0*' => Process::result('newer456'),
+        '*rev-list*v1.0.0*' => Process::result('head123'),
+        '*merge-base*newer456*head123*' => Process::result(exitCode: 1),
+        '*merge-base*head123*newer456*' => Process::result(exitCode: 0),
+        '*log*--pretty=%s*' => Process::result('a release'),
+        '*log*--format=%ci*' => Process::result('2026-01-01 00:00:00 +0000'),
         '*' => Process::result(''),
     ]);
 
@@ -538,13 +538,13 @@ it('switches forward to a newer version and runs the migrations it adds', functi
     Process::fake([
         '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
-        '*fetch --tags*' => Process::result(''),
-        '*rev-list -n 1 refs/tags/v2.0.0*' => Process::result('def456'),
-        '*merge-base --is-ancestor abc123 def456*' => Process::result(exitCode: 0),
-        '*diff --quiet*' => Process::result(exitCode: 0),
-        '*checkout def456*' => Process::result(''),
-        '*diff --name-only*' => Process::result('database/migrations/2099_01_01_000000_add_a_column.php'),
-        '*rev-list --count*' => Process::result('1'),
+        '*fetch*--tags*' => Process::result(''),
+        '*rev-list*v2.0.0*' => Process::result('def456'),
+        '*merge-base*abc123*def456*' => Process::result(exitCode: 0),
+        '*diff*--quiet*' => Process::result(exitCode: 0),
+        '*checkout*def456*' => Process::result(''),
+        '*diff*--name-only*' => Process::result('database/migrations/2099_01_01_000000_add_a_column.php'),
+        '*rev-list*--count*' => Process::result('1'),
         '*log*' => Process::result('a release'),
         '*' => Process::result(''),
     ]);
@@ -570,14 +570,14 @@ it('rolls back to an older version without touching the database, and names what
         '*rev-parse*HEAD*' => Process::result('abc123'),
         // Specific enough not to also match "diff --name-status" below,
         // which contains the substring "status" too.
-        '*status --porcelain*' => Process::result(''),
-        '*fetch --tags*' => Process::result(''),
-        '*rev-list -n 1 refs/tags/v1.0.0*' => Process::result('old111'),
-        '*merge-base --is-ancestor abc123 old111*' => Process::result(exitCode: 1),
-        '*merge-base --is-ancestor old111 abc123*' => Process::result(exitCode: 0),
-        '*diff --quiet*' => Process::result(exitCode: 0),
-        '*checkout old111*' => Process::result(''),
-        '*diff --name-status*' => Process::result("A\tdatabase/migrations/2099_01_01_000000_add_a_column.php"),
+        '*status*--porcelain*' => Process::result(''),
+        '*fetch*--tags*' => Process::result(''),
+        '*rev-list*v1.0.0*' => Process::result('old111'),
+        '*merge-base*abc123*old111*' => Process::result(exitCode: 1),
+        '*merge-base*old111*abc123*' => Process::result(exitCode: 0),
+        '*diff*--quiet*' => Process::result(exitCode: 0),
+        '*checkout*old111*' => Process::result(''),
+        '*diff*--name-status*' => Process::result("A\tdatabase/migrations/2099_01_01_000000_add_a_column.php"),
         '*rev-list --count*' => Process::result('1'),
         '*log*' => Process::result('an earlier release'),
         '*' => Process::result(''),
@@ -613,8 +613,8 @@ it('reports already being on the requested version without touching anything', f
     Process::fake([
         '*rev-parse*HEAD*' => Process::result('abc123'),
         '*status*' => Process::result(''),
-        '*fetch --tags*' => Process::result(''),
-        '*rev-list -n 1 refs/tags/v1.0.0*' => Process::result('abc123'),
+        '*fetch*--tags*' => Process::result(''),
+        '*rev-list*v1.0.0*' => Process::result('abc123'),
         '*log*' => Process::result('current release'),
         '*' => Process::result(''),
     ]);
@@ -657,16 +657,16 @@ it('lists versions and switches on confirm for an Admin', function () {
     Artisan::shouldReceive('call')->andReturn(0);
 
     Process::fake([
-        '*fetch --tags*' => Process::result(''),
+        '*fetch*--tags*' => Process::result(''),
         '*rev-parse*HEAD*' => Process::result('abc123'),
-        '*tag --list*' => Process::result('v1.1.0'),
-        '*rev-list -n 1 refs/tags/v1.1.0*' => Process::result('def456'),
-        '*status --porcelain*' => Process::result(''),
-        '*rev-list --count*' => Process::result('1'),
+        '*tag*--list*' => Process::result('v1.1.0'),
+        '*rev-list*v1.1.0*' => Process::result('def456'),
+        '*status*--porcelain*' => Process::result(''),
+        '*rev-list*--count*' => Process::result('1'),
         '*diff*' => Process::result(''),
-        '*checkout def456*' => Process::result(''),
-        '*log -1 --pretty=%s*' => Process::result('a release'),
-        '*log -1 --format=%ci*' => Process::result('2026-01-01 00:00:00 +0000'),
+        '*checkout*def456*' => Process::result(''),
+        '*log*--pretty=%s*' => Process::result('a release'),
+        '*log*--format=%ci*' => Process::result('2026-01-01 00:00:00 +0000'),
         '*' => Process::result(''),
     ]);
 

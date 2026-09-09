@@ -9,6 +9,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\Student\Models\StudentDetails;
 use Modules\Classes\Models\SchoolClass;
+use Modules\Result\Services\ResultAccessService;
 
 new #[Title('Student Directory')] class extends Component {
     use WithPagination;
@@ -117,6 +118,15 @@ new #[Title('Student Directory')] class extends Component {
     #[Computed]
     public function classes()
     {
+        if (auth()->user()->hasRole('Teacher')) {
+            $classIds = ResultAccessService::classIds(auth()->user());
+
+            return SchoolClass::where('institution_id', currentInstitutionId() ?? 0)
+                ->whereIn('id', $classIds)
+                ->orderBy('name')
+                ->get();
+        }
+
         return SchoolClass::when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
             ->orderBy('name')
             ->get();
@@ -134,6 +144,13 @@ new #[Title('Student Directory')] class extends Component {
 
         if (auth()->user()->hasRole('Parent')) {
             return $query->where('parent_id', auth()->id());
+        }
+
+        if (auth()->user()->hasRole('Teacher')) {
+            $classIds = ResultAccessService::classIds(auth()->user());
+
+            return $query->where('institution_id', currentInstitutionId() ?? 0)
+                ->whereIn('class_id', $classIds);
         }
 
         if (!isAdmin()) {

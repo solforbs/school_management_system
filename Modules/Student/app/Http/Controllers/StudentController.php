@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Modules\Institution\Models\Institution;
+use Modules\Result\Services\ResultAccessService;
 use Modules\Student\Actions\SaveStudent;
 use Modules\Student\Exceptions\StudentLimitException;
 use Modules\Student\Models\StudentDetails;
@@ -72,6 +73,13 @@ class StudentController extends Controller
 
         if (Auth::user()->hasRole('Parent')) {
             return $query->where('parent_id', Auth::id());
+        }
+
+        if (Auth::user()->hasRole('Teacher')) {
+            $classIds = ResultAccessService::classIds(Auth::user());
+
+            return $query->where('institution_id', currentInstitutionId() ?? 0)
+                ->whereIn('class_id', $classIds);
         }
 
         if (! isAdmin()) {
@@ -220,8 +228,14 @@ class StudentController extends Controller
             return;
         }
 
-        $studentInstitutionId = StudentDetails::where('student_id', $student->id)->value('institution_id');
+        $studentDetails = StudentDetails::where('student_id', $student->id)->first();
+        $studentInstitutionId = $studentDetails?->institution_id;
 
         abort_unless($studentInstitutionId && $studentInstitutionId === currentInstitution()?->id, 403);
+
+        if ($user->hasRole('Teacher')) {
+            $classIds = ResultAccessService::classIds($user);
+            abort_unless($studentDetails?->class_id && $classIds->contains((int) $studentDetails->class_id), 403);
+        }
     }
 }

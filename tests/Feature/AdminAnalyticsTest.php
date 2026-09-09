@@ -140,7 +140,7 @@ test('the admin export contains every entity, system-wide', function () {
     );
 
     expect($spreadsheet->getSheetNames())->toEqual([
-        'Summary', 'Institutions', 'Users', 'Students', 'Parents', 'Fees', 'Payments', 'Devices', 'Attendance (30 days)', 'Contact Messages',
+        'Summary', 'Institutions', 'Users', 'Students', 'Parents', 'Fees', 'Payments', 'Devices', 'Contact Messages',
     ]);
 });
 
