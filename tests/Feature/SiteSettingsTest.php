@@ -44,6 +44,8 @@ test('admins can view the site settings page and see every feature toggle', func
     foreach (Setting::FEATURES as $meta) {
         $response->assertSee($meta['label']);
     }
+
+    $response->assertSee('Sign-in')->assertSee('Client ID');
 });
 
 test('the deployment card shows on the site settings page when pulling is enabled', function () {
