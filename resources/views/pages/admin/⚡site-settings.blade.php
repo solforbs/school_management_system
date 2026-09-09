@@ -10,6 +10,20 @@ new #[Title('Site Settings')] class extends Component {
 
     public string $setupFee = '0';
 
+    public bool $googleLogin = false;
+
+    public string $googleClientId = '';
+
+    public string $googleRedirect = '';
+
+    /**
+     * Left blank on load and only written when the Admin actually types a
+     * new secret - the stored one is never sent back to the browser.
+     */
+    public string $googleClientSecret = '';
+
+    public bool $googleSecretConfigured = false;
+
     public function mount(): void
     {
         abort_unless(isAdmin(), 403);
@@ -19,6 +33,47 @@ new #[Title('Site Settings')] class extends Component {
         }
 
         $this->setupFee = (string) Setting::setupFee();
+
+        $this->googleLogin = Setting::isEnabled(Setting::GOOGLE_LOGIN);
+        $this->googleClientId = (string) Setting::value(Setting::GOOGLE_CLIENT_ID);
+        $this->googleRedirect = (string) Setting::value(Setting::GOOGLE_REDIRECT);
+        $this->googleSecretConfigured = filled(Setting::secret(Setting::GOOGLE_CLIENT_SECRET));
+    }
+
+    public function updatedGoogleLogin($value): void
+    {
+        abort_unless(isAdmin(), 403);
+
+        Setting::set(Setting::GOOGLE_LOGIN, (bool) $value);
+
+        Flux::toast(variant: 'success', text: __('Google sign-in :state.', [
+            'state' => $value ? __('enabled') : __('disabled'),
+        ]));
+    }
+
+    /**
+     * Saved on submit rather than live so the client id / redirect aren't
+     * persisted a keystroke at a time. A blank secret field keeps whatever
+     * is already stored - see Setting::putSecret().
+     */
+    public function saveGoogle(): void
+    {
+        abort_unless(isAdmin(), 403);
+
+        $this->validate([
+            'googleClientId' => ['nullable', 'string', 'max:255'],
+            'googleClientSecret' => ['nullable', 'string', 'max:255'],
+            'googleRedirect' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        Setting::put(Setting::GOOGLE_CLIENT_ID, trim($this->googleClientId) ?: null);
+        Setting::put(Setting::GOOGLE_REDIRECT, trim($this->googleRedirect) ?: null);
+        Setting::putSecret(Setting::GOOGLE_CLIENT_SECRET, trim($this->googleClientSecret) ?: null);
+
+        $this->googleClientSecret = '';
+        $this->googleSecretConfigured = filled(Setting::secret(Setting::GOOGLE_CLIENT_SECRET));
+
+        Flux::toast(variant: 'success', text: __('Google credentials saved.'));
     }
 
     /**
@@ -71,7 +126,7 @@ new #[Title('Site Settings')] class extends Component {
         {{-- Tabs --}}
         <div role="tablist"
             class="mb-6 mt-5 flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
-            @php($tabs = ['features' => __('Features'), 'seo' => __('SEO'), 'deployment' => __('Deployment')])
+            @php($tabs = ['features' => __('Features'), 'sign-in' => __('Sign-in'), 'seo' => __('SEO'), 'deployment' => __('Deployment')])
             @foreach ($tabs as $name => $label)
                 <button type="button" role="tab" @click="select('{{ $name }}')"
                     :aria-selected="tab === '{{ $name }}'"
@@ -112,6 +167,43 @@ new #[Title('Site Settings')] class extends Component {
                     <flux:button type="submit" variant="primary">
                         <span wire:loading.remove wire:target="saveSetupFee">{{ __('Save') }}</span>
                         <span wire:loading wire:target="saveSetupFee">{{ __('Saving…') }}</span>
+                    </flux:button>
+                </form>
+            </flux:card>
+        </div>
+
+        {{-- Sign-in --}}
+        <div x-show="tab === 'sign-in'" role="tabpanel" class="space-y-6" style="display: none;">
+            <flux:card class="max-w-2xl space-y-5">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <flux:heading size="sm">{{ __('Continue with Google') }}</flux:heading>
+                        <flux:text size="sm" class="text-zinc-500">
+                            {{ __('Show a "Continue with Google" button on the login page. The button stays hidden until a client ID is saved below.') }}
+                        </flux:text>
+                    </div>
+
+                    <flux:switch wire:model.live="googleLogin" />
+                </div>
+
+                <form wire:submit="saveGoogle" class="space-y-4 border-t border-zinc-200 pt-5 dark:border-zinc-700">
+                    <flux:input wire:model="googleClientId" :label="__('Client ID')"
+                        placeholder="000000000000-xxxxxxxx.apps.googleusercontent.com" />
+
+                    <flux:input wire:model="googleClientSecret" type="password" viewable
+                        :label="__('Client secret')"
+                        :placeholder="$googleSecretConfigured ? __('Configured - leave blank to keep') : __('GOCSPX-…')"
+                        :description="$googleSecretConfigured
+                            ? __('A secret is stored (encrypted). Enter a new one only to replace it.')
+                            : __('Stored encrypted at rest.')" />
+
+                    <flux:input wire:model="googleRedirect" :label="__('Redirect URI')"
+                        :placeholder="url('/auth/google/callback')"
+                        :description="__('Leave blank to use :url. Must exactly match an Authorized redirect URI on the Google OAuth client.', ['url' => url('/auth/google/callback')])" />
+
+                    <flux:button type="submit" variant="primary">
+                        <span wire:loading.remove wire:target="saveGoogle">{{ __('Save') }}</span>
+                        <span wire:loading wire:target="saveGoogle">{{ __('Saving…') }}</span>
                     </flux:button>
                 </form>
             </flux:card>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 
 class Setting extends Model
 {
@@ -29,6 +30,20 @@ class Setting extends Model
      * onboarding asks for no payment at all.
      */
     public const SETUP_FEE = 'onboarding_setup_fee';
+
+    /**
+     * Google OAuth for the "Continue with Google" login button. An Admin
+     * fills these on the site settings page; they take precedence over the
+     * matching config/services.php (.env) values, so a deploy needn't ship
+     * the secret in its environment.
+     */
+    public const GOOGLE_LOGIN = 'google_login';
+
+    public const GOOGLE_CLIENT_ID = 'google_oauth_client_id';
+
+    public const GOOGLE_CLIENT_SECRET = 'google_oauth_client_secret';
+
+    public const GOOGLE_REDIRECT = 'google_oauth_redirect';
 
     protected $fillable = [
         'key',
@@ -64,6 +79,63 @@ class Setting extends Model
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
 
         Cache::forget("settings.value.{$key}");
+    }
+
+    /**
+     * Read a value that was stored encrypted via putSecret(). Falls back to
+     * returning the raw value if it isn't decryptable, so a hand-set plain
+     * value still works.
+     */
+    public static function secret(string $key): ?string
+    {
+        $raw = static::value($key);
+
+        if ($raw === null) {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($raw);
+        } catch (\Throwable) {
+            return $raw;
+        }
+    }
+
+    /**
+     * Store a secret encrypted at rest. A blank value leaves the existing
+     * one untouched, so a settings form needn't re-enter it every save.
+     */
+    public static function putSecret(string $key, ?string $value): void
+    {
+        if (blank($value)) {
+            return;
+        }
+
+        static::put($key, Crypt::encryptString($value));
+    }
+
+    /**
+     * Google OAuth config - database first, config/services.php (.env) as
+     * the fallback.
+     *
+     * @return array{client_id: ?string, client_secret: ?string, redirect: ?string}
+     */
+    public static function googleOauth(): array
+    {
+        return [
+            'client_id' => static::value(self::GOOGLE_CLIENT_ID) ?: config('services.google.client_id'),
+            'client_secret' => static::secret(self::GOOGLE_CLIENT_SECRET) ?: config('services.google.client_secret'),
+            'redirect' => static::value(self::GOOGLE_REDIRECT) ?: config('services.google.redirect'),
+        ];
+    }
+
+    /**
+     * Whether the "Continue with Google" button should appear: switched on,
+     * and a client id resolvable from somewhere.
+     */
+    public static function googleLoginEnabled(): bool
+    {
+        return static::isEnabled(self::GOOGLE_LOGIN) && filled(static::googleOauth()['client_id']);
     }
 
     /**

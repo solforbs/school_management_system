@@ -79,6 +79,55 @@ test('toggling a feature off persists immediately', function () {
     expect(Setting::isEnabled('sms'))->toBeFalse();
 });
 
+test('an admin can save Google OAuth credentials, secret encrypted at rest', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    Livewire::test('pages::admin.site-settings')
+        ->set('googleClientId', 'abc.apps.googleusercontent.com')
+        ->set('googleClientSecret', 'GOCSPX-super-secret')
+        ->set('googleRedirect', 'https://sms.example.test/auth/google/callback')
+        ->call('saveGoogle')
+        ->assertHasNoErrors()
+        ->assertSet('googleClientSecret', '')
+        ->assertSet('googleSecretConfigured', true);
+
+    expect(Setting::value(Setting::GOOGLE_CLIENT_ID))->toBe('abc.apps.googleusercontent.com')
+        ->and(Setting::value(Setting::GOOGLE_REDIRECT))->toBe('https://sms.example.test/auth/google/callback')
+        ->and(Setting::secret(Setting::GOOGLE_CLIENT_SECRET))->toBe('GOCSPX-super-secret');
+
+    // The raw column must not hold the plaintext secret.
+    $raw = Setting::query()->where('key', Setting::GOOGLE_CLIENT_SECRET)->value('value');
+    expect($raw)->not->toBe('GOCSPX-super-secret')
+        ->and($raw)->not->toContain('GOCSPX-super-secret');
+});
+
+test('a blank secret field on save keeps the stored secret', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    Setting::putSecret(Setting::GOOGLE_CLIENT_SECRET, 'GOCSPX-original');
+
+    Livewire::test('pages::admin.site-settings')
+        ->set('googleClientId', 'abc.apps.googleusercontent.com')
+        ->set('googleClientSecret', '')
+        ->call('saveGoogle')
+        ->assertHasNoErrors();
+
+    expect(Setting::secret(Setting::GOOGLE_CLIENT_SECRET))->toBe('GOCSPX-original');
+});
+
+test('the Google sign-in switch drives googleLoginEnabled()', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    Setting::put(Setting::GOOGLE_CLIENT_ID, 'abc.apps.googleusercontent.com');
+
+    $component = Livewire::test('pages::admin.site-settings')
+        ->set('googleLogin', false);
+    expect(Setting::googleLoginEnabled())->toBeFalse();
+
+    $component->set('googleLogin', true);
+    expect(Setting::googleLoginEnabled())->toBeTrue();
+});
+
 test('a non-admin cannot mount the site settings component', function () {
     $user = User::factory()->create();
     $this->actingAs($user);

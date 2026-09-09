@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,11 +26,17 @@ class GoogleAuthController extends Controller
 {
     public function redirect(): SymfonyRedirect
     {
+        abort_unless(Setting::googleLoginEnabled(), 404);
+        $this->configureDriver();
+
         return Socialite::driver('google')->redirect();
     }
 
     public function callback(Request $request): RedirectResponse
     {
+        abort_unless(Setting::googleLoginEnabled(), 404);
+        $this->configureDriver();
+
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (\Throwable $e) {
@@ -83,5 +90,15 @@ class GoogleAuthController extends Controller
     private function fail(string $message): RedirectResponse
     {
         return redirect()->route('login')->with('error', $message);
+    }
+
+    /**
+     * Point the Socialite driver at whatever the Admin saved on the site
+     * settings page (falling back to config/services.php), since Socialite
+     * reads the credentials straight from config at call time.
+     */
+    private function configureDriver(): void
+    {
+        config(['services.google' => Setting::googleOauth()]);
     }
 }

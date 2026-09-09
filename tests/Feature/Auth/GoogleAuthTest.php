@@ -1,9 +1,18 @@
 <?php
 
+use App\Models\Setting;
 use App\Models\User;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
+
+// Google sign-in is gated on an admin having switched it on AND a client id
+// being resolvable. Most tests here exercise the happy path, so wire that up
+// once; the "disabled" cases override it explicitly.
+beforeEach(function () {
+    Setting::set(Setting::GOOGLE_LOGIN, true);
+    Setting::put(Setting::GOOGLE_CLIENT_ID, 'test-client');
+});
 
 /**
  * Stub the Google provider so `Socialite::driver('google')->user()` returns
@@ -76,6 +85,40 @@ test('a suspended account cannot sign in with Google', function () {
         ->assertSessionHas('error');
 
     $this->assertGuest();
+});
+
+test('the button is hidden and the routes 404 when Google sign-in is switched off', function () {
+    Setting::set(Setting::GOOGLE_LOGIN, false);
+
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('Continue with Google');
+
+    $this->get(route('auth.google.redirect'))->assertNotFound();
+    $this->get(route('auth.google.callback'))->assertNotFound();
+});
+
+test('the button is hidden and the routes 404 until a client id is configured', function () {
+    Setting::put(Setting::GOOGLE_CLIENT_ID, null);
+    config(['services.google.client_id' => null]);
+
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('Continue with Google');
+
+    $this->get(route('auth.google.redirect'))->assertNotFound();
+});
+
+test('the callback uses the client id an admin saved in settings', function () {
+    Setting::put(Setting::GOOGLE_CLIENT_ID, 'db-client');
+    config(['services.google.client_id' => 'env-client']);
+
+    fakeGoogleUser('google-cfg', 'cfg@example.com');
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('dashboard', absolute: false));
+
+    expect(config('services.google.client_id'))->toBe('db-client');
 });
 
 test('a cancelled or failed Google handshake returns to login with an error', function () {
