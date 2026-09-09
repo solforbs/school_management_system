@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\ContactMessageController;
 use App\Http\Controllers\DashboardController;
@@ -34,6 +35,14 @@ Route::get('/plans', fn () => view('frontend.plans', [
 ]))->name('plans');
 Route::view('/contact', 'frontend.contact')->name('contact');
 // make sure to add the EnsureAccountIsActive middleware to all routes
+
+// "Continue with Google" on the login page. Guests only - an existing
+// account is matched by google_id then e-mail; a new Google e-mail is
+// signed up like the open registration form and lands on onboarding.
+Route::middleware('guest')->group(function () {
+    Route::get('auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
+    Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+});
 
 // Paystack calls this directly, unauthenticated - no session, no CSRF
 // token. Kept outside /dashboard so the payment-gate middleware never
