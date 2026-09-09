@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DenyOnDemoInstitution;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureInstitutionApproved;
 use App\Http\Middleware\EnsureInstitutionHasPaid;
@@ -33,6 +34,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // syncing and can't act as its owner elsewhere.
         $middleware->alias([
             'abilities' => CheckAbilities::class,
+            // Blocks billing / hardware / messaging / account-identity
+            // actions while signed into the shared demo school.
+            'demo.readonly' => DenyOnDemoInstitution::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

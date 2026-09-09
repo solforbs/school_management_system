@@ -5,7 +5,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
-    Route::livewire('settings/profile', 'pages::settings.profile')->name('profile.edit');
+    // 'demo.readonly': the demo login is shared, so its name/email/password
+    // can't be edited from inside it.
+    Route::livewire('settings/profile', 'pages::settings.profile')
+        ->middleware('demo.readonly')
+        ->name('profile.edit');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -14,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('settings/security', 'pages::settings.security')
         ->middleware([
             'password.confirm',
+            'demo.readonly',
         ])
         ->name('security.edit');
 });

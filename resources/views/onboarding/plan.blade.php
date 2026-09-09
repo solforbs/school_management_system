@@ -17,6 +17,20 @@
                 </flux:callout>
             @endif
 
+            <flux:card class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <flux:heading size="sm">Not sure yet? Take a look around first.</flux:heading>
+                    <flux:text class="mt-0.5 text-sm text-zinc-500">
+                        Jump into a fully set-up demo school — classes, teachers, students, exams and fees — and come
+                        back when you're ready. Nothing you do there is saved.
+                    </flux:text>
+                </div>
+                <form method="POST" action="{{ route('demo.enter') }}" class="shrink-0">
+                    @csrf
+                    <flux:button type="submit" variant="primary" icon="beaker">Explore the demo school</flux:button>
+                </form>
+            </flux:card>
+
             @if ($setupFee > 0)
                 <flux:card class="mb-6">
                     <div class="flex flex-wrap items-baseline justify-between gap-2">

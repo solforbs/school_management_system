@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -48,6 +49,7 @@ use Modules\Timetable\Models\TimetableEntry;
  * @property int|null $max_electives
  * @property string $timezone
  * @property bool $is_active
+ * @property bool $is_demo
  * @property string $status
  * @property bool $is_approved
  * @property Carbon|null $approved_at
@@ -106,6 +108,7 @@ class Institution extends Model
         // Status
         'status',
         'is_active',
+        'is_demo',
         'is_approved',
         'approved_at',
         'approved_by_id',
@@ -129,12 +132,21 @@ class Institution extends Model
         return [
             'is_approved' => 'boolean',
             'is_active' => 'boolean',
+            'is_demo' => 'boolean',
             'min_electives' => 'integer',
             'max_electives' => 'integer',
             'approved_at' => 'datetime',
             'subscription_started_at' => 'datetime',
             'subscription_expires_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @param  Builder<Institution>  $query
+     */
+    public function scopeDemo($query): void
+    {
+        $query->where('is_demo', true);
     }
 
     public function owner()

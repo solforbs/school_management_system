@@ -65,3 +65,9 @@ Schedule::command('zkteco:sync-clocks')->hourly();
 // Daily is plenty since nothing is actually cleared until 7 days have
 // passed since the last clear (DeviceAttendanceLogRetention enforces that).
 Schedule::command('zkteco:clear-old-attendance-logs')->dailyAt('02:00');
+
+// The shared demo school is meant to look untouched for the next onboarding
+// director who drops into it, so whatever the last one changed is thrown
+// away and the school rebuilt from the seeder. Six-hourly keeps it fresh
+// without wiping someone's exploration mid-session too often.
+Schedule::command('demo:reset')->everySixHours()->withoutOverlapping()->runInBackground();

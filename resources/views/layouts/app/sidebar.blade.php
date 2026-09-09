@@ -301,6 +301,7 @@
     </flux:header>
 
     <x-impersonation-banner />
+    <x-demo-banner />
 
     {{ $slot }}
 
