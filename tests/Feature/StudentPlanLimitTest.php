@@ -13,6 +13,7 @@ use Modules\Institution\Models\Institution;
 use Modules\Student\Actions\SaveStudent;
 use Modules\Student\Exceptions\StudentLimitException;
 use Modules\Student\Models\StudentDetails;
+use Modules\Teacher\Models\TeacherDetails;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -130,6 +131,37 @@ test('the student directory shows how many the plan supports', function () {
         ->assertOk()
         ->assertSee('supports up to 500 students')
         ->assertSee('1 enrolled');
+});
+
+test('the plan limit banner is hidden from staff who cannot manage billing', function () {
+    [$director, $institution] = directorOnPlan(1);
+
+    StudentDetails::create([
+        'student_id' => User::factory()->create()->id,
+        'institution_id' => $institution->id,
+        'admission_number' => 'ADM-'.uniqid(),
+        'enrollment_status' => 'active',
+    ]);
+
+    // The Director - who can act on it - still sees the warning.
+    $this->actingAs($director)->get(route('student.index'))
+        ->assertOk()
+        ->assertSee('reached that limit');
+
+    // A Teacher in the same school cannot upgrade a plan, so the banner
+    // isn't shown to them even though they can open the student directory.
+    $teacher = User::factory()->create(['active_institution_id' => $institution->id]);
+    $teacher->assignRole('Teacher');
+    TeacherDetails::create([
+        'teacher_id' => $teacher->id,
+        'institution_id' => $institution->id,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($teacher->refresh())->get(route('student.index'))
+        ->assertOk()
+        ->assertDontSee('reached that limit')
+        ->assertDontSee('subscription supports up to');
 });
 
 test('the enrolment form warns when the plan is full', function () {

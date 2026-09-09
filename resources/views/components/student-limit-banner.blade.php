@@ -5,9 +5,12 @@
     $status = $institution?->studentLimitStatus();
 @endphp
 
-{{-- Admins aren't scoped to a plan, and an offline synced device carries
-     no plan to read a limit from. --}}
-@if ($status && ! isAdmin() && ! syncClientMode() && $status['plan'])
+{{-- Only the people who can actually act on it (Director, Accountant - the
+     "view billing" holders) see this. Teachers, parents and students can't
+     upgrade a plan, so the enrolment limit isn't their concern. Admins
+     aren't scoped to a plan, and an offline synced device carries no plan
+     to read a limit from. --}}
+@if ($status && ! isAdmin() && ! syncClientMode() && $status['plan'] && auth()->user()?->can('view billing'))
     @php
         $planName = $status['plan']->name;
 

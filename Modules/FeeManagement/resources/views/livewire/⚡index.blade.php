@@ -34,8 +34,7 @@ new #[Title('Fee Invoices')] class extends Component
     public function delete(int $id): void
     {
         abort_unless(auth()->user()->can('delete feemanagement'), 403);
-        $fee = Fee::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
-            ->findOrFail($id);
+        $fee = Fee::query()->visibleTo(auth()->user())->findOrFail($id);
         $fee->delete();
     }
 
@@ -43,7 +42,7 @@ new #[Title('Fee Invoices')] class extends Component
     public function fees(): LengthAwarePaginator
     {
         return Fee::with(['student.studentUserDetails', 'institution'])
-            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->visibleTo(auth()->user())
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';
 
