@@ -150,7 +150,14 @@ if (! function_exists('currentInstitution')) {
         // Director (and any other role that owns institutions directly) -
         // whichever one they've chosen as active, not just "the first
         // one" - see HasInstitution for how/when this gets set.
-        return $user->activeInstitution;
+        //
+        // The parent/student fallbacks catch an account whose 'Parent' or
+        // 'Student' role was never set but which is still linked to a
+        // student record: without them such a user resolves to no
+        // institution and every institution-scoped screen breaks for them.
+        return $user->activeInstitution
+            ?? $user->parentInstitution
+            ?? $user->studentInstitution;
     }
 }
 if (! function_exists('currentInstitutionId')) {
