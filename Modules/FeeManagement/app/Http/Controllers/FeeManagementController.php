@@ -198,24 +198,6 @@ class FeeManagementController extends Controller
      */
     private function scopeToViewer($query): void
     {
-        $user = Auth::user();
-
-        if (isAdmin()) {
-            return;
-        }
-
-        if ($user->hasRole('Parent')) {
-            $query->where('parent_id', $user->id);
-
-            return;
-        }
-
-        if ($user->hasRole('Student')) {
-            $query->where('student_id', $user->id);
-
-            return;
-        }
-
-        $query->where('institution_id', currentInstitution()?->id ?? 0);
+        $query->visibleTo(Auth::user());
     }
 }

@@ -154,4 +154,27 @@ class Fee extends Model
             default => $query,
         };
     }
+
+    /**
+     * Limit a query to the fees the given user is allowed to see: an Admin
+     * sees everything, a Parent only their own children's fees, a Student
+     * only their own, and everyone else (Director, Accountant, ...) their
+     * current institution's.
+     */
+    public function scopeVisibleTo($query, User $user)
+    {
+        if ($user->hasRole('Admin')) {
+            return $query;
+        }
+
+        if ($user->hasRole('Parent')) {
+            return $query->where('parent_id', $user->id);
+        }
+
+        if ($user->hasRole('Student')) {
+            return $query->where('student_id', $user->id);
+        }
+
+        return $query->where('institution_id', currentInstitution()?->id ?? 0);
+    }
 }
