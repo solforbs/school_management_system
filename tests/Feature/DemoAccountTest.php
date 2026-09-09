@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\DB;
 use Modules\Examinations\Models\ExamSitting;
 use Modules\Institution\Database\Seeders\DemoAccountSeeder;
 use Modules\Institution\Models\Institution;
@@ -57,6 +58,8 @@ test('the demo seeder builds a demo-flagged school with a full data graph', func
         ->and(Hash::check(DemoAccountSeeder::DIRECTOR_EMAIL, $director->password))->toBeTrue();
 
     $institution = Institution::demo()->sole();
+    $scoped = fn (string $table) => DB::table($table)->where('institution_id', $institution->id)->count();
+
     expect($institution->is_demo)->toBeTrue()
         ->and($institution->is_approved)->toBeTrue()
         ->and($institution->subjects()->count())->toBeGreaterThan(10)
@@ -65,7 +68,16 @@ test('the demo seeder builds a demo-flagged school with a full data graph', func
         ->and($institution->studentDetails()->count())->toBeGreaterThan(20)
         ->and($institution->fees()->count())->toBeGreaterThan(0)
         ->and($institution->results()->count())->toBeGreaterThan(0)
-        ->and(ExamSitting::where('institution_id', $institution->id)->count())->toBe(1);
+        ->and(ExamSitting::where('institution_id', $institution->id)->count())->toBeGreaterThan(1)
+        // Every module has demo data.
+        ->and($scoped('curricula'))->toBeGreaterThan(0)
+        ->and($scoped('subject_selections'))->toBeGreaterThan(0)
+        ->and($scoped('timetable_entries'))->toBeGreaterThan(0)
+        ->and($scoped('report_cards'))->toBeGreaterThan(0)
+        ->and($scoped('lessons'))->toBeGreaterThan(0)
+        ->and($scoped('lesson_reports'))->toBeGreaterThan(0)
+        ->and($scoped('expenditures'))->toBeGreaterThan(0)
+        ->and($scoped('staff_payments'))->toBeGreaterThan(0);
 });
 
 test('demo:reset throws away edits, keeps the director, and rebuilds', function () {

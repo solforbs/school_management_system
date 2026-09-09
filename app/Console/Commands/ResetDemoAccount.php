@@ -6,17 +6,15 @@ use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Modules\Examinations\Models\Examination;
-use Modules\Examinations\Models\ExamSitting;
+use Illuminate\Support\Facades\Schema;
 use Modules\Institution\Database\Seeders\DemoAccountSeeder;
 use Modules\Institution\Models\Institution;
-use Modules\Result\Models\Result;
 
 /**
- * Wipes the shared demo school and rebuilds it from the seeder, so whatever
- * onboarding directors changed while poking around is gone. Runs on a
- * schedule (see routes/console.php) and is also how the demo is created the
- * first time.
+ * Wipes the shared demo school and rebuilds it from the seeders, so
+ * whatever onboarding directors changed while poking around is gone. Runs
+ * on a schedule (see routes/console.php) and is also how the demo is
+ * created the first time.
  */
 class ResetDemoAccount extends Command
 {
@@ -24,21 +22,37 @@ class ResetDemoAccount extends Command
 
     protected $description = 'Reset the shared demo school to its seeded state';
 
+    /**
+     * Every table the demo seeders write that is scoped by `institution_id`.
+     * Cleared explicitly with FK checks off, because several of them
+     * (`results`, `expenditures`, `staff_payments`) are reachable from an
+     * institution delete by more than one cascade path, which InnoDB
+     * refuses.
+     *
+     * @var list<string>
+     */
+    private const SCOPED_TABLES = [
+        'results', 'examinations', 'exam_sittings', 'report_cards',
+        'lessons', 'lesson_reports', 'subject_selections',
+        'expenditures', 'expenditure_categories', 'staff_payments', 'staff_details',
+        'fees', 'timetable_entries', 'subject_teachers', 'teacher_details',
+        'student_details', 'grading_bands', 'report_templates', 'curricula',
+        'classes', 'subjects', 'devices',
+    ];
+
     public function handle(): int
     {
         DB::transaction(function () {
-            Institution::demo()->each(function (Institution $institution) {
-                // `results` is reachable from an institution delete by two
-                // cascade paths (institution_id and examination_id), which
-                // InnoDB refuses. Clear the exam graph explicitly first;
-                // everything else on institution_id is single-path.
-                Result::where('institution_id', $institution->id)->delete();
-                Examination::where('institution_id', $institution->id)->delete();
-                ExamSitting::where('institution_id', $institution->id)->delete();
+            Institution::demo()->pluck('id')->each(function (int $id) {
+                Schema::withoutForeignKeyConstraints(function () use ($id) {
+                    foreach (self::SCOPED_TABLES as $table) {
+                        if (Schema::hasTable($table) && Schema::hasColumn($table, 'institution_id')) {
+                            DB::table($table)->where('institution_id', $id)->delete();
+                        }
+                    }
 
-                // The rest - classes, subjects, students, fees, timetable,
-                // grading bands, staff, devices - cascades off institution_id.
-                $institution->delete();
+                    DB::table('institutions')->where('id', $id)->delete();
+                });
             });
 
             // The seeded teachers/students/parents/staff are users, which
@@ -59,6 +73,7 @@ class ResetDemoAccount extends Command
             'students' => $institution?->studentDetails()->count(),
             'teachers' => $institution?->teacherDetails()->count(),
             'subjects' => $institution?->subjects()->count(),
+            'results' => $institution?->results()->count(),
         ];
 
         Log::info('Demo account reset', $summary);
