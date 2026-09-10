@@ -34,6 +34,7 @@ yarn-error.log
 # Written at runtime by SitemapGenerator (production APP_URL, hourly) -
 # tracking it makes the server tree permanently dirty and blocks deploys.
 /public/robots.txt
+/public/marketing/
 
 # Local backup files
 bkp/

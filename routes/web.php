@@ -111,64 +111,66 @@ Route::get('subjects-available', function () {
     ]);
 })->name('subjects-available');
 
-Route::get('/seed', function () {
-    set_time_limit(0);
-    ini_set('memory_limit', '1024M');
+if (app()->environment('local')) {
+    Route::get('/seed', function () {
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
 
-    Artisan::call('db:seed', [
-        '--class' => 'Modules\\Institution\\Database\\Seeders\\InstitutionDatabaseSeeder',
-        '--force' => true,
-    ]);
-
-    $institution = Institution::where('code', 'GVA001')->first();
-
-    if ($institution) {
-        $institution->update([
-            'is_approved' => true,
-            'approved_at' => now(),
-            'is_active' => true,
-            'status' => 'active',
+        Artisan::call('db:seed', [
+            '--class' => 'Modules\\Institution\\Database\\Seeders\\InstitutionDatabaseSeeder',
+            '--force' => true,
         ]);
-    }
 
-    $studentsCount = StudentDetails::where('institution_id', $institution?->id)->count();
-    $parentsCount = User::role('Parent')->count();
-    $teachersCount = TeacherDetails::where('institution_id', $institution?->id)->count();
-    $staffCount = StaffDetails::where('institution_id', $institution?->id)->count();
-    $examsCount = DB::table('examinations')->where('institution_id', $institution?->id)->count();
-    $resultsCount = DB::table('results')->where('institution_id', $institution?->id)->count();
-    $reportCardsCount = DB::table('report_cards')->where('institution_id', $institution?->id)->count();
-    $feesCount = DB::table('fees')->where('institution_id', $institution?->id)->count();
+        $institution = Institution::where('code', 'GVA001')->first();
 
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Successfully seeded Green Valley Academy with 1,000+ students, faculty, staff, parents, exams, and fees!',
-        'institution' => [
-            'name' => $institution ? $institution->name : 'Green Valley Academy',
-            'code' => $institution ? $institution->code : 'GVA001',
-            'is_approved' => (bool) ($institution ? $institution->is_approved : false),
-            'status' => $institution ? $institution->status : 'active',
-            'admin_approval' => 'Bypassed (Active & Approved)',
-        ],
-        'credentials' => [
-            'director' => 'director@greenvalley.ac.ke',
-            'senior_accountant' => 'staff1@greenvalley.ac.ke',
-            'teacher_sample' => 'teacher1@greenvalley.ac.ke',
-            'parent_sample' => 'parent1@greenvalley.ac.ke',
-            'student_sample' => 'student1@greenvalley.ac.ke',
-            'default_password' => 'password',
-        ],
-        'counts' => [
-            'students' => $studentsCount,
-            'parents' => $parentsCount,
-            'teachers' => $teachersCount,
-            'staff' => $staffCount,
-            'examinations' => $examsCount,
-            'exam_results' => $resultsCount,
-            'report_cards' => $reportCardsCount,
-            'fee_records' => $feesCount,
-        ],
-    ]);
-})->name('seed.greenvalley');
+        if ($institution) {
+            $institution->update([
+                'is_approved' => true,
+                'approved_at' => now(),
+                'is_active' => true,
+                'status' => 'active',
+            ]);
+        }
+
+        $studentsCount = StudentDetails::where('institution_id', $institution?->id)->count();
+        $parentsCount = User::role('Parent')->count();
+        $teachersCount = TeacherDetails::where('institution_id', $institution?->id)->count();
+        $staffCount = StaffDetails::where('institution_id', $institution?->id)->count();
+        $examsCount = DB::table('examinations')->where('institution_id', $institution?->id)->count();
+        $resultsCount = DB::table('results')->where('institution_id', $institution?->id)->count();
+        $reportCardsCount = DB::table('report_cards')->where('institution_id', $institution?->id)->count();
+        $feesCount = DB::table('fees')->where('institution_id', $institution?->id)->count();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Successfully seeded Green Valley Academy with 1,000+ students, faculty, staff, parents, exams, and fees!',
+            'institution' => [
+                'name' => $institution ? $institution->name : 'Green Valley Academy',
+                'code' => $institution ? $institution->code : 'GVA001',
+                'is_approved' => (bool) ($institution ? $institution->is_approved : false),
+                'status' => $institution ? $institution->status : 'active',
+                'admin_approval' => 'Bypassed (Active & Approved)',
+            ],
+            'credentials' => [
+                'director' => 'director@greenvalley.ac.ke',
+                'senior_accountant' => 'staff1@greenvalley.ac.ke',
+                'teacher_sample' => 'teacher1@greenvalley.ac.ke',
+                'parent_sample' => 'parent1@greenvalley.ac.ke',
+                'student_sample' => 'student1@greenvalley.ac.ke',
+                'default_password' => 'password',
+            ],
+            'counts' => [
+                'students' => $studentsCount,
+                'parents' => $parentsCount,
+                'teachers' => $teachersCount,
+                'staff' => $staffCount,
+                'examinations' => $examsCount,
+                'exam_results' => $resultsCount,
+                'report_cards' => $reportCardsCount,
+                'fee_records' => $feesCount,
+            ],
+        ]);
+    })->name('seed.greenvalley');
+}
 
 require __DIR__.'/settings.php';
