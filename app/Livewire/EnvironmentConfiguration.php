@@ -65,15 +65,19 @@ class EnvironmentConfiguration extends Component
         }
     }
 
+    /**
+     * @return array<string, array<string, array<string, mixed>>>
+     */
     #[Computed]
-    /** @return array<string, mixed> */
     public function categories(): array
     {
         return ConfigurationManager::getCategories();
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     #[Computed]
-    /** @return array<string, mixed> */
     public function currentCategory(): array
     {
         return $this->categories()[$this->activeCategory] ?? [];

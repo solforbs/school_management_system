@@ -1169,15 +1169,27 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Services/ZKTecoUserSyncService.php
+		-
+			message: '#^Property App\\Models\\User\:\:\$tetherSyncable \(array\<string\>\) in isset\(\) is not nullable\.$#'
+			identifier: isset.property
+			count: 1
+			path: app/Models/User.php
 
 		-
-			message: '#^Method App\Livewire\EnvironmentConfiguration\:\:categories\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
+			message: '#^Method App\\Services\\AnalyticsService\:\:sortCollection\(\) has parameter \$collection with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
 			count: 1
-			path: app/Livewire/EnvironmentConfiguration.php
+			path: app/Services/AnalyticsService.php
 
 		-
-			message: '#^Method App\Livewire\EnvironmentConfiguration\:\:currentCategory\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
+			message: '#^Method App\\Services\\AnalyticsService\:\:sortCollection\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
+			identifier: missingType.generics
 			count: 1
-			path: app/Livewire/EnvironmentConfiguration.php
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Parameter \#2 \$direction of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:orderBy\(\) expects ''asc''\|''desc''\|SortDirection, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/AnalyticsService.php
+
