@@ -104,12 +104,14 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
         Route::post('students/{studentId}/sync-device', [SyncStudentToDeviceController::class, 'syncStudent'])->name('students.sync-device');
     });
 });
+// Behind auth: it answers from the caller's own institution, so there is
+// nothing here for an anonymous request to read anyway.
 Route::get('subjects-available', function () {
     return institutionSubjects()->map(fn ($subject) => [
         'id' => $subject->id,
         'name' => $subject->name,
     ]);
-})->name('subjects-available');
+})->middleware(['auth', 'verified'])->name('subjects-available');
 
 if (app()->environment('local')) {
     Route::get('/seed', function () {
