@@ -8,17 +8,31 @@ The environment configuration feature allows administrators to manage applicatio
 
 - **Web-based editing**: Manage environment variables through the admin settings page
 - **Organized by category**: Variables are grouped by function (General, Mail, Storage, Payments, SMS, AI, Device Sync)
-- **Encryption at rest**: Sensitive values (API keys, passwords, secrets) are encrypted before being stored
+- **Write-only credentials**: API keys and passwords are masked, never sent back to the browser, and left untouched when submitted blank
 - **Validation**: Each field is validated according to predefined rules
 - **Atomic updates**: Changes are only persisted if validation passes
-- **Backup preservation**: Empty password fields preserve existing encrypted values
+- **Backup preservation**: Empty password fields preserve the stored value
 
 ### Security
 
-Secret fields marked in the configuration are:
-- Encrypted using Laravel's encryption (`Illuminate\Support\Facades\Crypt`)
-- Never sent back to the browser (blank placeholders shown instead)
-- Can only be updated by admins (role-based access control)
+Fields declared with `type => 'password'` are write-only:
+- Never sent back to the browser - the field always renders blank, and only a
+  boolean "one is set" flag crosses the wire
+- Submitting a blank field keeps whatever is already stored
+- Only admins can read or update them (role-based access control)
+
+Values are written to `.env` verbatim, deliberately. Every consumer reads
+them straight through `env()` (`config/mail.php`, `config/services.php`,
+`config/sms.php`, `config/filesystems.php`), so an encrypted value would be
+handed to the provider as-is and rejected. Encrypting would also buy nothing:
+`APP_KEY` lives in the same file, so whoever can read `.env` can decrypt it.
+File permissions are the control that matters - keep `.env` at `640` and
+owned by the web user.
+
+Only keys listed in `ConfigurationManager::EDITABLE_CONFIG` can be written.
+`save()` builds its key set from that allow-list rather than from the
+client-supplied payload, and `EnvManager` rejects malformed keys and strips
+line breaks from values.
 
 ## Architecture
 
@@ -52,7 +66,7 @@ const EDITABLE_CONFIG = [
             'type' => 'text|password|email|number|select|url',
             'description' => 'Field description',
             'rules' => 'Laravel validation rules',
-            'secret' => false, // Whether to encrypt
+            // type 'password' makes a field write-only in the UI
             'options' => [], // For select type
         ],
     ],
@@ -64,7 +78,7 @@ const EDITABLE_CONFIG = [
 - `getCategory(string $category): array` - Get configuration for specific category
 - `getEditableKeys(): array` - Get all editable variable names
 - `getConfig(string $key): ?array` - Get metadata for specific variable
-- `isSecret(string $key): bool` - Check if variable should be encrypted
+- `isWriteOnly(string $key): bool` - Whether the field is masked and write-only in the UI
 - `getRules(string $key): ?string` - Get validation rules for variable
 - `getAllRules(): array` - Get all validation rules
 
@@ -101,34 +115,34 @@ Manages the UI and state for the configuration editor.
 - `MAIL_HOST` - SMTP server hostname
 - `MAIL_PORT` - SMTP port
 - `MAIL_USERNAME` - SMTP authentication username
-- `MAIL_PASSWORD` - SMTP password (encrypted)
+- `MAIL_PASSWORD` - SMTP password (masked)
 - `MAIL_ENCRYPTION` - Encryption protocol (null, tls, ssl)
 - `MAIL_FROM_ADDRESS` - Sender email address
 - `MAIL_FROM_NAME` - Sender name
 
 ### Storage
 - `AWS_ACCESS_KEY_ID` - AWS access key
-- `AWS_SECRET_ACCESS_KEY` - AWS secret key (encrypted)
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key (masked)
 - `AWS_DEFAULT_REGION` - AWS region
 - `AWS_BUCKET` - S3 bucket name
 - `CLOUDINARY_URL` - Cloudinary connection string
 - `CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
 - `CLOUDINARY_KEY` - Cloudinary API key
-- `CLOUDINARY_SECRET` - Cloudinary API secret (encrypted)
+- `CLOUDINARY_SECRET` - Cloudinary API secret (masked)
 
 ### Payments
 - `PAYSTACK_PUBLIC_KEY` - Paystack public key
-- `PAYSTACK_SECRET_KEY` - Paystack secret key (encrypted)
+- `PAYSTACK_SECRET_KEY` - Paystack secret key (masked)
 
 ### SMS
-- `PINNACLE_API_KEY` - Host Pinnacle API key (encrypted)
+- `PINNACLE_API_KEY` - Host Pinnacle API key (masked)
 - `PINNACLE_API_URL` - Host Pinnacle API endpoint
 - `PINNACLE_USER_ID` - Host Pinnacle user ID
 - `PINNACLE_SENDER_ID` - SMS sender ID
-- `PINNACLE_API_PASSWORD` - Host Pinnacle password (encrypted)
+- `PINNACLE_API_PASSWORD` - Host Pinnacle password (masked)
 
 ### AI
-- `GEMINI_API_KEY` - Google Gemini API key (encrypted)
+- `GEMINI_API_KEY` - Google Gemini API key (masked)
 - `GEMINI_MODEL` - Gemini model name
 
 ### Device Sync
@@ -242,7 +256,7 @@ Test coverage includes:
 - Access control (guests, non-admins, admins)
 - Loading initial values
 - Saving configuration
-- Secret value encryption
+- Write-only credential handling
 - Validation
 - Preserving existing secrets with empty fields
 - Configuration reset
@@ -260,10 +274,17 @@ Test coverage includes:
 - Check logs for permission errors
 - Verify the application has write permissions to the project directory
 
-### Encrypted values not decrypting
-- Verify `APP_KEY` is set correctly
-- Check that the encryption key hasn't changed
-- Ensure `Illuminate\Support\Facades\Crypt` is being used
+### A provider rejects a credential saved through the UI
+- Check the raw value in `.env` - it should be the credential itself, not a
+  `eyJpdiI6...` ciphertext. Earlier versions encrypted these; re-enter any
+  credential saved before that was fixed.
+- Restart PHP-FPM and run `php artisan config:cache` so the new value is picked up.
+
+### Running the test suite changed my .env
+- It shouldn't any more. `EnvManager` refuses to write the real `.env` while
+  `APP_ENV=testing`, and the suite points `env-manager.path` at a temp file.
+- If you hit the refusal in a new test, set
+  `config(['env-manager.path' => $someTempFile])` in that test's setup.
 
 ## Future Enhancements
 
