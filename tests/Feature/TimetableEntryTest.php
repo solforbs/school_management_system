@@ -49,7 +49,7 @@ test('a director creates a timetable entry', function () {
 
     $this->actingAs($director)->post(route('timetable.store'), [
         'class_id' => $class->id,
-        'subject' => $subject->name,
+        'subject_id' => $subject->id,
         'day_of_week' => 'Monday',
         'start_time' => '08:00',
         'end_time' => '08:45',
@@ -58,8 +58,28 @@ test('a director creates a timetable entry', function () {
 
     expect(TimetableEntry::count())->toBe(1)
         ->and(TimetableEntry::first()->class_id)->toBe($class->id)
+        ->and(TimetableEntry::first()->subject_id)->toBe($subject->id)
+        // The name is denormalised alongside the id for anything still
+        // reading the legacy free-text column.
         ->and(TimetableEntry::first()->subject)->toBe('Mathematics')
         ->and(TimetableEntry::first()->institution_id)->toBe($institution->id);
+});
+
+test('a subject from another school cannot be scheduled', function () {
+    [$director, , $class] = makeTimetableEntrySchool();
+    [, , , $theirSubject] = makeTimetableEntrySchool();
+
+    // 'exists:subjects,id' alone would let a crafted request put another
+    // school's subject on this school's timetable.
+    $this->actingAs($director)->post(route('timetable.store'), [
+        'class_id' => $class->id,
+        'subject_id' => $theirSubject->id,
+        'day_of_week' => 'Monday',
+        'start_time' => '08:00',
+        'end_time' => '08:45',
+    ])->assertForbidden();
+
+    expect(TimetableEntry::count())->toBe(0);
 });
 
 test('double booking the same teacher in the same time slot is rejected', function () {
@@ -86,7 +106,7 @@ test('double booking the same teacher in the same time slot is rejected', functi
     $this->actingAs($director)->post(route('timetable.store'), [
         'class_id' => $class2->id,
         'teacher_id' => $teacher->id,
-        'subject' => 'Physics',
+        'subject_id' => $subject->id,
         'day_of_week' => 'Monday',
         'start_time' => '08:30',
         'end_time' => '09:30',
