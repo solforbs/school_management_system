@@ -150,8 +150,8 @@ class EnvManager
 
                     if (isset($env[$key])) {
                         $value = $env[$key];
-                        // Quote value if it contains spaces or special chars
-                        if ($value && (str_contains($value, ' ') || str_contains($value, '"'))) {
+                        // Quote value if it contains spaces, special chars, or looks encrypted
+                        if ($value && (str_contains($value, ' ') || str_contains($value, '"') || str_contains($value, '=') || str_starts_with($value, 'ey'))) {
                             $value = '"'.addslashes($value).'"';
                         }
                         $lines[] = "{$key}={$value}";
@@ -163,7 +163,7 @@ class EnvManager
 
         // Add any new keys that weren't in the original file
         foreach ($env as $key => $value) {
-            if ($value && (str_contains($value, ' ') || str_contains($value, '"'))) {
+            if ($value && (str_contains($value, ' ') || str_contains($value, '"') || str_contains($value, '=') || str_starts_with($value, 'ey'))) {
                 $value = '"'.addslashes($value).'"';
             }
             $lines[] = "{$key}={$value}";
