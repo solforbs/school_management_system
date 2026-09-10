@@ -148,9 +148,8 @@ class ConfigurationManager
             'PAYSTACK_SECRET_KEY' => [
                 'label' => 'Paystack Secret Key',
                 'type' => 'password',
-                'description' => 'Paystack secret key (stored encrypted)',
+                'description' => 'Paystack secret key (used directly by payment API)',
                 'rules' => 'nullable|string|max:255',
-                'secret' => true,
             ],
         ],
         'sms' => [

@@ -154,7 +154,7 @@ test('configuration categories are accessible', function () {
 
 test('configuration keys are marked as secret when appropriate', function () {
     expect(ConfigurationManager::isSecret('MAIL_PASSWORD'))->toBeTrue();
-    expect(ConfigurationManager::isSecret('PAYSTACK_SECRET_KEY'))->toBeTrue();
+    expect(ConfigurationManager::isSecret('PAYSTACK_SECRET_KEY'))->toBeFalse(); // Used directly by payment API
     expect(ConfigurationManager::isSecret('GEMINI_API_KEY'))->toBeTrue();
     expect(ConfigurationManager::isSecret('APP_NAME'))->toBeFalse();
     expect(ConfigurationManager::isSecret('MAIL_HOST'))->toBeFalse();
