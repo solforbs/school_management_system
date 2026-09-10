@@ -39,7 +39,14 @@ class ReportController extends Controller
         abort_unless($user->can('export report'), 403);
 
         @ini_set('memory_limit', '512M');
-        @set_time_limit(300);
+
+        // Only ever raise the ceiling, never introduce one. Under a SAPI with
+        // no limit - CLI, a queue worker, the test suite - set_time_limit(300)
+        // would *impose* 300 seconds on everything that follows in that
+        // process, not just this export.
+        if ((int) ini_get('max_execution_time') !== 0) {
+            @set_time_limit(300);
+        }
 
         [$from, $to, $label] = $this->resolvePeriod($request);
 
