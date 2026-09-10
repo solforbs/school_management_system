@@ -59,10 +59,9 @@
                             <input type="{{ $showSensitiveValues ? 'text' : 'password' }}"
                                 id="{{ $key }}"
                                 wire:model="configuration.{{ $activeCategory }}.{{ $key }}"
-                                placeholder="{{ $secrets[$key] && $originalValues[$key] ? __('Configured - leave blank to keep') : $config['label'] }}"
+                                placeholder="{{ ($secrets[$key] ?? false) ? __('Configured - leave blank to keep') : $config['label'] }}"
                                 class="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm transition focus:border-blue-500 focus:ring focus:ring-blue-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white dark:focus:ring-blue-900" />
 
-                            @if ($secrets[$key])
                                 <button type="button" wire:click="$toggle('showSensitiveValues')"
                                     class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
                                     @if ($showSensitiveValues)
@@ -79,7 +78,6 @@
                                         </svg>
                                     @endif
                                 </button>
-                            @endif
                         </div>
                     @else
                         <input type="{{ $config['type'] }}"
@@ -112,9 +110,9 @@
                     clip-rule="evenodd" />
             </svg>
             <div class="text-sm text-blue-800 dark:text-blue-200">
-                <p class="font-semibold">{{ __('Sensitive data is encrypted') }}</p>
+                <p class="font-semibold">{{ __('How credentials are handled') }}</p>
                 <p class="mt-1">
-                    {{ __('Fields marked with a password icon are encrypted at rest in your .env file. Passwords are never sent back to the browser.') }}
+                    {{ __('Masked fields are never sent back to the browser - they always start blank, and leaving one blank keeps whatever is already stored. Values are written to .env as-is, because the services that use them read them directly; protect that file with server permissions.') }}
                 </p>
             </div>
         </div>

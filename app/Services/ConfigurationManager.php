@@ -62,9 +62,8 @@ class ConfigurationManager
             'MAIL_PASSWORD' => [
                 'label' => 'SMTP Password',
                 'type' => 'password',
-                'description' => 'SMTP authentication password (stored encrypted)',
+                'description' => 'SMTP authentication password (write-only: leave blank to keep)',
                 'rules' => 'nullable|string',
-                'secret' => true,
             ],
             'MAIL_ENCRYPTION' => [
                 'label' => 'SMTP Encryption',
@@ -96,9 +95,8 @@ class ConfigurationManager
             'AWS_SECRET_ACCESS_KEY' => [
                 'label' => 'AWS Secret Key',
                 'type' => 'password',
-                'description' => 'AWS S3 secret access key (stored encrypted)',
+                'description' => 'AWS S3 secret access key (write-only: leave blank to keep)',
                 'rules' => 'nullable|string',
-                'secret' => true,
             ],
             'AWS_DEFAULT_REGION' => [
                 'label' => 'AWS Region',
@@ -133,9 +131,8 @@ class ConfigurationManager
             'CLOUDINARY_SECRET' => [
                 'label' => 'Cloudinary Secret',
                 'type' => 'password',
-                'description' => 'Cloudinary API secret (stored encrypted)',
+                'description' => 'Cloudinary API secret (write-only: leave blank to keep)',
                 'rules' => 'nullable|string',
-                'secret' => true,
             ],
         ],
         'payments' => [
@@ -156,9 +153,8 @@ class ConfigurationManager
             'PINNACLE_API_KEY' => [
                 'label' => 'Pinnacle API Key',
                 'type' => 'password',
-                'description' => 'Host Pinnacle SMS API key (stored encrypted)',
+                'description' => 'Host Pinnacle SMS API key (write-only: leave blank to keep)',
                 'rules' => 'nullable|string',
-                'secret' => true,
             ],
             'PINNACLE_API_URL' => [
                 'label' => 'Pinnacle API URL',
@@ -181,18 +177,16 @@ class ConfigurationManager
             'PINNACLE_API_PASSWORD' => [
                 'label' => 'Pinnacle Password',
                 'type' => 'password',
-                'description' => 'Host Pinnacle password (stored encrypted)',
+                'description' => 'Host Pinnacle password (write-only: leave blank to keep)',
                 'rules' => 'nullable|string',
-                'secret' => true,
             ],
         ],
         'ai' => [
             'GEMINI_API_KEY' => [
                 'label' => 'Gemini API Key',
                 'type' => 'password',
-                'description' => 'Google Gemini API key (stored encrypted)',
+                'description' => 'Google Gemini API key (write-only: leave blank to keep)',
                 'rules' => 'nullable|string',
-                'secret' => true,
             ],
             'GEMINI_MODEL' => [
                 'label' => 'Gemini Model',
@@ -266,13 +260,20 @@ class ConfigurationManager
     }
 
     /**
-     * Check if a variable is marked as secret (should be encrypted)
+     * Whether a value is write-only in the UI: masked on entry, never sent
+     * back to the browser, and left as-is when the field is submitted blank.
+     *
+     * These are deliberately stored in plain text. Every consumer reads them
+     * straight through env() - config/mail.php, config/services.php,
+     * config/sms.php, config/filesystems.php - so an encrypted value would
+     * be handed to the provider verbatim and rejected, which is exactly how
+     * the Paystack key broke. Encrypting would buy nothing anyway: APP_KEY
+     * lives in the same file, so whoever can read .env can already decrypt
+     * it. File permissions are the control that matters for .env.
      */
-    public static function isSecret(string $key): bool
+    public static function isWriteOnly(string $key): bool
     {
-        $config = self::getConfig($key);
-
-        return $config['secret'] ?? false;
+        return (self::getConfig($key)['type'] ?? null) === 'password';
     }
 
     /**

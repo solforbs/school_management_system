@@ -4,7 +4,6 @@ use App\Livewire\EnvironmentConfiguration;
 use App\Models\User;
 use App\Services\ConfigurationManager;
 use App\Services\EnvManager;
-use Illuminate\Support\Facades\Crypt;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
@@ -100,26 +99,6 @@ test('an admin can save configuration values', function () {
     expect($envManager->get('MAIL_PORT'))->toBe('587');
 });
 
-test('secret values are validated and encrypted when saved', function () {
-    $admin = makeSettingsAdmin();
-    $this->actingAs($admin);
-
-    Livewire::test(EnvironmentConfiguration::class)
-        ->set('configuration.mail.MAIL_PASSWORD', 'super-secret-smtp')
-        ->call('save')
-        ->assertHasNoErrors();
-
-    $envManager = app(EnvManager::class);
-    $stored = $envManager->get('MAIL_PASSWORD');
-
-    // The stored value should be encrypted
-    expect($stored)->not->toBe('super-secret-smtp');
-
-    // Should be able to decrypt it
-    $decrypted = Crypt::decryptString($stored);
-    expect($decrypted)->toBe('super-secret-smtp');
-});
-
 test('paystack keys are stored in plain text for direct API use', function () {
     $this->actingAs(makeSettingsAdmin());
 
@@ -172,8 +151,7 @@ test('empty password fields preserve existing values', function () {
     $this->actingAs($admin);
 
     $envManager = app(EnvManager::class);
-    $originalSecret = Crypt::encryptString('original-secret-value');
-    $envManager->put('MAIL_PASSWORD', $originalSecret);
+    $envManager->put('MAIL_PASSWORD', 'original-secret-value');
 
     // Try to save with empty secret field
     Livewire::test(EnvironmentConfiguration::class)
@@ -181,11 +159,9 @@ test('empty password fields preserve existing values', function () {
         ->set('configuration.mail.MAIL_PASSWORD', '') // Empty - should preserve
         ->call('save');
 
-    $stored = $envManager->get('MAIL_PASSWORD');
-    $decrypted = Crypt::decryptString($stored);
-
     // The original value should still be there
-    expect($decrypted)->toBe('original-secret-value');
+    expect($envManager->get('MAIL_PASSWORD'))->toBe('original-secret-value')
+        ->and($envManager->get('MAIL_USERNAME'))->toBe('new-user');
 });
 
 test('configuration reset restores original values', function () {
@@ -216,10 +192,36 @@ test('configuration categories are accessible', function () {
     expect($categories)->toHaveKey('device_sync');
 });
 
-test('configuration keys are marked as secret when appropriate', function () {
-    expect(ConfigurationManager::isSecret('MAIL_PASSWORD'))->toBeTrue();
-    expect(ConfigurationManager::isSecret('PAYSTACK_SECRET_KEY'))->toBeFalse(); // Used directly by payment API
-    expect(ConfigurationManager::isSecret('GEMINI_API_KEY'))->toBeTrue();
-    expect(ConfigurationManager::isSecret('APP_NAME'))->toBeFalse();
-    expect(ConfigurationManager::isSecret('MAIL_HOST'))->toBeFalse();
+test('credential fields are marked write-only', function () {
+    expect(ConfigurationManager::isWriteOnly('MAIL_PASSWORD'))->toBeTrue();
+    expect(ConfigurationManager::isWriteOnly('PAYSTACK_SECRET_KEY'))->toBeTrue();
+    expect(ConfigurationManager::isWriteOnly('GEMINI_API_KEY'))->toBeTrue();
+    expect(ConfigurationManager::isWriteOnly('APP_NAME'))->toBeFalse();
+    expect(ConfigurationManager::isWriteOnly('MAIL_HOST'))->toBeFalse();
+});
+
+test('a stored credential is never sent to the browser', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    app(EnvManager::class)->put('MAIL_PASSWORD', 'super-secret-smtp');
+
+    $component = Livewire::test(EnvironmentConfiguration::class);
+
+    // The field renders blank; only the "is one set?" flag crosses the wire.
+    expect($component->get('configuration.mail.MAIL_PASSWORD'))->toBe('')
+        ->and($component->get('secrets.MAIL_PASSWORD'))->toBeTrue()
+        ->and(json_encode($component->get('configuration')))->not->toContain('super-secret-smtp');
+});
+
+test('credentials are stored verbatim so the services that read them still work', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    Livewire::test(EnvironmentConfiguration::class)
+        ->set('configuration.mail.MAIL_PASSWORD', 'super-secret-smtp')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // config/mail.php reads env('MAIL_PASSWORD') straight through - an
+    // encrypted value here would be handed to the SMTP server as-is.
+    expect(app(EnvManager::class)->get('MAIL_PASSWORD'))->toBe('super-secret-smtp');
 });

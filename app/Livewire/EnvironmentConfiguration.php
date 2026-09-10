@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Services\ConfigurationManager;
 use App\Services\EnvManager;
 use Flux\Flux;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -47,13 +46,21 @@ class EnvironmentConfiguration extends Component
 
             foreach (array_keys($vars) as $key) {
                 $value = $envManager->get($key);
+
+                // A write-only value is never sent to the browser - the field
+                // starts blank and only a typed replacement is written back.
+                // `configuration` is a public Livewire property, so anything
+                // put here ends up in the payload the client can read.
+                if (ConfigurationManager::isWriteOnly($key)) {
+                    $this->secrets[$key] = filled($value);
+                    $this->configuration[$category][$key] = '';
+                    $this->originalValues[$key] = '';
+
+                    continue;
+                }
+
                 $this->configuration[$category][$key] = $value;
                 $this->originalValues[$key] = $value;
-
-                // Track which fields are secrets
-                if (ConfigurationManager::isSecret($key)) {
-                    $this->secrets[$key] = true;
-                }
             }
         }
     }
@@ -126,20 +133,18 @@ class EnvironmentConfiguration extends Component
             return;
         }
 
-        // Save secrets encrypted, others as plain values
+        // Everything is written in plain text: each of these is read back
+        // through env() by the config that consumes it, so an encrypted
+        // value would reach the provider verbatim. See isWriteOnly().
         $envManager = $this->getEnvManager();
         foreach ($toSave as $key => $value) {
-            if (ConfigurationManager::isSecret($key)) {
-                if (blank($value)) {
-                    // Empty secret field - keep existing value
-                    continue;
-                }
-                // Store encrypted
-                $encrypted = Crypt::encryptString($value);
-                $envManager->put($key, $encrypted);
-            } else {
-                $envManager->put($key, $value);
+            // A blank write-only field means "leave what is already stored"
+            // rather than "clear it" - the field always renders empty.
+            if (ConfigurationManager::isWriteOnly($key) && blank($value)) {
+                continue;
             }
+
+            $envManager->put($key, $value);
         }
 
         // Reload to get fresh values
