@@ -61,12 +61,19 @@ class SaveStudent
                     return;
                 }
 
-                // Verify parent has children in this institution or is from this institution
-                $hasChildrenInInstitution = $parent->children()
-                    ->whereHas('student', fn ($q) => $q->where('institution_id', $institutionId))
+                // The parent must belong to this school: either their own
+                // record is stamped with it, or they already have a child
+                // enrolled here. student_details carries institution_id;
+                // users does not.
+                $ownsRow = ParentDetails::where('parent_id', $parent->id)
+                    ->where('institution_id', $institutionId)
                     ->exists();
 
-                if (! $hasChildrenInInstitution) {
+                $hasChildHere = StudentDetails::where('parent_id', $parent->id)
+                    ->where('institution_id', $institutionId)
+                    ->exists();
+
+                if (! $ownsRow && ! $hasChildHere) {
                     $fail('The selected parent account cannot be used with this institution.');
                 }
             }],
@@ -133,7 +140,7 @@ class SaveStudent
         $this->guardStudentLimit($institutionId);
 
         return DB::transaction(function () use ($data, $institutionId, $photo) {
-            $parent = $this->resolveParentForCreate($data);
+            $parent = $this->resolveParentForCreate($data, $institutionId);
 
             $student = User::create([
                 'name' => $data['name'],
@@ -238,7 +245,7 @@ class SaveStudent
      *
      * @param  array<string, mixed>  $data
      */
-    private function resolveParentForCreate(array $data): ?User
+    private function resolveParentForCreate(array $data, int $institutionId): ?User
     {
         if (! empty($data['parent_id'])) {
             $parent = User::find($data['parent_id']);
@@ -261,6 +268,9 @@ class SaveStudent
 
         ParentDetails::create([
             'parent_id' => $parent->id,
+            // The school enrolling the student owns the parent account it
+            // creates alongside them.
+            'institution_id' => $institutionId,
             'parent_phone' => $data['parent_phone'] ?? null,
             'parent_occupation' => $data['parent_occupation'] ?? null,
         ]);
@@ -305,13 +315,16 @@ class SaveStudent
             $studentDetails->save();
         }
 
-        ParentDetails::updateOrCreate(
-            ['parent_id' => $parent->id],
-            [
-                'parent_phone' => $data['parent_phone'] ?? null,
-                'parent_occupation' => $data['parent_occupation'] ?? null,
-            ]
-        );
+        $details = ParentDetails::firstOrNew(['parent_id' => $parent->id]);
+
+        $details->parent_phone = $data['parent_phone'] ?? null;
+        $details->parent_occupation = $data['parent_occupation'] ?? null;
+
+        // Claim an unowned row for this school, but never move one that
+        // already belongs to another - that would hand the account over.
+        $details->institution_id ??= $studentDetails->institution_id;
+
+        $details->save();
     }
 
     /**

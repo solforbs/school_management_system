@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $parent_id
+ * @property int|null $institution_id
  * @property string|null $parent_phone
  * @property string|null $parent_occupation
  * @property Carbon|null $created_at
@@ -28,6 +29,7 @@ class ParentDetails extends Model
      */
     protected $fillable = [
         'parent_id',
+        'institution_id',
         'parent_phone',
         'parent_occupation',
     ];

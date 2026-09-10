@@ -41,8 +41,13 @@ new #[Title('Student Form')] class extends Component
     {
         return User::role('Parent')
             ->when(! isAdmin(), function ($q) {
-                // Non-admins can only see parents who have existing children in their institution
-                $q->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()));
+                // Owned by this school, or with a child already enrolled here.
+                $institutionId = currentInstitutionId();
+
+                $q->where(function ($sq) use ($institutionId) {
+                    $sq->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
+                        ->orWhereHas('children', fn ($cq) => $cq->where('institution_id', $institutionId));
+                });
             })
             ->with(['parent', 'children.student.studentUserDetails'])
             ->orderBy('name')

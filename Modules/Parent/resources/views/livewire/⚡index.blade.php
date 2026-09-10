@@ -29,8 +29,13 @@ new #[Title('Parent Management')] class extends Component
         return User::role('Parent')
             ->with(['parent', 'roles', 'children.student', 'children.institution'])
             ->when(! isAdmin(), function ($q) {
-                // Non-admins can only see parents who have children in their institution
-                $q->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()));
+                // Owned by this school, or with a child enrolled here.
+                $institutionId = currentInstitutionId();
+
+                $q->where(function ($sq) use ($institutionId) {
+                    $sq->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
+                        ->orWhereHas('children', fn ($cq) => $cq->where('institution_id', $institutionId));
+                });
             })
             ->when($this->search !== '', function ($q) {
                 $term = '%'.$this->search.'%';

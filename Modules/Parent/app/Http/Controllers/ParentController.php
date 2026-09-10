@@ -33,8 +33,13 @@ class ParentController extends Controller
         $query = User::role('Parent')
             ->with(['parent', 'children.student', 'children.institution'])
             ->when(! isAdmin(), function ($q) {
-                // Non-admins can only see parents who have children in their institution
-                $q->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()));
+                // Owned by this school, or with a child enrolled here.
+                $institutionId = currentInstitutionId();
+
+                $q->where(function ($sq) use ($institutionId) {
+                    $sq->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
+                        ->orWhereHas('children', fn ($cq) => $cq->where('institution_id', $institutionId));
+                });
             })
             ->when($request->filled('search'), function ($q) use ($request) {
                 $term = '%'.$request->string('search')->value().'%';
@@ -91,7 +96,7 @@ class ParentController extends Controller
         $validated = $request->validate(SaveParent::createRules());
 
         try {
-            SaveParent::create($validated, $this->unlinkedStudents());
+            SaveParent::create($validated, $this->unlinkedStudents(), currentInstitution()?->id);
 
             return redirect()->route('parent.index')->with('success', 'Parent created successfully!');
         } catch (\Exception $e) {
@@ -194,8 +199,13 @@ class ParentController extends Controller
     }
 
     /**
-     * Ensure a non-admin viewer only manages parents with a child in their
+     * Ensure a non-admin viewer only manages parents belonging to their
      * currently active institution.
+     *
+     * Ownership is the institution stamped on the parent's own row, or any
+     * school one of their children is enrolled at. It is deliberately not
+     * "nobody owns them, so anybody may": that let every Director read, edit
+     * and delete any parent who had no student linked yet.
      */
     private function authorizeAccessTo(User $parent): void
     {
@@ -205,13 +215,18 @@ class ParentController extends Controller
 
         $activeInstitutionId = currentInstitution()?->id;
 
-        $children = StudentDetails::where('parent_id', $parent->id)->get();
+        if ($activeInstitutionId === null) {
+            abort(403);
+        }
 
-        // A parent with no children at all isn't claimed by any institution
-        // yet, so any Director can manage/link them. Otherwise at least one
-        // child must be in the viewer's active institution.
-        $accessible = $children->isEmpty() || $children->where('institution_id', $activeInstitutionId)->isNotEmpty();
+        $ownsRow = ParentDetails::where('parent_id', $parent->id)
+            ->where('institution_id', $activeInstitutionId)
+            ->exists();
 
-        abort_unless($accessible, 403);
+        $hasChildHere = StudentDetails::where('parent_id', $parent->id)
+            ->where('institution_id', $activeInstitutionId)
+            ->exists();
+
+        abort_unless($ownsRow || $hasChildHere, 403);
     }
 }

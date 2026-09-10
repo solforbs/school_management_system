@@ -58,9 +58,9 @@ class SaveParent
      *                                     caller may link - only ones with no parent yet, so this can't steal a
      *                                     student from another parent
      */
-    public static function create(array $data, $linkableStudents): User
+    public static function create(array $data, $linkableStudents, ?int $institutionId = null): User
     {
-        return DB::transaction(function () use ($data, $linkableStudents) {
+        return DB::transaction(function () use ($data, $linkableStudents, $institutionId) {
             $parent = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -70,6 +70,10 @@ class SaveParent
 
             ParentDetails::create([
                 'parent_id' => $parent->id,
+                // Stamped so the school that created this parent can still
+                // reach them before any student is linked. Without it the
+                // row belongs to nobody, which used to mean everybody.
+                'institution_id' => $institutionId,
                 'parent_phone' => $data['parent_phone'] ?? null,
                 'parent_occupation' => $data['parent_occupation'] ?? null,
             ]);
