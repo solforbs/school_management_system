@@ -41,12 +41,14 @@ function minimalDemoSchool(): array
     return [$director->refresh(), $institution];
 }
 
-function onboardingDirector(): User
-{
-    $director = User::factory()->create();
-    $director->assignRole('Director');
+if (! function_exists('onboardingDirector')) {
+    function onboardingDirector(): User
+    {
+        $director = User::factory()->create();
+        $director->assignRole('Director');
 
-    return $director->refresh();
+        return $director->refresh();
+    }
 }
 
 test('the demo seeder builds a demo-flagged school with a full data graph', function () {

@@ -29,12 +29,14 @@ function onboardingPlan(array $overrides = []): Plan
     ], $overrides));
 }
 
-function onboardingDirector(): User
-{
-    $user = User::factory()->create();
-    $user->assignRole('Director');
+if (! function_exists('onboardingDirector')) {
+    function onboardingDirector(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole('Director');
 
-    return $user->refresh();
+        return $user->refresh();
+    }
 }
 
 /**
