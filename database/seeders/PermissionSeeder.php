@@ -227,6 +227,8 @@ class PermissionSeeder extends Seeder
         $accountant->syncPermissions($accountantPermissions);
 
         // 4. Parent Role (Limited access - view their children's information)
+        // No 'view lesson': lesson-attendance is a teaching-side record and
+        // isn't a guardian's to see.
         $parent = Role::firstOrCreate(['name' => 'Parent', 'guard_name' => 'web']);
         $parentPermissions = Permission::whereIn('name', [
             'view student',
@@ -235,7 +237,6 @@ class PermissionSeeder extends Seeder
             'view timetable',
             'view classes',
             'view feemanagement',
-            'view lesson',
             'view result',
             'view reportcard',
             'view dashboard',

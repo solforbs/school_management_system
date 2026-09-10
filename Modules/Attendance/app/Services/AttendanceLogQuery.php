@@ -8,6 +8,7 @@ use Athwari\LaravelZktecoAdms\Enums\AttendanceStatus;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Modules\Student\Models\StudentDetails;
 
 /**
  * Who may see which attendance logs, and how a log reads on screen.
@@ -61,47 +62,87 @@ class AttendanceLogQuery
     }
 
     /**
+     * School staff - the roles that legitimately see every student's scan
+     * for their institution. Everyone else (a guardian, a student, or an
+     * account whose 'Parent' role was never set) is narrowed to specific
+     * students by visiblePins(), never handed the whole institution.
+     */
+    private static function isSchoolStaff(User $user): bool
+    {
+        return $user->hasAnyRole(['Director', 'Accountant', 'Teacher']);
+    }
+
+    /**
+     * The student user IDs a non-staff user is attached to: their own
+     * children (as a guardian) and themselves (if they are a student).
+     *
+     * @return Collection<int, int>
+     */
+    private static function attachedStudentIds(User $user): Collection
+    {
+        $ids = $user->children()->pluck('student_id');
+
+        if ($user->studentUserDetails()->exists()) {
+            $ids->push($user->id);
+        }
+
+        return $ids->filter()->unique()->values();
+    }
+
+    /**
      * Institution IDs a non-admin user is allowed to view attendance for.
      *
      * @return Collection<int, int>
      */
     public static function allowedInstitutionIds(User $user): Collection
     {
-        if ($user->hasRole('Parent')) {
-            return $user->children()->pluck('institution_id')->filter()->unique()->values();
-        }
-
-        if ($user->hasRole('Student')) {
-            return collect([$user->studentUserDetails?->institution_id])->filter()->values();
-        }
-
         if ($user->hasRole('Teacher')) {
             return collect([$user->teacherUserDetails?->institution_id])->filter()->values();
         }
 
-        // Director/Accountant/other institution owners - just the one
-        // currently active, not every institution they own.
-        return collect([currentInstitution()?->id])->filter()->values();
+        if (self::isSchoolStaff($user)) {
+            // Director/Accountant/other institution owners - just the one
+            // currently active, not every institution they own.
+            return collect([currentInstitution()?->id])->filter()->values();
+        }
+
+        // A guardian or student (or an account with the underlying links
+        // but neither role): the institutions their own students sit in.
+        // Fall back to their resolved institution so a valid in-context
+        // request isn't 403'd; visiblePins() still narrows the rows to
+        // nothing when there is no student attachment.
+        $fromStudents = StudentDetails::query()
+            ->where(function ($q) use ($user) {
+                $q->where('parent_id', $user->id)->orWhere('student_id', $user->id);
+            })
+            ->pluck('institution_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        return $fromStudents->isNotEmpty()
+            ? $fromStudents
+            : collect([currentInstitution()?->id])->filter()->values();
     }
 
     /**
      * Device PINs (== app User IDs) this user may see attendance for, or
-     * null when the role isn't restricted to specific students (e.g. a
-     * Director sees every student in the institution).
+     * null when the user is school staff and so sees every student in the
+     * institution. A non-staff user is always scoped to the students they
+     * are attached to; if that set is empty they see nothing (an empty
+     * array), never everything.
      *
      * @return string[]|null
      */
     public static function visiblePins(User $user): ?array
     {
-        if ($user->hasRole('Parent')) {
-            return $user->children()->pluck('student_id')->map(fn ($id) => (string) $id)->all();
+        if (self::isSchoolStaff($user)) {
+            return null;
         }
 
-        if ($user->hasRole('Student')) {
-            return [(string) $user->id];
-        }
-
-        return null;
+        return self::attachedStudentIds($user)
+            ->map(fn ($id) => (string) $id)
+            ->all();
     }
 
     /**
