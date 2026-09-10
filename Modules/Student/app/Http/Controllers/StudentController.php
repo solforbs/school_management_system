@@ -113,8 +113,6 @@ class StudentController extends Controller
     {
         abort_unless(Auth::user()->can('create student'), 403);
 
-        $validated = $request->validate(SaveStudent::createRules());
-
         // Never trust a client-submitted institution_id for a non-admin -
         // the student is always created under whichever institution is
         // currently active for the acting Director.
@@ -123,6 +121,8 @@ class StudentController extends Controller
             : currentInstitution()?->id;
 
         abort_unless($institutionId, 422, 'No institution selected.');
+
+        $validated = $request->validate(SaveStudent::createRules($institutionId));
 
         try {
             $this->saveStudent->create($validated, $institutionId, $request->file('profile_image'));

@@ -39,7 +39,7 @@ class SaveStudent
     /**
      * @return array<string, mixed>
      */
-    public static function createRules(): array
+    public static function createRules(int $institutionId = 0): array
     {
         return array_merge([
             'name' => 'required|string|max:255',
@@ -49,9 +49,25 @@ class SaveStudent
 
             // Either link an existing parent account (a parent can have more
             // than one student) or fill in the fields below to create one.
-            'parent_id' => ['nullable', 'exists:users,id', function ($attribute, $value, $fail) {
-                if ($value && ! User::find($value)?->hasRole('Parent')) {
+            'parent_id' => ['nullable', 'exists:users,id', function ($attribute, $value, $fail) use ($institutionId) {
+                if (! $value) {
+                    return;
+                }
+
+                $parent = User::find($value);
+                if (! $parent || ! $parent->hasRole('Parent')) {
                     $fail('The selected parent account is not valid.');
+
+                    return;
+                }
+
+                // Verify parent has children in this institution or is from this institution
+                $hasChildrenInInstitution = $parent->children()
+                    ->whereHas('student', fn ($q) => $q->where('institution_id', $institutionId))
+                    ->exists();
+
+                if (! $hasChildrenInInstitution) {
+                    $fail('The selected parent account cannot be used with this institution.');
                 }
             }],
         ], self::sharedRules());
@@ -217,12 +233,19 @@ class SaveStudent
      * parent details were filled in. Neither given means the student simply
      * has no parent on file yet.
      *
+     * The parent_id is already validated in createRules() to ensure it belongs
+     * to the correct institution, but we do a final safety check here before use.
+     *
      * @param  array<string, mixed>  $data
      */
     private function resolveParentForCreate(array $data): ?User
     {
         if (! empty($data['parent_id'])) {
-            return User::find($data['parent_id']);
+            $parent = User::find($data['parent_id']);
+            // Safety check - validation in createRules() should prevent this, but be defensive
+            abort_unless($parent && $parent->hasRole('Parent'), 403, 'Invalid parent account.');
+
+            return $parent;
         }
 
         if (empty($data['parent_name']) && empty($data['parent_email']) && empty($data['parent_phone'])) {
