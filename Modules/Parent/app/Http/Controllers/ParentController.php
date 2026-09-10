@@ -33,10 +33,8 @@ class ParentController extends Controller
         $query = User::role('Parent')
             ->with(['parent', 'children.student', 'children.institution'])
             ->when(! isAdmin(), function ($q) {
-                $q->where(function ($sq) {
-                    $sq->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()))
-                        ->orDoesntHave('children');
-                });
+                // Non-admins can only see parents who have children in their institution
+                $q->whereHas('children', fn ($cq) => $cq->where('institution_id', currentInstitutionId()));
             })
             ->when($request->filled('search'), function ($q) use ($request) {
                 $term = '%'.$request->string('search')->value().'%';
