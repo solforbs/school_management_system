@@ -10,6 +10,7 @@ use Modules\Lesson\Models\Lesson;
 use Modules\Staff\Models\StaffDetails;
 use Modules\Staff\Models\StaffPayment;
 use Modules\Student\Models\StudentDetails;
+use Modules\Subject\Models\Subject;
 use Modules\Teacher\Models\TeacherDetails;
 use Modules\Timetable\Models\TimetableEntry;
 
@@ -205,11 +206,22 @@ test('the livewire timetable form refuses to double-book a teacher', function ()
     $classOne = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 1 A']);
     $classTwo = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Form 1 B']);
 
+    $maths = Subject::create([
+        'institution_id' => $institution->id,
+        'name' => 'Mathematics',
+        'is_active' => true,
+    ]);
+    $physics = Subject::create([
+        'institution_id' => $institution->id,
+        'name' => 'Physics',
+        'is_active' => true,
+    ]);
+
     $this->actingAs($director)
         ->post(route('timetable.store'), [
             'institution_id' => $institution->id,
             'class_id' => (string) $classOne->id,
-            'subject' => 'Mathematics',
+            'subject_id' => (string) $maths->id,
             'teacher_id' => (string) $teacher->id,
             'day_of_week' => 'Monday',
             'start_time' => '08:00',
@@ -223,7 +235,7 @@ test('the livewire timetable form refuses to double-book a teacher', function ()
         ->post(route('timetable.store'), [
             'institution_id' => $institution->id,
             'class_id' => (string) $classTwo->id,
-            'subject' => 'Physics',
+            'subject_id' => (string) $physics->id,
             'teacher_id' => (string) $teacher->id,
             'day_of_week' => 'Monday',
             'start_time' => '08:30',
