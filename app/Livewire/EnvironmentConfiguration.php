@@ -102,27 +102,27 @@ class EnvironmentConfiguration extends Component
         abort_unless(isAdmin(), 403);
 
         $rules = [];
-        $values = [];
+        $toSave = [];
 
-        // Build strictly from the server-side allow-list. The `configuration`
+        // Built strictly from the server-side allow-list. The `configuration`
         // property is client-hydrated, so iterating it directly would let a
         // crafted Livewire payload write any key at all into .env.
+        //
+        // Only what actually changed is validated and written. Validating the
+        // whole allow-list would make a `required` field the admin never
+        // touched - a blank MAIL_MAILER, say - block saving an unrelated tab.
         foreach (ConfigurationManager::getCategories() as $category => $vars) {
             foreach (array_keys($vars) as $key) {
-                $rule = ConfigurationManager::getRules($key);
-                if ($rule) {
+                $value = $this->configuration[$category][$key] ?? null;
+
+                if ($value === ($this->originalValues[$key] ?? null)) {
+                    continue;
+                }
+
+                if ($rule = ConfigurationManager::getRules($key)) {
                     $rules["configuration.{$category}.{$key}"] = $rule;
                 }
 
-                $values[$key] = $this->configuration[$category][$key] ?? null;
-            }
-        }
-
-        $this->validate($rules);
-
-        $toSave = [];
-        foreach ($values as $key => $value) {
-            if ($value !== ($this->originalValues[$key] ?? null)) {
                 $toSave[$key] = $value;
             }
         }
@@ -132,6 +132,8 @@ class EnvironmentConfiguration extends Component
 
             return;
         }
+
+        $this->validate($rules);
 
         // Everything is written in plain text: each of these is read back
         // through env() by the config that consumes it, so an encrypted
