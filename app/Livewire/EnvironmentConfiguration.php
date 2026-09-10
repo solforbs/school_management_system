@@ -97,23 +97,25 @@ class EnvironmentConfiguration extends Component
         $rules = [];
         $values = [];
 
-        // Gather all configuration values and build validation rules
-        foreach ($this->configuration as $category => $vars) {
-            foreach ($vars as $key => $value) {
+        // Build strictly from the server-side allow-list. The `configuration`
+        // property is client-hydrated, so iterating it directly would let a
+        // crafted Livewire payload write any key at all into .env.
+        foreach (ConfigurationManager::getCategories() as $category => $vars) {
+            foreach (array_keys($vars) as $key) {
                 $rule = ConfigurationManager::getRules($key);
                 if ($rule) {
                     $rules["configuration.{$category}.{$key}"] = $rule;
                 }
-                $values[$key] = $value;
+
+                $values[$key] = $this->configuration[$category][$key] ?? null;
             }
         }
 
         $this->validate($rules);
 
-        // Save configuration to .env
         $toSave = [];
         foreach ($values as $key => $value) {
-            if ($value !== $this->originalValues[$key]) {
+            if ($value !== ($this->originalValues[$key] ?? null)) {
                 $toSave[$key] = $value;
             }
         }

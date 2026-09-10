@@ -230,7 +230,12 @@ class ReportCardController extends Controller
     {
         abort_unless(Auth::user()->can('delete reportcard'), 403);
 
-        $reportCard = ReportCard::findOrFail($id);
+        // Scoped like show()/pdf(): an unscoped lookup here would let a
+        // crafted id delete another school's report card.
+        $query = ReportCard::query();
+        $this->scopeToViewer($query);
+
+        $reportCard = $query->findOrFail($id);
 
         // First unlink its PDF then delete the report card
         if ($reportCard->pdf_path && Storage::disk('public')->exists($reportCard->pdf_path)) {

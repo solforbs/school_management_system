@@ -8,6 +8,33 @@ use Illuminate\Support\Facades\Crypt;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
+/**
+ * Every test here writes through EnvManager. Point it at a throwaway file
+ * first: writing the real .env from a test would replace live credentials
+ * with fixture values (EnvManager also refuses outright, as a backstop).
+ */
+beforeEach(function () {
+    $this->tempEnv = sys_get_temp_dir().'/env-manager-test-'.bin2hex(random_bytes(8)).'.env';
+
+    file_put_contents($this->tempEnv, implode("\n", [
+        'APP_NAME=Fixture School',
+        'MAIL_MAILER=log',
+        'APP_KEY=base64:fixture-key',
+        'MAIL_HOST=mail.fixture.test',
+        'MAIL_PORT=2525',
+        'MAIL_PASSWORD=',
+        'PAYSTACK_SECRET_KEY=',
+    ])."\n");
+
+    config(['env-manager.path' => $this->tempEnv]);
+});
+
+afterEach(function () {
+    if (isset($this->tempEnv) && file_exists($this->tempEnv)) {
+        unlink($this->tempEnv);
+    }
+});
+
 function makeSettingsAdmin(): User
 {
     Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
@@ -78,19 +105,56 @@ test('secret values are validated and encrypted when saved', function () {
     $this->actingAs($admin);
 
     Livewire::test(EnvironmentConfiguration::class)
-        ->set('configuration.payments.PAYSTACK_SECRET_KEY', 'sk_test_12345')
+        ->set('configuration.mail.MAIL_PASSWORD', 'super-secret-smtp')
         ->call('save')
         ->assertHasNoErrors();
 
     $envManager = app(EnvManager::class);
-    $stored = $envManager->get('PAYSTACK_SECRET_KEY');
+    $stored = $envManager->get('MAIL_PASSWORD');
 
     // The stored value should be encrypted
-    expect($stored)->not->toBe('sk_test_12345');
+    expect($stored)->not->toBe('super-secret-smtp');
 
     // Should be able to decrypt it
     $decrypted = Crypt::decryptString($stored);
-    expect($decrypted)->toBe('sk_test_12345');
+    expect($decrypted)->toBe('super-secret-smtp');
+});
+
+test('paystack keys are stored in plain text for direct API use', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    Livewire::test(EnvironmentConfiguration::class)
+        ->set('configuration.payments.PAYSTACK_SECRET_KEY', 'sk_test_12345')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(app(EnvManager::class)->get('PAYSTACK_SECRET_KEY'))->toBe('sk_test_12345');
+});
+
+test('a crafted payload cannot write an env key outside the allow-list', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    $envManager = app(EnvManager::class);
+    $originalKey = $envManager->get('APP_KEY');
+    expect($originalKey)->not->toBeNull();
+
+    Livewire::test(EnvironmentConfiguration::class)
+        ->set('configuration.general.APP_KEY', 'base64:attacker-controlled')
+        ->set('configuration.general.EVIL_BACKDOOR', '1')
+        ->call('save');
+
+    expect($envManager->get('APP_KEY'))->toBe($originalKey)
+        ->and($envManager->get('EVIL_BACKDOOR'))->toBeNull();
+});
+
+test('a newline in a value cannot inject an extra env assignment', function () {
+    $this->actingAs(makeSettingsAdmin());
+
+    $envManager = app(EnvManager::class);
+    $envManager->put('MAIL_HOST', "smtp.test.com\nINJECTED=yes");
+
+    expect($envManager->get('MAIL_HOST'))->toBe('smtp.test.comINJECTED=yes')
+        ->and($envManager->get('INJECTED'))->toBeNull();
 });
 
 test('configuration validates data according to rules', function () {
@@ -109,15 +173,15 @@ test('empty password fields preserve existing values', function () {
 
     $envManager = app(EnvManager::class);
     $originalSecret = Crypt::encryptString('original-secret-value');
-    $envManager->put('PAYSTACK_SECRET_KEY', $originalSecret);
+    $envManager->put('MAIL_PASSWORD', $originalSecret);
 
     // Try to save with empty secret field
     Livewire::test(EnvironmentConfiguration::class)
-        ->set('configuration.payments.PAYSTACK_PUBLIC_KEY', 'pk_test_new')
-        ->set('configuration.payments.PAYSTACK_SECRET_KEY', '') // Empty - should preserve
+        ->set('configuration.mail.MAIL_USERNAME', 'new-user')
+        ->set('configuration.mail.MAIL_PASSWORD', '') // Empty - should preserve
         ->call('save');
 
-    $stored = $envManager->get('PAYSTACK_SECRET_KEY');
+    $stored = $envManager->get('MAIL_PASSWORD');
     $decrypted = Crypt::decryptString($stored);
 
     // The original value should still be there

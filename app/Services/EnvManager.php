@@ -8,9 +8,20 @@ class EnvManager
 {
     protected string $envPath;
 
-    public function __construct()
+    /**
+     * Defaults to the real .env, but the path is injectable so a test (or a
+     * dry run) can point at a throwaway file instead of rewriting the
+     * environment the app is actually running on.
+     */
+    public function __construct(?string $envPath = null)
     {
-        $this->envPath = base_path('.env');
+        $this->envPath = $envPath
+            ?? (string) config('env-manager.path', base_path('.env'));
+    }
+
+    public function path(): string
+    {
+        return $this->envPath;
     }
 
     /**
@@ -24,10 +35,17 @@ class EnvManager
     }
 
     /**
-     * Set a configuration value in .env
+     * Set a configuration value in .env.
+     *
+     * The key must look like a real environment variable and the value may
+     * not contain a line break: either would otherwise let a caller append
+     * arbitrary extra assignments to the file.
      */
     public function put(string $key, ?string $value): void
     {
+        $key = self::assertValidKey($key);
+        $value = self::sanitizeValue($value);
+
         $env = $this->parseEnv();
         $env[$key] = $value;
 
@@ -35,6 +53,30 @@ class EnvManager
 
         // Bust any cached env values
         Cache::forget("env.{$key}");
+    }
+
+    /**
+     * @throws \InvalidArgumentException
+     */
+    private static function assertValidKey(string $key): string
+    {
+        if (preg_match('/^[A-Z_][A-Z0-9_]*$/', $key) !== 1) {
+            throw new \InvalidArgumentException("Invalid environment key: {$key}");
+        }
+
+        return $key;
+    }
+
+    /**
+     * Strip anything that could break out of the `KEY=value` line.
+     */
+    private static function sanitizeValue(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return str_replace(["\r", "\n", "\0"], '', $value);
     }
 
     /**
@@ -64,7 +106,7 @@ class EnvManager
         $env = $this->parseEnv();
 
         foreach ($values as $key => $value) {
-            $env[$key] = $value;
+            $env[self::assertValidKey($key)] = self::sanitizeValue($value);
         }
 
         $this->writeEnv($env);
@@ -125,6 +167,8 @@ class EnvManager
     /** @param array<string, ?string> $env */
     protected function writeEnv(array $env): void
     {
+        $this->guardAgainstWritingRealEnvInTests();
+
         $lines = [];
 
         // Try to preserve original file structure for existing keys
@@ -170,5 +214,24 @@ class EnvManager
         }
 
         file_put_contents($this->envPath, implode(PHP_EOL, $lines).PHP_EOL);
+    }
+
+    /**
+     * A test run must never rewrite the environment the app runs on: doing
+     * so silently replaces live credentials with fixture values. Tests that
+     * genuinely need to exercise writing must point `env-manager.path` at a
+     * throwaway file first.
+     */
+    private function guardAgainstWritingRealEnvInTests(): void
+    {
+        if (! app()->environment('testing')) {
+            return;
+        }
+
+        if (realpath($this->envPath) === realpath(base_path('.env'))) {
+            throw new \RuntimeException(
+                'Refusing to write the real .env from a test. Set config([\'env-manager.path\' => ...]) to a temporary file.'
+            );
+        }
     }
 }
