@@ -23,7 +23,7 @@ class SaveTimetableEntry
         return [
             'class_id' => 'required|exists:classes,id',
             'teacher_id' => 'nullable|exists:users,id',
-            'subject' => 'required|string|max:255',
+            'subject_id' => 'required|exists:subjects,id',
             'day_of_week' => 'required|in:'.implode(',', self::DAYS),
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
@@ -65,11 +65,16 @@ class SaveTimetableEntry
         // another school's class.
         abort_unless($schoolClass && $schoolClass->institution_id === $institutionId, 403);
 
+        // Verify the subject belongs to this institution
+        $subject = Subject::find($data['subject_id']);
+        abort_unless($subject && $subject->institution_id === $institutionId, 403);
+
         $payload = [
             'institution_id' => $institutionId,
             'class_id' => $data['class_id'],
             'teacher_id' => ! empty($data['teacher_id']) ? $data['teacher_id'] : null,
-            'subject' => $data['subject'],
+            'subject_id' => $data['subject_id'],
+            'subject' => $subject->name,
             'day_of_week' => $data['day_of_week'],
             'start_time' => $data['start_time'],
             'end_time' => $data['end_time'],
@@ -79,12 +84,6 @@ class SaveTimetableEntry
             // Keep the legacy class_name column in sync for anything still
             // reading it directly, though class_id is the source of truth.
             'class_name' => $schoolClass?->name,
-
-            // Best-effort link to the Subject catalog - subject stays free
-            // text since not every typed name has a matching catalog entry.
-            'subject_id' => Subject::where('institution_id', $institutionId)
-                ->where('name', $data['subject'])
-                ->value('id'),
         ];
 
         if ($entry) {

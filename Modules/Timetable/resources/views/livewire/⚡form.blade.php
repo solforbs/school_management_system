@@ -157,7 +157,14 @@ new #[Title('Timetable Entry')] class extends Component
                         </flux:select>
                         
                         <div class="md:col-span-2">
-                            <flux:input type="text" name="subject" label="Subject Name" value="{{ old('subject', $entry->subject) }}" required />
+                            <flux:select name="subject_id" label="Subject" required>
+                                <flux:select.option value="">Select Subject</flux:select.option>
+                                @foreach ($this->subjects as $subject)
+                                    <flux:select.option value="{{ $subject->id }}" :selected="old('subject_id', $entry->subject_id) == $subject->id">
+                                        {{ $subject->name }}
+                                    </flux:select.option>
+                                @endforeach
+                            </flux:select>
                         </div>
                     </div>
                 </x-stepper.section>
@@ -281,7 +288,14 @@ new #[Title('Timetable Entry')] class extends Component
                         </flux:select>
                         
                         <div class="md:col-span-2">
-                            <flux:input type="text" name="subject" label="Subject Name" value="{{ old('subject') }}" placeholder="e.g. Mathematics, English Literature..." required />
+                            <flux:select name="subject_id" label="Subject" required>
+                                <flux:select.option value="">Select Subject</flux:select.option>
+                                @foreach ($this->subjects as $subject)
+                                    <flux:select.option value="{{ $subject->id }}" :selected="old('subject_id') == $subject->id">
+                                        {{ $subject->name }}
+                                    </flux:select.option>
+                                @endforeach
+                            </flux:select>
                         </div>
                     </div>
                 </x-stepper.section>
