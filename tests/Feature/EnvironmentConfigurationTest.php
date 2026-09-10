@@ -34,7 +34,7 @@ afterEach(function () {
     }
 });
 
-function makeSettingsAdmin(): User
+function makeEnvConfigAdmin(): User
 {
     Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'web']);
 
@@ -58,7 +58,7 @@ test('non-admins cannot mount the environment configuration component', function
 });
 
 test('admins can mount the environment configuration component', function () {
-    $this->actingAs(makeSettingsAdmin());
+    $this->actingAs(makeEnvConfigAdmin());
 
     Livewire::test(EnvironmentConfiguration::class)
         ->assertViewIs('livewire.environment-configuration')
@@ -73,7 +73,7 @@ test('configuration loads initial values from env', function () {
     // Set up a test value
     $envManager->put($testKey, $testValue);
 
-    $admin = makeSettingsAdmin();
+    $admin = makeEnvConfigAdmin();
     $this->actingAs($admin);
 
     $component = Livewire::test(EnvironmentConfiguration::class);
@@ -83,7 +83,7 @@ test('configuration loads initial values from env', function () {
 });
 
 test('an admin can save configuration values', function () {
-    $admin = makeSettingsAdmin();
+    $admin = makeEnvConfigAdmin();
     $this->actingAs($admin);
 
     Livewire::test(EnvironmentConfiguration::class)
@@ -100,7 +100,7 @@ test('an admin can save configuration values', function () {
 });
 
 test('paystack keys are stored in plain text for direct API use', function () {
-    $this->actingAs(makeSettingsAdmin());
+    $this->actingAs(makeEnvConfigAdmin());
 
     Livewire::test(EnvironmentConfiguration::class)
         ->set('configuration.payments.PAYSTACK_SECRET_KEY', 'sk_test_12345')
@@ -111,7 +111,7 @@ test('paystack keys are stored in plain text for direct API use', function () {
 });
 
 test('a crafted payload cannot write an env key outside the allow-list', function () {
-    $this->actingAs(makeSettingsAdmin());
+    $this->actingAs(makeEnvConfigAdmin());
 
     $envManager = app(EnvManager::class);
     $originalKey = $envManager->get('APP_KEY');
@@ -127,7 +127,7 @@ test('a crafted payload cannot write an env key outside the allow-list', functio
 });
 
 test('a newline in a value cannot inject an extra env assignment', function () {
-    $this->actingAs(makeSettingsAdmin());
+    $this->actingAs(makeEnvConfigAdmin());
 
     $envManager = app(EnvManager::class);
     $envManager->put('MAIL_HOST', "smtp.test.com\nINJECTED=yes");
@@ -137,7 +137,7 @@ test('a newline in a value cannot inject an extra env assignment', function () {
 });
 
 test('configuration validates data according to rules', function () {
-    $admin = makeSettingsAdmin();
+    $admin = makeEnvConfigAdmin();
     $this->actingAs($admin);
 
     Livewire::test(EnvironmentConfiguration::class)
@@ -147,7 +147,7 @@ test('configuration validates data according to rules', function () {
 });
 
 test('empty password fields preserve existing values', function () {
-    $admin = makeSettingsAdmin();
+    $admin = makeEnvConfigAdmin();
     $this->actingAs($admin);
 
     $envManager = app(EnvManager::class);
@@ -165,7 +165,7 @@ test('empty password fields preserve existing values', function () {
 });
 
 test('configuration reset restores original values', function () {
-    $admin = makeSettingsAdmin();
+    $admin = makeEnvConfigAdmin();
     $this->actingAs($admin);
 
     $component = Livewire::test(EnvironmentConfiguration::class)
@@ -201,7 +201,7 @@ test('credential fields are marked write-only', function () {
 });
 
 test('a stored credential is never sent to the browser', function () {
-    $this->actingAs(makeSettingsAdmin());
+    $this->actingAs(makeEnvConfigAdmin());
 
     app(EnvManager::class)->put('MAIL_PASSWORD', 'super-secret-smtp');
 
@@ -214,7 +214,7 @@ test('a stored credential is never sent to the browser', function () {
 });
 
 test('credentials are stored verbatim so the services that read them still work', function () {
-    $this->actingAs(makeSettingsAdmin());
+    $this->actingAs(makeEnvConfigAdmin());
 
     Livewire::test(EnvironmentConfiguration::class)
         ->set('configuration.mail.MAIL_PASSWORD', 'super-secret-smtp')
