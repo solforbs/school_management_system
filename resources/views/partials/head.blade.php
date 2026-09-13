@@ -6,7 +6,16 @@
 </title>
 
 <link rel="icon" href="{{ asset('logos/solforbs-logo.png') }}" type="image/png" sizes="any">
-<link rel="apple-touch-icon" href="{{ asset('logos/solforbs-logo.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
+{{-- PWA --}}
+<link rel="manifest" href="{{ asset('manifest.json') }}">
+<meta name="theme-color" content="#0047FF">
+<meta name="application-name" content="{{ config('app.name') }}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
 
 @fonts
 

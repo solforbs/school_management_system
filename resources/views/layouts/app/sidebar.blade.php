@@ -251,6 +251,13 @@
 
         <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
 
+        {{-- Revealed by resources/js/pwa.js once the browser offers to install the app --}}
+        <div class="px-2 pb-2" data-pwa-install hidden>
+            <flux:button variant="primary" size="sm" icon="arrow-down-tray" class="w-full cursor-pointer">
+                {{ __('Click to install app') }}
+            </flux:button>
+        </div>
+
         <flux:text size="xs" class="text-center text-zinc-400 dark:text-zinc-600 pb-1">
             {{ config('app.version') }}
         </flux:text>
