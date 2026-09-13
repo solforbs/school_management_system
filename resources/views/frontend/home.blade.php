@@ -34,6 +34,12 @@
                     <flux:button href="#live-preview" variant="outline" class="font-medium">
                         Explore Live Features
                     </flux:button>
+                    {{-- Revealed by resources/js/pwa.js once the browser offers to install the app --}}
+                    <span data-pwa-install hidden>
+                        <flux:button variant="ghost" icon="arrow-down-tray" class="font-medium cursor-pointer">
+                            Install App
+                        </flux:button>
+                    </span>
                 </div>
 
                 {{-- Trust Badges --}}
