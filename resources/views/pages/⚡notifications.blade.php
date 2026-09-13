@@ -146,6 +146,12 @@ new #[Title('Parent Notifications')] class extends Component
 
         $scheduled = $this->mode === 'schedule' ? Carbon::parse($this->scheduledFor) : null;
 
+        // The shared demo school never messages anyone: the notice is
+        // recorded as delivered to every parent so the history looks real,
+        // but no job runs and the scheduler (which only picks up 'pending')
+        // never sees it.
+        $demo = currentInstitution()?->is_demo === true;
+
         $notification = ParentNotification::create([
             'institution_id' => $this->institutionId(),
             'template_id' => $this->sourceTemplateId,
@@ -157,11 +163,13 @@ new #[Title('Parent Notifications')] class extends Component
                 ->mapWithKeys(fn ($name) => [$name => trim($this->placeholderValues[$name] ?? '')])
                 ->all(),
             'scheduled_for' => $scheduled,
-            'status' => 'pending',
+            'status' => $demo ? 'sent' : 'pending',
+            'delivered_count' => $demo ? $this->parentCount : 0,
+            'sent_at' => $demo ? now() : null,
             'created_by' => auth()->id(),
         ]);
 
-        if (! $scheduled) {
+        if (! $scheduled && ! $demo) {
             SendParentNotificationJob::dispatch($notification->id);
         }
 
@@ -172,9 +180,11 @@ new #[Title('Parent Notifications')] class extends Component
         unset($this->history);
 
         Flux::toast(
-            text: $scheduled
-                ? 'Notification scheduled for '.$scheduled->format('j M Y, H:i').'.'
-                : 'Notification queued for delivery to '.$this->parentCount.' parent(s).',
+            text: match (true) {
+                $demo => 'Demo school: notification recorded for '.$notification->delivered_count.' parent(s), but nothing is actually sent from the demo.',
+                $scheduled !== null => 'Notification scheduled for '.$scheduled->format('j M Y, H:i').'.',
+                default => 'Notification queued for delivery to '.$this->parentCount.' parent(s).',
+            },
             variant: 'success',
         );
     }

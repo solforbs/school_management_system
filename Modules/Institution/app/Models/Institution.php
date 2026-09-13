@@ -167,8 +167,17 @@ class Institution extends Model
         return ! $this->subscription_expires_at || $this->subscription_expires_at->isFuture();
     }
 
+    /**
+     * The shared demo school exists to show off the whole product, so it
+     * has every module and feature regardless of which plan (if any) is
+     * attached to it.
+     */
     public function hasModule(string $module): bool
     {
+        if ($this->is_demo) {
+            return true;
+        }
+
         if (! $this->plan || ! $this->subscriptionActive()) {
             return false;
         }
@@ -178,6 +187,10 @@ class Institution extends Model
 
     public function hasFeature(string $feature): bool
     {
+        if ($this->is_demo) {
+            return true;
+        }
+
         if (! $this->plan || ! $this->subscriptionActive()) {
             return false;
         }

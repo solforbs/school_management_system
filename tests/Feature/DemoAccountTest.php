@@ -1,12 +1,19 @@
 <?php
 
+use App\Jobs\SendParentNotificationJob;
+use App\Models\ParentNotification;
+use App\Models\Plan;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Livewire\Livewire;
 use Modules\Examinations\Models\ExamSitting;
 use Modules\Institution\Database\Seeders\DemoAccountSeeder;
 use Modules\Institution\Models\Institution;
 use Modules\Subject\Models\Subject;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     $this->seed(PermissionSeeder::class);
@@ -137,20 +144,74 @@ test('a director who already runs a school cannot enter the demo', function () {
     $this->actingAs($director->refresh())->post(route('demo.enter'))->assertForbidden();
 });
 
-test('billing, devices and account settings are turned off inside the demo', function () {
+test('paying for a plan and editing the shared login are turned off inside the demo', function () {
     [$demoDirector] = minimalDemoSchool();
 
-    $this->actingAs($demoDirector)->get(route('billing.show'))->assertForbidden();
-    $this->actingAs($demoDirector)->get(route('devices.index'))->assertForbidden();
-    $this->actingAs($demoDirector)->get(route('notifications.index'))->assertForbidden();
+    $this->actingAs($demoDirector)->post(route('billing.initiate'))->assertForbidden();
     $this->actingAs($demoDirector)->get(route('profile.edit'))->assertForbidden();
+    $this->actingAs($demoDirector)->withSession(['auth.password_confirmed_at' => time()])->get(route('security.edit'))->assertForbidden();
 });
 
-test('the demo director can still do ordinary school work', function () {
+test('the demo director reaches every director page, including the ones that used to be blocked', function () {
+    [$demoDirector] = minimalDemoSchool();
+
+    foreach (['student.index', 'billing.show', 'devices.index', 'sync-devices.index', 'notifications.index'] as $route) {
+        $this->actingAs($demoDirector)->get(route($route))->assertOk();
+    }
+});
+
+test('the demo school has every module and feature even with no plan attached', function () {
+    [, $institution] = minimalDemoSchool();
+
+    expect($institution->subscription_plan)->toBeNull();
+
+    foreach (array_map('basename', glob(base_path('Modules/*'), GLOB_ONLYDIR)) as $module) {
+        expect($institution->hasModule($module))->toBeTrue("demo school is missing the {$module} module");
+    }
+
+    expect($institution->hasFeature('ai_receipt_scanning'))->toBeTrue()
+        ->and($institution->hasFeature('bulk_sms'))->toBeTrue();
+});
+
+test('the demo seeder puts the demo school on the enterprise plan', function () {
+    $this->seed(PlanSeeder::class);
+    $this->seed(DemoAccountSeeder::class);
+
+    $institution = Institution::demo()->sole();
+
+    expect($institution->subscription_plan)->toBe(Plan::where('slug', 'enterprise')->value('id'))
+        ->and($institution->hasActiveSubscription())->toBeTrue()
+        ->and($institution->hasModule('FeeManagement'))->toBeTrue();
+});
+
+test('the demo director has every permission the director role carries', function () {
+    [$demoDirector] = minimalDemoSchool();
+
+    $rolePermissions = Role::findByName('Director')->permissions->pluck('name');
+
+    expect($rolePermissions)->not->toBeEmpty()
+        ->and($demoDirector->getAllPermissions()->pluck('name')->sort()->values()->all())
+        ->toBe($rolePermissions->sort()->values()->all());
+});
+
+test('a notice sent from the demo school is recorded as delivered but never actually sent', function () {
+    Queue::fake();
     [$demoDirector, $institution] = minimalDemoSchool();
 
-    // A route that is not on the demo block list renders fine.
-    $this->actingAs($demoDirector)->get(route('student.index'))->assertOk();
+    Livewire::actingAs($demoDirector)
+        ->test('pages::notifications')
+        ->set('subject', 'Mid-term break')
+        ->set('body', 'School closes on Friday.')
+        ->set('channels', ['email'])
+        ->set('mode', 'now')
+        ->call('send')
+        ->assertHasNoErrors();
+
+    $notice = ParentNotification::where('institution_id', $institution->id)->sole();
+
+    expect($notice->status)->toBe('sent')
+        ->and($notice->sent_at)->not->toBeNull();
+    Queue::assertNotPushed(SendParentNotificationJob::class);
 });
 
 test('a normal director is not blocked by the demo guard', function () {

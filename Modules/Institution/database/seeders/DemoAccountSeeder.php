@@ -2,6 +2,7 @@
 
 namespace Modules\Institution\Database\Seeders;
 
+use App\Models\Plan;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\PlanSeeder;
@@ -185,6 +186,11 @@ class DemoAccountSeeder extends Seeder
                 'status' => 'active',
                 'is_approved' => true,
                 'approved_at' => now(),
+                // The top plan, so billing and limits read as a fully
+                // subscribed school. Modules and features don't depend on
+                // it - a demo institution has all of them regardless (see
+                // Institution::hasModule()).
+                'subscription_plan' => Plan::where('slug', 'enterprise')->value('id'),
                 'subscription_started_at' => now(),
                 'subscription_expires_at' => now()->addYear(),
             ],

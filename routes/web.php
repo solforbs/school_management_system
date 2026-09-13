@@ -81,27 +81,30 @@ Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboa
     Route::livewire('admin/settings', 'pages::admin.site-settings')->name('admin.settings.edit');
     Route::resource('messages', ContactMessageController::class)->names('messages');
 
-    // Turned off inside the shared demo school - real money, real hardware,
-    // real messages. See DenyOnDemoInstitution.
+    // store/show aren't implemented - device creation and viewing are
+    // handled entirely by the create/edit Livewire components.
+    Route::resource('/devices', DevicesController::class)->names('devices')->except(['store', 'show']);
+    // Queues a clock sync; the terminal applies it on its next check-in.
+    Route::post('devices/{device}/set-time', [DevicesController::class, 'setTime'])->name('devices.set-time');
+    // Settings/users/time/on-device log clearing/command queue - one page,
+    // never attendance data (that stays Director-only, see Attendance).
+    Route::livewire('devices/{deviceId}/manage', 'pages::devices.manage')->name('devices.manage');
+    // Offline sync clients - distinct from the biometric hardware above.
+    Route::resource('sync-devices', SyncDeviceController::class)
+        ->names('sync-devices')
+        ->only(['index', 'create', 'store', 'destroy']);
+    // A Director's notices to the school's parents - term dates, closures.
+    // Inside the demo school the page works but sends are simulated.
+    Route::livewire('notifications', 'pages::notifications')->name('notifications.index');
+    Route::get('billing', [BillingController::class, 'show'])->name('billing.show');
+    Route::post('students/{studentId}/sync-device', [SyncStudentToDeviceController::class, 'syncStudent'])->name('students.sync-device');
+
+    // Turned off inside the shared demo school: the one thing there that
+    // would move real money. Everything else a Director can do is open in
+    // the demo - see DenyOnDemoInstitution.
     Route::middleware('demo.readonly')->group(function () {
-        // store/show aren't implemented - device creation and viewing are
-        // handled entirely by the create/edit Livewire components.
-        Route::resource('/devices', DevicesController::class)->names('devices')->except(['store', 'show']);
-        // Queues a clock sync; the terminal applies it on its next check-in.
-        Route::post('devices/{device}/set-time', [DevicesController::class, 'setTime'])->name('devices.set-time');
-        // Settings/users/time/on-device log clearing/command queue - one page,
-        // never attendance data (that stays Director-only, see Attendance).
-        Route::livewire('devices/{deviceId}/manage', 'pages::devices.manage')->name('devices.manage');
-        // Offline sync clients - distinct from the biometric hardware above.
-        Route::resource('sync-devices', SyncDeviceController::class)
-            ->names('sync-devices')
-            ->only(['index', 'create', 'store', 'destroy']);
-        // A Director's notices to the school's parents - term dates, closures.
-        Route::livewire('notifications', 'pages::notifications')->name('notifications.index');
-        Route::get('billing', [BillingController::class, 'show'])->name('billing.show');
         Route::post('billing/pay', [BillingController::class, 'initiate'])->name('billing.initiate');
         Route::get('billing/callback', [BillingController::class, 'callback'])->name('billing.callback');
-        Route::post('students/{studentId}/sync-device', [SyncStudentToDeviceController::class, 'syncStudent'])->name('students.sync-device');
     });
 });
 // Behind auth: it answers from the caller's own institution, so there is

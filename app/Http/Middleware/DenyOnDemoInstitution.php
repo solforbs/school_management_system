@@ -7,11 +7,11 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Turns off the handful of actions that shouldn't run inside the shared
- * demo school - anything that spends real money, talks to real hardware,
- * sends real messages, or changes the shared login itself. Everything else
- * (add a student, edit a subject, enter marks) stays fully editable; that's
- * the point of the demo.
+ * Turns off the few actions that must not run inside the shared demo
+ * school: paying for a subscription (real money) and editing the shared
+ * demo login itself. Everything else a Director can do - students, marks,
+ * devices, notices (delivery is simulated there) - stays open; that's the
+ * point of the demo.
  */
 class DenyOnDemoInstitution
 {
