@@ -308,8 +308,11 @@
         </flux:dropdown>
     </flux:header>
 
-    <x-impersonation-banner />
-    <x-demo-banner />
+    {{-- Own grid row above the page content (see app.css); left to auto-placement these land in the sidebar column --}}
+    <div class="sticky top-0 z-40 [grid-area:banners]" data-app-banners>
+        <x-impersonation-banner />
+        <x-demo-banner />
+    </div>
 
     {{ $slot }}
 

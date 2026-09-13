@@ -138,6 +138,20 @@ select:focus[data-flux-control] {
     }
 }
 
+/* --- App notices (demo / impersonation banners) ---
+   Flux lays the body out as a grid of named areas. Anything without an
+   area is auto-placed into the first free cell - the min-content sidebar
+   column - which is where the banners were ending up. Give them a row of
+   their own above the header, spanning the content columns only. */
+*:has(> [data-flux-sidebar] + [data-flux-header]):has(> [data-app-banners]) {
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+        "sidebar banners banners"
+        "sidebar header  header"
+        "sidebar main    aside"
+        "sidebar footer  aside";
+}
+
 /* --- Custom Premium SaaS Sidebar Styles --- */
 [data-flux-sidebar-item] {
     border-radius: 9999px !important;
