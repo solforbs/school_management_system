@@ -1,4 +1,5 @@
 import './pwa';
+import './preloader';
 
 function initScrollReveal() {
     const items = document.querySelectorAll('[data-animate]:not([data-animate-in])');

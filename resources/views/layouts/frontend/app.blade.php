@@ -9,6 +9,7 @@
 </head>
 
 <body class="bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+    <x-preloader />
     <x-frontend.navbar />
 
     <main>

@@ -9,6 +9,7 @@
 @endphp
 
 <body class="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+    <x-preloader />
     <flux:sidebar sticky collapsible="mobile"
         class="border-e border-zinc-200/80 bg-white shadow-[1px_0_4px_0_rgba(0,0,0,0.02)] dark:border-zinc-800 dark:bg-zinc-950">
         <flux:sidebar.header>
