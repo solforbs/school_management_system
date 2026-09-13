@@ -114,7 +114,7 @@
         </flux:button>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mt-3">
         <x-kpi-card title="Total Revenue" icon="banknotes" color="emerald"
             count="KES {{ $currency($stats['revenue_total']) }}" href="{{ route('admin.payments.index') }}">
             @php

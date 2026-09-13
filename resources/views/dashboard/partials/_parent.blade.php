@@ -18,8 +18,8 @@
         <div class="grid grid-cols-1 gap-3">
             @forelse ($stats['children'] as $child)
                 <div
-                    class="flex items-center justify-between rounded-xl border border-zinc-200 dark:border-zinc-800 p-3.5 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <div class="flex items-center gap-3">
+                    class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3.5 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div class="flex items-center gap-3 min-w-0">
                         @php
                             $name = $child->student?->name ?? 'Child';
                             $initials = collect(explode(' ', $name))

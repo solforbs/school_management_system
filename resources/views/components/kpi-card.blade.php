@@ -113,25 +113,28 @@
 @endif
 
 @php
+    // The figure is sized against the card's own width (container query
+    // units), with a longer figure starting from a smaller ceiling, so a
+    // narrow card in a dense grid never clips "KES 1,995,600".
     $len = strlen($displayFallback);
     if ($len > 15) {
-        $textSize = 'text-lg sm:text-xl';
+        $textSize = 'text-[clamp(1rem,8cqw,1.25rem)]';
     } elseif ($len > 11) {
-        $textSize = 'text-xl sm:text-2xl';
+        $textSize = 'text-[clamp(1.125rem,10cqw,1.5rem)]';
     } else {
-        $textSize = 'text-2xl sm:text-3xl';
+        $textSize = 'text-[clamp(1.25rem,12cqw,1.875rem)]';
     }
 @endphp
 
-    <flux:card class="p-4 sm:p-5 hover:shadow-xl hover:-translate-y-1.5 hover:rotate-1 hover:scale-[1.02] transition-all duration-300 dark:hover:border-zinc-500 ring-1 ring-transparent hover:ring-zinc-900/5 cursor-pointer flex flex-col justify-between h-full relative overflow-hidden group">
+    <flux:card class="@container p-4 sm:p-5 hover:shadow-xl hover:-translate-y-1.5 hover:rotate-1 hover:scale-[1.02] transition-all duration-300 dark:hover:border-zinc-500 ring-1 ring-transparent hover:ring-zinc-900/5 cursor-pointer flex flex-col justify-between h-full relative overflow-hidden group">
         <div class="absolute -right-4 -top-4 w-20 h-20 rounded-full {{ $colors['bg'] }} transition-transform group-hover:scale-[2.5] duration-500 ease-out pointer-events-none"></div>
         
         <div class="relative flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
                 <div class="flex items-center justify-center size-8 sm:size-9 rounded-xl {{ $colors['iconBg'] }} font-semibold shrink-0">
                     <flux:icon icon="{{ $icon }}" class="size-4 sm:size-4.5" />
                 </div>
-                <span class="font-bold text-xs uppercase tracking-wider text-zinc-600 dark:text-zinc-300 leading-snug truncate max-w-[170px] sm:max-w-none">{{ $title }}</span>
+                <span class="font-bold text-xs uppercase tracking-wider text-zinc-600 dark:text-zinc-300 leading-snug min-w-0 break-words">{{ $title }}</span>
             </div>
             @if ($href)
                 <flux:icon icon="chevron-right" class="size-4 text-zinc-300 {{ $colors['hoverText'] }} group-hover:translate-x-1 transition-all shrink-0" />
@@ -142,7 +145,7 @@
             @if($isNumeric) 
                 x-data="animatedCounter({{ $numericValue }}, {{ $decimals }}, '{{ $prefix }}', '{{ $suffix ?: ($countSuffix ?: '') }}')" 
             @endif>
-            <div class="font-black text-xl sm:text-2xl lg:text-3xl tracking-tight text-zinc-900 dark:text-white flex items-baseline gap-1 tabular-nums">
+            <div class="font-black {{ $textSize }} tracking-tight text-zinc-900 dark:text-white flex items-baseline gap-1 tabular-nums whitespace-nowrap min-w-0">
                 @if ($isNumeric)
                     <span x-text="displayCount" class="tabular-nums select-all">{{ $displayFallback }}</span>
                 @else

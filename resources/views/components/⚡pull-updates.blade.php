@@ -70,8 +70,8 @@ new class extends Component
 <div>
     @if (auth()->user()?->hasRole('Admin') && config('deploy.enabled'))
         <flux:card class="mb-4">
-            <div class="flex items-start justify-between gap-4">
-                <div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div class="min-w-0">
                     <flux:heading size="lg">Application updates</flux:heading>
                     <flux:text class="text-zinc-500">
                         Pull the latest <span class="font-mono">{{ config('deploy.branch') }}</span> onto this server.
@@ -94,7 +94,7 @@ new class extends Component
 
                 {{-- wire:click keeps this on the page - no navigation, no reload. --}}
                 <flux:button wire:click="pullUpdates" wire:loading.attr="disabled" wire:target="pullUpdates"
-                    variant="primary" color="blue" icon="arrow-down-tray" class="shrink-0">
+                    variant="primary" color="blue" icon="arrow-down-tray" class="shrink-0 self-start">
                     <span wire:loading.remove wire:target="pullUpdates">Pull updates</span>
                     <span wire:loading wire:target="pullUpdates">Pulling…</span>
                 </flux:button>

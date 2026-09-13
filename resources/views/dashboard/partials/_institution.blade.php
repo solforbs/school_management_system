@@ -90,14 +90,14 @@
         {{-- Fee Collection Velocity Meter --}}
         <div
             class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3 hover:border-zinc-300 transition duration-150 lg:col-span-2">
-            <div class="flex items-center justify-between">
-                <div>
+            <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div class="min-w-0">
                     <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Fee Collection Velocity</h3>
                     <p class="text-xs text-zinc-400 mt-0.5">Real-time revenue settlement across all enrolled students.
                     </p>
                 </div>
                 <span
-                    class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-400">
+                    class="shrink-0 whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-400">
                     {{ $pct($stats['fees_collected'], $stats['fees_billed']) }}% Collected
                 </span>
             </div>
@@ -150,8 +150,8 @@
     {{-- Recent Fees Card --}}
     <div
         class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3">
-        <div class="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
-            <div>
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+            <div class="min-w-0">
                 <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Recent Fee Receipts</h3>
                 <p class="text-xs text-zinc-400 mt-0.5">Latest transactions and student payment allocations.</p>
             </div>
@@ -165,8 +165,8 @@
         <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
             @forelse ($stats['recent_fees'] as $fee)
                 <div
-                    class="flex items-center justify-between py-2.5 text-sm hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 px-2 rounded-lg transition-colors">
-                    <div class="flex items-center gap-3">
+                    class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5 text-sm hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 px-2 rounded-lg transition-colors">
+                    <div class="flex items-center gap-3 min-w-0">
                         @php
                             $name = $fee->student?->name ?? 'Unknown';
                             $initials = collect(explode(' ', $name))
@@ -178,14 +178,14 @@
                             class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
                             {{ $initials }}
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <span
                                 class="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm">{{ $name }}</span>
                             <span class="text-zinc-400 text-xs ml-1.5">— {{ $fee->title }}</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100">KES
+                    <div class="flex items-center gap-3 shrink-0 ml-auto">
+                        <span class="font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100 whitespace-nowrap">KES
                             {{ $currency($fee->amount) }}</span>
                         <flux:badge size="sm"
                             :color="match ($fee->status) {
