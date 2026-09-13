@@ -1,7 +1,7 @@
 {{--
     Full-screen loading overlay. Rendered visible so it covers the very
     first paint; resources/js/preloader.js fades it out once the page is
-    ready and brings it back for wire:navigate and full-page loads.
+    ready and brings it back for wire:navigate swaps and plain form posts.
     Tailwind's animate-pulse is a 2s cycle.
 --}}
 <div data-preloader role="status" aria-live="polite" aria-busy="true"
