@@ -152,6 +152,23 @@ test('paying for a plan and editing the shared login are turned off inside the d
     $this->actingAs($demoDirector)->withSession(['auth.password_confirmed_at' => time()])->get(route('security.edit'))->assertForbidden();
 });
 
+test('settings opens on appearance inside the demo instead of the turned-off profile page', function () {
+    [$demoDirector] = minimalDemoSchool();
+
+    $this->actingAs($demoDirector)->get('/settings')->assertRedirect(route('appearance.edit'));
+
+    $this->actingAs($demoDirector)->get(route('appearance.edit'))
+        ->assertOk()
+        ->assertDontSee(route('profile.edit'))
+        ->assertDontSee(route('security.edit'));
+});
+
+test('settings still opens on profile outside the demo', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/settings')->assertRedirect(route('profile.edit'));
+});
+
 test('the demo director reaches every director page, including the ones that used to be blocked', function () {
     [$demoDirector] = minimalDemoSchool();
 

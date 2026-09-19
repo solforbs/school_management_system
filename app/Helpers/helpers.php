@@ -160,6 +160,19 @@ if (! function_exists('currentInstitution')) {
             ?? $user->studentInstitution;
     }
 }
+if (! function_exists('settingsHomeUrl')) {
+    /**
+     * Where "Settings" lands. Inside the demo school the Profile and
+     * Security pages are turned off (the login is shared - see
+     * DenyOnDemoInstitution), so it opens on Appearance instead of a 403.
+     */
+    function settingsHomeUrl(): string
+    {
+        return currentInstitution()?->is_demo === true
+            ? route('appearance.edit')
+            : route('profile.edit');
+    }
+}
 if (! function_exists('currentInstitutionId')) {
     function currentInstitutionId(): ?int
     {
