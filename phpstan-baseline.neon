@@ -781,68 +781,14 @@ parameters:
 			path: app/Services/AnalyticsExportService.php
 
 		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addDevicesSheet\(\) has parameter \$devices with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addFeesSheet\(\) has parameter \$fees with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addInstitutionsSheet\(\) has parameter \$institutions with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addMessagesSheet\(\) has parameter \$messages with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addParentsSheet\(\) has parameter \$parents with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addStudentsSheet\(\) has parameter \$students with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Method App\\Services\\AnalyticsExportService\:\:addUsersSheet\(\) has parameter \$users with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
 			message: '#^Method App\\Services\\AnalyticsExportService\:\:institutionWorkbook\(\) has parameter \$institutionIds with generic class Illuminate\\Support\\Collection but does not specify its types\: TKey, TValue$#'
 			identifier: missingType.generics
 			count: 1
 			path: app/Services/AnalyticsExportService.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
 			message: '#^Relation ''owner'' is not found in Modules\\Institution\\Models\\Institution model\.$#'
 			identifier: larastan.relationExistence
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Return type of call to method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: method.unresolvableReturnType
 			count: 1
 			path: app/Services/AnalyticsExportService.php
 

@@ -162,11 +162,9 @@ class AnalyticsExportService
     {
         $rows = [];
 
-        $query->chunk($chunkSize, function ($batch) use (&$rows, $map) {
-            foreach ($batch as $model) {
-                $rows[] = $map($model);
-            }
-        });
+        foreach ($query->lazy($chunkSize) as $model) {
+            $rows[] = $map($model);
+        }
 
         return $rows;
     }
