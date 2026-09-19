@@ -54,7 +54,12 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            // 'single' never rotates or prunes - left running it grows
+            // forever (storage/logs/laravel.log hit 20MB+ from routine
+            // traffic alone) until the disk fills and every write in the
+            // app, including MySQL's, starts failing. 'daily' rotates and
+            // LOG_DAILY_DAYS below caps how much history piles up.
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 

@@ -61,38 +61,38 @@ class AnalyticsExportService
         $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
-        $institutions = Institution::with('owner')->get();
-        $users = $this->betweenDates(User::withoutRole('Admin')->with('roles'), $from, $to)->get();
-        $students = $this->betweenDates(StudentDetails::with(['student', 'institution']), $from, $to)->get();
-        $parents = $this->betweenDates(User::role('Parent')->with('parent'), $from, $to)->get();
-        $fees = $this->betweenDates(Fee::with(['student', 'institution']), $from, $to)->latest()->get();
-        $payments = $this->betweenDates(Payment::with(['institution', 'plan']), $from, $to)->latest('created_at')->get();
-        $devices = Devices::with(['zktecoDevice', 'institution'])->get();
-        $messages = $this->betweenDates(ContactMessage::query(), $from, $to)->latest()->get();
+        $institutionsQuery = Institution::with('owner')->orderBy('id');
+        $usersQuery = $this->betweenDates(User::withoutRole('Admin')->with('roles'), $from, $to);
+        $studentsQuery = $this->betweenDates(StudentDetails::with(['student', 'institution']), $from, $to);
+        $parentsQuery = $this->betweenDates(User::role('Parent')->with('parent'), $from, $to);
+        $feesQuery = $this->betweenDates(Fee::with(['student', 'institution']), $from, $to)->latest();
+        $paymentsQuery = $this->betweenDates(Payment::with(['institution', 'plan']), $from, $to)->latest('created_at');
+        $devicesQuery = Devices::with(['zktecoDevice', 'institution'])->orderBy('id');
+        $messagesQuery = $this->betweenDates(ContactMessage::query(), $from, $to)->latest();
 
         $this->addSummarySheet($spreadsheet, $periodLabel, [
-            'Institutions' => $institutions->count(),
-            'Users' => $users->count(),
-            'Students' => $students->count(),
-            'Parents' => $parents->count(),
-            'Fees raised' => 'KES '.number_format((float) $fees->sum('amount'), 2),
-            'Fees collected' => 'KES '.number_format((float) $fees->sum('amount_paid'), 2),
-            'Payments received' => 'KES '.number_format((float) $payments->where('status', 'successful')->sum('amount'), 2),
-            'Devices' => $devices->count(),
-            'Contact messages' => $messages->count(),
+            'Institutions' => (clone $institutionsQuery)->count(),
+            'Users' => (clone $usersQuery)->count(),
+            'Students' => (clone $studentsQuery)->count(),
+            'Parents' => (clone $parentsQuery)->count(),
+            'Fees raised' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount'), 2),
+            'Fees collected' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount_paid'), 2),
+            'Payments received' => 'KES '.number_format((float) (clone $paymentsQuery)->where('status', 'successful')->sum('amount'), 2),
+            'Devices' => (clone $devicesQuery)->count(),
+            'Contact messages' => (clone $messagesQuery)->count(),
         ]);
-        $this->addInstitutionsSheet($spreadsheet, $institutions);
-        $this->addUsersSheet($spreadsheet, $users);
-        $this->addStudentsSheet($spreadsheet, $students, showInstitution: true);
-        $this->addParentsSheet($spreadsheet, $parents, showInstitution: false);
-        $this->addFeesSheet($spreadsheet, $fees, showInstitution: true);
-        $this->addPaymentsSheet($spreadsheet, $payments);
-        $this->addDevicesSheet($spreadsheet, $devices, showInstitution: true);
+        $this->addInstitutionsSheet($spreadsheet, $institutionsQuery);
+        $this->addUsersSheet($spreadsheet, $usersQuery);
+        $this->addStudentsSheet($spreadsheet, $studentsQuery, showInstitution: true);
+        $this->addParentsSheet($spreadsheet, $parentsQuery, showInstitution: false);
+        $this->addFeesSheet($spreadsheet, $feesQuery, showInstitution: true);
+        $this->addPaymentsSheet($spreadsheet, $paymentsQuery);
+        $this->addDevicesSheet($spreadsheet, $devicesQuery, showInstitution: true);
         // Attendance is a Director-only concern - the system-wide workbook
         // deliberately excludes it so Admin never sees attendance data, even
         // in bulk-export form. Institution-scoped exports still get their
         // own attendance sheet below via institutionWorkbook().
-        $this->addMessagesSheet($spreadsheet, $messages);
+        $this->addMessagesSheet($spreadsheet, $messagesQuery);
 
         return $spreadsheet;
     }
@@ -102,27 +102,29 @@ class AnalyticsExportService
         $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
-        $students = $this->betweenDates(StudentDetails::whereIn('institution_id', $institutionIds)->with('student'), $from, $to)->get();
-        $parents = $this->betweenDates(
+        $studentsQuery = $this->betweenDates(StudentDetails::whereIn('institution_id', $institutionIds)->with('student'), $from, $to);
+        $parentsQuery = $this->betweenDates(
             User::role('Parent')->whereHas('children', fn ($q) => $q->whereIn('institution_id', $institutionIds))->with('parent'),
             $from,
             $to,
-        )->get();
-        $fees = $this->betweenDates(Fee::whereIn('institution_id', $institutionIds)->with('student'), $from, $to)->latest()->get();
-        $devices = Devices::whereIn('institution_id', $institutionIds)->with('zktecoDevice')->get();
-        $deviceIds = $devices->pluck('zktecoDevice.id')->filter();
+        );
+        $feesQuery = $this->betweenDates(Fee::whereIn('institution_id', $institutionIds)->with('student'), $from, $to)->latest();
+        $devicesQuery = Devices::whereIn('institution_id', $institutionIds)->with('zktecoDevice')->orderBy('id');
+        $deviceIds = Devices::whereIn('institution_id', $institutionIds)
+            ->whereNotNull('zkteco_device_id')
+            ->pluck('zkteco_device_id');
 
         $this->addSummarySheet($spreadsheet, $periodLabel, [
-            'Students' => $students->count(),
-            'Parents' => $parents->count(),
-            'Fees raised' => 'KES '.number_format((float) $fees->sum('amount'), 2),
-            'Fees collected' => 'KES '.number_format((float) $fees->sum('amount_paid'), 2),
-            'Devices' => $devices->count(),
+            'Students' => (clone $studentsQuery)->count(),
+            'Parents' => (clone $parentsQuery)->count(),
+            'Fees raised' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount'), 2),
+            'Fees collected' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount_paid'), 2),
+            'Devices' => (clone $devicesQuery)->count(),
         ]);
-        $this->addStudentsSheet($spreadsheet, $students, showInstitution: false);
-        $this->addParentsSheet($spreadsheet, $parents, showInstitution: false);
-        $this->addFeesSheet($spreadsheet, $fees, showInstitution: false);
-        $this->addDevicesSheet($spreadsheet, $devices, showInstitution: false);
+        $this->addStudentsSheet($spreadsheet, $studentsQuery, showInstitution: false);
+        $this->addParentsSheet($spreadsheet, $parentsQuery, showInstitution: false);
+        $this->addFeesSheet($spreadsheet, $feesQuery, showInstitution: false);
+        $this->addDevicesSheet($spreadsheet, $devicesQuery, showInstitution: false);
         $this->addAttendanceSheet($spreadsheet, ZktecoAttendanceLog::whereIn('device_id', $deviceIds), $from, $to);
 
         return $spreadsheet;
@@ -142,6 +144,34 @@ class AnalyticsExportService
     }
 
     /**
+     * Turns a query into the flat row arrays PhpSpreadsheet expects, one
+     * chunk at a time rather than hydrating the whole result set (plus every
+     * eager-loaded relation) into memory in one go. The biggest sheets here
+     * (users, students, fees) can run into the tens of thousands of rows on
+     * a real install, and this "export everything" workbook has no size
+     * limit by design - chunking keeps peak memory bounded to one batch of
+     * models instead of the entire table.
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     * @param  callable(TModel): array<int, mixed>  $map
+     * @return array<int, array<int, mixed>>
+     */
+    private function mapInChunks(Builder $query, callable $map, int $chunkSize = 500): array
+    {
+        $rows = [];
+
+        $query->chunk($chunkSize, function ($batch) use (&$rows, $map) {
+            foreach ($batch as $model) {
+                $rows[] = $map($model);
+            }
+        });
+
+        return $rows;
+    }
+
+    /**
      * @param  array<string, int|string>  $totals
      */
     private function addSummarySheet(Spreadsheet $spreadsheet, string $periodLabel, array $totals): void
@@ -156,13 +186,16 @@ class AnalyticsExportService
         $sheet->getStyle('A'.(count($rows) + 3).':A'.(count($rows) + 4))->getFont()->setBold(true);
     }
 
-    private function addInstitutionsSheet(Spreadsheet $spreadsheet, Collection $institutions): void
+    /**
+     * @param  Builder<Institution>  $query
+     */
+    private function addInstitutionsSheet(Spreadsheet $spreadsheet, Builder $query): void
     {
         $this->addSheet(
             $spreadsheet,
             'Institutions',
             ['Name', 'Code', 'Type', 'County', 'City', 'Status', 'Active', 'Approved', 'Owner', 'Owner Email', 'Created'],
-            $institutions->map(fn (Institution $institution) => [
+            $this->mapInChunks($query, fn (Institution $institution) => [
                 $institution->name,
                 $institution->code,
                 $institution->type,
@@ -178,13 +211,16 @@ class AnalyticsExportService
         );
     }
 
-    private function addUsersSheet(Spreadsheet $spreadsheet, Collection $users): void
+    /**
+     * @param  Builder<User>  $query
+     */
+    private function addUsersSheet(Spreadsheet $spreadsheet, Builder $query): void
     {
         $this->addSheet(
             $spreadsheet,
             'Users',
             ['Name', 'Email', 'Role(s)', 'Status', 'Created'],
-            $users->map(fn (User $user) => [
+            $this->mapInChunks($query, fn (User $user) => [
                 $user->name,
                 $user->email,
                 $user->roles->pluck('name')->implode(', '),
@@ -194,7 +230,10 @@ class AnalyticsExportService
         );
     }
 
-    private function addStudentsSheet(Spreadsheet $spreadsheet, Collection $students, bool $showInstitution): void
+    /**
+     * @param  Builder<StudentDetails>  $query
+     */
+    private function addStudentsSheet(Spreadsheet $spreadsheet, Builder $query, bool $showInstitution): void
     {
         $headers = ['Name', 'Admission No.', 'Gender', 'Enrollment Status', 'Active', 'Date of Birth', 'City', 'Created'];
         if ($showInstitution) {
@@ -205,7 +244,7 @@ class AnalyticsExportService
             $spreadsheet,
             'Students',
             $headers,
-            $students->map(function (StudentDetails $studentDetails) use ($showInstitution) {
+            $this->mapInChunks($query, function (StudentDetails $studentDetails) use ($showInstitution) {
                 $row = [
                     $studentDetails->student?->name,
                     $studentDetails->admission_number,
@@ -228,13 +267,16 @@ class AnalyticsExportService
         );
     }
 
-    private function addParentsSheet(Spreadsheet $spreadsheet, Collection $parents, bool $showInstitution): void
+    /**
+     * @param  Builder<User>  $query
+     */
+    private function addParentsSheet(Spreadsheet $spreadsheet, Builder $query, bool $showInstitution): void
     {
         $this->addSheet(
             $spreadsheet,
             'Parents',
             ['Name', 'Email', 'Phone', 'Occupation', 'Children', 'Created'],
-            $parents->map(fn (User $parent) => [
+            $this->mapInChunks($query, fn (User $parent) => [
                 $parent->name,
                 $parent->email,
                 $parent->parent?->parent_phone,
@@ -245,7 +287,10 @@ class AnalyticsExportService
         );
     }
 
-    private function addFeesSheet(Spreadsheet $spreadsheet, Collection $fees, bool $showInstitution): void
+    /**
+     * @param  Builder<Fee>  $query
+     */
+    private function addFeesSheet(Spreadsheet $spreadsheet, Builder $query, bool $showInstitution): void
     {
         $headers = ['Student', 'Title', 'Type', 'Amount', 'Paid', 'Balance', 'Status', 'Due Date', 'Created'];
         if ($showInstitution) {
@@ -256,7 +301,7 @@ class AnalyticsExportService
             $spreadsheet,
             'Fees',
             $headers,
-            $fees->map(function (Fee $fee) use ($showInstitution) {
+            $this->mapInChunks($query, function (Fee $fee) use ($showInstitution) {
                 $row = [$fee->student?->name];
 
                 if ($showInstitution) {
@@ -278,7 +323,10 @@ class AnalyticsExportService
         );
     }
 
-    private function addDevicesSheet(Spreadsheet $spreadsheet, Collection $devices, bool $showInstitution): void
+    /**
+     * @param  Builder<Devices>  $query
+     */
+    private function addDevicesSheet(Spreadsheet $spreadsheet, Builder $query, bool $showInstitution): void
     {
         $headers = ['Serial Number', 'Device Name', 'IP Address', 'Online', 'Created'];
         if ($showInstitution) {
@@ -289,7 +337,7 @@ class AnalyticsExportService
             $spreadsheet,
             'Devices',
             $headers,
-            $devices->map(function (Devices $device) use ($showInstitution) {
+            $this->mapInChunks($query, function (Devices $device) use ($showInstitution) {
                 $row = [$device->serial_number];
 
                 if ($showInstitution) {
@@ -315,15 +363,15 @@ class AnalyticsExportService
      * AnalyticsService's trend helpers.
      */
     /**
-     * @param  Collection<int, Payment>  $payments
+     * @param  Builder<Payment>  $query
      */
-    private function addPaymentsSheet(Spreadsheet $spreadsheet, Collection $payments): void
+    private function addPaymentsSheet(Spreadsheet $spreadsheet, Builder $query): void
     {
         $this->addSheet(
             $spreadsheet,
             'Payments',
             ['Institution', 'Purpose', 'Plan', 'Amount', 'Currency', 'Channel', 'Status', 'Reference', 'Paid At', 'Created'],
-            $payments->map(fn (Payment $payment) => [
+            $this->mapInChunks($query, fn (Payment $payment) => [
                 $payment->institution === null ? 'Unclaimed' : $payment->institution->name,
                 $payment->isSetupFee() ? 'Setup fee' : 'Subscription',
                 $payment->plan?->name,
@@ -375,7 +423,10 @@ class AnalyticsExportService
         $this->addSheet($spreadsheet, $title, ['Date', 'Check-ins'], $rows);
     }
 
-    private function addMessagesSheet(Spreadsheet $spreadsheet, Collection $messages): void
+    /**
+     * @param  Builder<ContactMessage>  $query
+     */
+    private function addMessagesSheet(Spreadsheet $spreadsheet, Builder $query): void
     {
         $topics = config('contact.topics', []);
 
@@ -383,7 +434,7 @@ class AnalyticsExportService
             $spreadsheet,
             'Contact Messages',
             ['Name', 'Email', 'Phone', 'Topic', 'Message', 'Received'],
-            $messages->map(fn (ContactMessage $message) => [
+            $this->mapInChunks($query, fn (ContactMessage $message) => [
                 $message->name,
                 $message->email,
                 $message->phone,

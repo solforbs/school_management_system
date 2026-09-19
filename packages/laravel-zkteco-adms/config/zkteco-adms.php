@@ -27,7 +27,20 @@ return [
     */
     'routes' => [
         'prefix' => env('ZKTECO_ROUTE_PREFIX', 'iclock'),
-        'middleware' => [],
+        /*
+         * These endpoints authenticate a request only by checking that its
+         * SN parameter is a syntactically valid serial number - with
+         * device.auto_register on, that's enough to register as a "device"
+         * and start pushing data. Without a rate limit, that's an open
+         * door to unbounded writes from anyone who can reach this host.
+         * The default is deliberately generous: a real device polls
+         * /getrequest roughly every response.delay seconds, so this only
+         * bites scripted abuse, not legitimate hardware - even several
+         * dozen devices sharing one NAT'd IP stay well under it. Raise
+         * ZKTECO_ROUTE_RATE_LIMIT if a real deployment needs more.
+         */
+        'middleware' => array_filter(array_map('trim', explode(',', (string) env('ZKTECO_ROUTE_MIDDLEWARE', ''))))
+            ?: ['throttle:'.env('ZKTECO_ROUTE_RATE_LIMIT', 120).',1'],
         'domain' => env('ZKTECO_ROUTE_DOMAIN'),
     ],
 

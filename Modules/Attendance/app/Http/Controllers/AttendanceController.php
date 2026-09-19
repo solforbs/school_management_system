@@ -40,7 +40,16 @@ class AttendanceController extends Controller
         if (in_array($format, ['xlsx', 'pdf'], true)) {
             abort_unless(Auth::user()->can('export attendance'), 403);
 
-            $rows = $query->get()->map(fn (ZktecoAttendanceLog $log) => $this->toExportRow($log));
+            // Chunked rather than get()->map(): an unfiltered export has no
+            // date bound, and this table only grows (every device push adds
+            // to it) - chunk() hydrates 500 logs (plus their eager-loaded
+            // relations) at a time instead of the entire result set at once.
+            $rows = [];
+            $query->chunk(500, function ($logs) use (&$rows) {
+                foreach ($logs as $log) {
+                    $rows[] = $this->toExportRow($log);
+                }
+            });
 
             return $format === 'xlsx'
                 ? $exporter->excel($rows, self::HEADERS, $filename, 'Attendance Logs')

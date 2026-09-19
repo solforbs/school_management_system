@@ -98,8 +98,11 @@ class AdmsController extends Controller
             return $serialNumber;
         }
 
-        Log::debug('getrequest', ['device' => $serialNumber]);
-
+        // Not logged unconditionally: a device polls this every ~30s
+        // forever (config('zkteco-adms.response.delay')), so an unconditional
+        // debug line here is pure noise that drowns out everything else in
+        // the log for every device, all day. writeCommandsOrOK() logs the
+        // polls that actually deliver something instead.
         return $this->writeCommandsOrOK($serialNumber);
     }
 
@@ -486,6 +489,11 @@ class AdmsController extends Controller
         $commands = $this->commandManager->drainCommands($serialNumber);
 
         if (count($commands) > 0) {
+            Log::debug('commands delivered', [
+                'device' => $serialNumber,
+                'count' => count($commands),
+            ]);
+
             $output = '';
             foreach ($commands as $entry) {
                 $output .= $entry->toWireFormat();
