@@ -347,7 +347,7 @@ new #[Title('Teacher Management')] class extends Component
                                     </td>
 
                                     <td class="py-4 px-5 text-right" onclick="event.stopPropagation();">
-                                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
+                                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
                                             @if($status === 'active')
                                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80">
                                                     <span class="size-1.5 rounded-full bg-emerald-500"></span>
@@ -360,6 +360,13 @@ new #[Title('Teacher Management')] class extends Component
                                             @else
                                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                                                     {{ ucfirst($status) }}
+                                                </span>
+                                            @endif
+
+                                            @if($teacherDetails->can_enroll_students)
+                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400 border border-green-200/80">
+                                                    <flux:icon icon="check-circle" class="size-3.5" />
+                                                    Can Enroll
                                                 </span>
                                             @endif
 

@@ -214,6 +214,12 @@ new #[Title('Teacher')] class extends Component {
                             </div>
 
                             <div class="md:col-span-2">
+                                <flux:checkbox name="can_enroll_students" value="1" label="Allow Student Enrollment"
+                                    description="If checked, this teacher can add new students to their own classes."
+                                    :checked="old('can_enroll_students', $teacher->can_enroll_students)" />
+                            </div>
+
+                            <div class="md:col-span-2">
                                 <flux:textarea name="address" rows="2" label="Home Address"
                                     placeholder="Full residential address...">{{ old('address', $teacher->address) }}
                                 </flux:textarea>
@@ -402,6 +408,12 @@ new #[Title('Teacher')] class extends Component {
                                 <flux:checkbox name="is_active" value="1" label="Account Active"
                                     description="Uncheck to temporarily disable system access for this teacher."
                                     checked />
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <flux:checkbox name="can_enroll_students" value="1" label="Allow Student Enrollment"
+                                    description="If checked, this teacher can add new students to their own classes."
+                                    :checked="old('can_enroll_students', false)" />
                             </div>
 
                             <div class="md:col-span-2">

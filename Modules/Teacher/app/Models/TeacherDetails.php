@@ -24,11 +24,13 @@ class TeacherDetails extends Model
         'is_active',
         'status',
         'notes',
+        'can_enroll_students',
     ];
 
     protected $casts = [
         'hire_date' => 'date',
         'is_active' => 'boolean',
+        'can_enroll_students' => 'boolean',
     ];
 
     public function teacher()

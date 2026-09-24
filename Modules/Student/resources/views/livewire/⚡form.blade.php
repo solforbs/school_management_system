@@ -9,6 +9,8 @@ use Modules\Institution\Models\Institution;
 use Modules\Parent\Models\ParentDetails;
 use Modules\Student\Models\StudentDetails;
 use Modules\Classes\Models\SchoolClass;
+use Modules\Teacher\Models\TeacherDetails;
+use Modules\Timetable\Models\TimetableEntry;
 
 new #[Title('Student Form')] class extends Component
 {
@@ -17,14 +19,25 @@ new #[Title('Student Form')] class extends Component
     public function mount(?int $studentId = null): void
     {
         if ($studentId === null) {
-            abort_unless(auth()->user()->can('create student'), 403);
+            $user = auth()->user();
+            $canCreate = $user->can('create student');
+
+            // Check if teacher has enrollment permission
+            if (!$canCreate && $user->hasRole('Teacher')) {
+                $teacherDetails = TeacherDetails::where('teacher_id', $user->id)
+                    ->where('institution_id', currentInstitutionId())
+                    ->first();
+                $canCreate = $teacherDetails?->can_enroll_students ?? false;
+            }
+
+            abort_unless($canCreate, 403, 'You do not have permission to enroll students');
             return;
         }
 
         abort_unless(auth()->user()->can('edit student'), 403);
 
         $this->student = User::with('studentUserDetails')->findOrFail($studentId);
-        
+
         $user = auth()->user();
 
         if ($user->hasRole('Parent')) {
@@ -57,6 +70,27 @@ new #[Title('Student Form')] class extends Component
     #[Computed]
     public function classes()
     {
+        $user = auth()->user();
+
+        // If teacher with enrollment permission: only their timetabled classes
+        if ($user->hasRole('Teacher')) {
+            $teacherDetails = TeacherDetails::where('teacher_id', $user->id)
+                ->where('institution_id', currentInstitutionId())
+                ->first();
+
+            if ($teacherDetails?->can_enroll_students) {
+                $classIds = TimetableEntry::where('teacher_id', $user->id)
+                    ->distinct('class_id')
+                    ->pluck('class_id')
+                    ->filter();
+
+                return SchoolClass::whereIn('id', $classIds)
+                    ->orderBy('name')
+                    ->get();
+            }
+        }
+
+        // Director/Admin: all classes
         return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
             ->orderBy('name')
             ->get();
