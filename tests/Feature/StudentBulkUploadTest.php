@@ -23,8 +23,8 @@ beforeEach(function () {
 function directorForUpload(): array
 {
     $plan = Plan::create([
-        'name' => 'Upload ' . uniqid(),
-        'slug' => 'upload-' . uniqid(),
+        'name' => 'Upload '.uniqid(),
+        'slug' => 'upload-'.uniqid(),
         'price' => 1000,
         'billing_cycle' => 'termly',
         'modules' => ['Student'],
@@ -38,8 +38,8 @@ function directorForUpload(): array
 
     $institution = Institution::create([
         'user_id' => $director->id,
-        'name' => 'Upload School ' . uniqid(),
-        'code' => 'US-' . uniqid(),
+        'name' => 'Upload School '.uniqid(),
+        'code' => 'US-'.uniqid(),
         'type' => 'School',
         'is_active' => true,
         'status' => 'active',
@@ -72,7 +72,7 @@ function uploadSheet(array $rows): UploadedFile
         $rows,
     ));
 
-    $path = tempnam(sys_get_temp_dir(), 'students') . '.xlsx';
+    $path = tempnam(sys_get_temp_dir(), 'students').'.xlsx';
     (new Xlsx($spreadsheet))->save($path);
 
     return UploadedFile::fake()->createWithContent('students.xlsx', file_get_contents($path));
@@ -194,7 +194,7 @@ test('generated login emails stay unique across duplicate names', function () {
     $emails = StudentDetails::where('institution_id', $institution->id)
         ->with('student')
         ->get()
-        ->map(fn($d) => $d->student?->email);
+        ->map(fn ($d) => $d->student?->email);
 
     expect($emails)->toHaveCount(2)
         ->and($emails->unique())->toHaveCount(2);
