@@ -12,6 +12,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::livewire('students', 'student::index')->name('student.index');
     Route::get('students/export', [StudentController::class, 'export'])->name('student.export');
     Route::livewire('students/create', 'student::form')->name('student.create');
+    Route::livewire('students/upload', 'student::upload')->name('student.upload');
     // Parameter deliberately not named after the model - implicit binding
     // would hand mount() a model where it expects an id.
     Route::livewire('students/{studentId}/edit', 'student::form')->name('student.edit');

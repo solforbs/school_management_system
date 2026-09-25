@@ -191,7 +191,7 @@ new #[Title('Student Directory')] class extends Component {
             <x-export-buttons base-route="student.export" module="student"
                 :params="['search' => $this->search, 'status' => $this->status, 'class_id' => $this->classId, 'gender' => $this->gender]" />
             @can('create student')
-                <flux:button href="{{ route('student.create') }}" wire:navigate.hover icon="arrow-up-tray" variant="ghost"
+                <flux:button href="{{ route('student.upload') }}" wire:navigate.hover icon="arrow-up-tray" variant="ghost"
                     class="font-semibold shadow-sm px-4">
                     Upload Records
                 </flux:button>
