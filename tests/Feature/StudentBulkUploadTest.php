@@ -23,8 +23,8 @@ beforeEach(function () {
 function directorForUpload(): array
 {
     $plan = Plan::create([
-        'name' => 'Upload '.uniqid(),
-        'slug' => 'upload-'.uniqid(),
+        'name' => 'Upload ' . uniqid(),
+        'slug' => 'upload-' . uniqid(),
         'price' => 1000,
         'billing_cycle' => 'termly',
         'modules' => ['Student'],
@@ -38,8 +38,8 @@ function directorForUpload(): array
 
     $institution = Institution::create([
         'user_id' => $director->id,
-        'name' => 'Upload School '.uniqid(),
-        'code' => 'US-'.uniqid(),
+        'name' => 'Upload School ' . uniqid(),
+        'code' => 'US-' . uniqid(),
         'type' => 'School',
         'is_active' => true,
         'status' => 'active',
@@ -72,7 +72,7 @@ function uploadSheet(array $rows): UploadedFile
         $rows,
     ));
 
-    $path = tempnam(sys_get_temp_dir(), 'students').'.xlsx';
+    $path = tempnam(sys_get_temp_dir(), 'students') . '.xlsx';
     (new Xlsx($spreadsheet))->save($path);
 
     return UploadedFile::fake()->createWithContent('students.xlsx', file_get_contents($path));
@@ -102,7 +102,7 @@ test('rows typed into the sheet are saved as student records', function () {
     Livewire::actingAs($director)
         ->test('student::upload')
         ->set('rows.0', [
-            'name' => 'Anas Mohamed Salat',
+            'name' => 'Student name',
             'admission_number' => 'fhn-1-2025',
             'student_number' => 'fhn-1-2025',
             'class_name' => 'Grade 3',
@@ -121,7 +121,7 @@ test('rows typed into the sheet are saved as student records', function () {
         ->and((int) $details->class_id)->toBe($class->id)
         ->and($details->gender)->toBe('male')
         ->and($details->enrollment_status)->toBe('active')
-        ->and($details->student?->name)->toBe('Anas Mohamed Salat')
+        ->and($details->student?->name)->toBe('Student name')
         ->and($details->student?->hasRole('Student'))->toBeTrue();
 });
 
@@ -129,7 +129,7 @@ test('an uploaded xlsx fills the sheet with its rows', function () {
     [$director] = directorForUpload();
 
     $file = uploadSheet([
-        ['Anas Mohamed Salat', 'fhn-1-2025', 'fhn-1-2025', 'Grade 3', 'Male', 'Not Listed', 'N/A', 'Active'],
+        ['Student name', 'fhn-1-2025', 'fhn-1-2025', 'Grade 3', 'Male', 'Not Listed', 'N/A', 'Active'],
         ['Amina Yusuf', 'fhn-2-2025', '', 'Grade 3', 'Female', 'Halima Yusuf', '0700111222', 'Active'],
     ]);
 
@@ -137,7 +137,7 @@ test('an uploaded xlsx fills the sheet with its rows', function () {
         ->test('student::upload')
         ->set('file', $file)
         ->assertHasNoErrors()
-        ->assertSet('rows.0.name', 'Anas Mohamed Salat')
+        ->assertSet('rows.0.name', 'Student name')
         ->assertSet('rows.0.admission_number', 'fhn-1-2025')
         ->assertSet('rows.0.class_name', 'Grade 3')
         ->assertSet('rows.0.gender', 'male')
@@ -152,7 +152,7 @@ test('an uploaded file can be saved end to end, keeping failed rows visible', fu
     [$director, $institution] = directorForUpload();
 
     $file = uploadSheet([
-        ['Anas Mohamed Salat', 'fhn-1-2025', 'fhn-1-2025', 'Grade 3', 'Male', 'Not Listed', 'N/A', 'Active'],
+        ['Student name', 'fhn-1-2025', 'fhn-1-2025', 'Grade 3', 'Male', 'Not Listed', 'N/A', 'Active'],
         ['Broken Row', 'fhn-9-2025', '', 'No Such Class', 'Male', '', '', 'Active'],
     ]);
 
@@ -194,7 +194,7 @@ test('generated login emails stay unique across duplicate names', function () {
     $emails = StudentDetails::where('institution_id', $institution->id)
         ->with('student')
         ->get()
-        ->map(fn ($d) => $d->student?->email);
+        ->map(fn($d) => $d->student?->email);
 
     expect($emails)->toHaveCount(2)
         ->and($emails->unique())->toHaveCount(2);
