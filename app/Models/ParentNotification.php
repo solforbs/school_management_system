@@ -96,14 +96,12 @@ class ParentNotification extends Model
     }
 
     /**
-     * A scheduled send still waiting for its time - the only state a
-     * Director can call off.
+     * A send waiting for its time or currently queued/sending - states
+     * a Director can stop or call off.
      */
     public function isCancellable(): bool
     {
-        return $this->status === 'pending'
-            && $this->scheduled_for !== null
-            && $this->scheduled_for->isFuture();
+        return in_array($this->status, ['pending', 'sending'], true);
     }
 
     public function usesChannel(string $channel): bool

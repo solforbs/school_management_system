@@ -278,3 +278,84 @@ test('a sent notification can no longer be cancelled', function () {
         ->call('cancel')
         ->assertStatus(422);
 });
+
+test('a director can load and edit a scheduled notification', function () {
+    [$head, $institution] = director();
+    parentAt($institution, null, 'p@example.com');
+
+    $notification = ParentNotification::create([
+        'institution_id' => $institution->id,
+        'name' => 'Old Notice',
+        'subject' => 'Old Subject',
+        'body' => 'Old Body for {{parent}}',
+        'channels' => ['email'],
+        'status' => 'pending',
+        'scheduled_for' => now()->addDays(2),
+    ]);
+
+    Livewire::actingAs($head)
+        ->test('pages::notifications')
+        ->call('editScheduled', $notification->id)
+        ->assertSet('editingScheduledId', $notification->id)
+        ->assertSet('subject', 'Old Subject')
+        ->assertSet('body', 'Old Body for {{parent}}')
+        ->set('subject', 'Updated Subject')
+        ->call('send')
+        ->assertHasNoErrors();
+
+    $notification->refresh();
+    expect($notification->subject)->toBe('Updated Subject')
+        ->and(ParentNotification::count())->toBe(1);
+});
+
+test('a director can reuse a sent notification as a correction draft', function () {
+    [$head, $institution] = director();
+
+    $notification = ParentNotification::create([
+        'institution_id' => $institution->id,
+        'name' => 'Fee Reminder',
+        'subject' => 'Fee Reminder',
+        'body' => 'Please pay fees by Friday',
+        'channels' => ['email'],
+        'status' => 'sent',
+        'sent_at' => now()->subDay(),
+    ]);
+
+    Livewire::actingAs($head)
+        ->test('pages::notifications')
+        ->call('reuseNotification', $notification->id)
+        ->assertSet('editingScheduledId', null)
+        ->assertSet('subject', 'Correction: Fee Reminder')
+        ->assertSet('body', 'Please pay fees by Friday');
+});
+
+test('in-flight delivery stops when notification is marked canceled', function () {
+    Mail::fake();
+    $this->mock(SmsService::class, fn ($m) => $m->shouldReceive('send')->andReturn(['success' => true]));
+
+    [$head, $institution] = director();
+    // 3 parents
+    parentAt($institution, '0700111111', 'p1@example.com');
+    parentAt($institution, '0700222222', 'p2@example.com');
+    parentAt($institution, '0700333333', 'p3@example.com');
+
+    $notification = ParentNotification::create([
+        'institution_id' => $institution->id,
+        'name' => 'Broadcast',
+        'subject' => 'School Notice',
+        'body' => 'Notice to {{parent}}',
+        'channels' => ['email'],
+        'status' => 'pending',
+    ]);
+
+    // Mark as canceled before/during job run
+    $notification->update(['status' => 'canceled']);
+
+    (new SendParentNotificationJob($notification->id))->handle(app(SmsService::class));
+
+    $notification->refresh();
+    expect($notification->status)->toBe('canceled')
+        ->and($notification->delivered_count)->toBe(0);
+
+    Mail::assertNothingQueued();
+});

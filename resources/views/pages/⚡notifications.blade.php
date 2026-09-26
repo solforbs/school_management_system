@@ -24,6 +24,8 @@ new #[Title('Parent Notifications')] class extends Component
     public string $tab = 'send';
 
     // --- Compose / send ------------------------------------------------
+    public ?int $editingScheduledId = null;
+
     public ?int $sourceTemplateId = null;
 
     public string $subject = '';
@@ -152,6 +154,36 @@ new #[Title('Parent Notifications')] class extends Component
         // never sees it.
         $demo = currentInstitution()?->is_demo === true;
 
+        $placeholderVals = collect($this->customPlaceholders)
+            ->mapWithKeys(fn ($name) => [$name => trim($this->placeholderValues[$name] ?? '')])
+            ->all();
+
+        if ($this->editingScheduledId) {
+            $notification = ParentNotification::where('institution_id', $this->institutionId())->findOrFail($this->editingScheduledId);
+            abort_unless($notification->isCancellable(), 422, 'This notification can no longer be edited.');
+
+            $notification->update([
+                'template_id' => $this->sourceTemplateId,
+                'name' => Str::limit($this->subject, 80, ''),
+                'subject' => $this->subject,
+                'body' => $this->body,
+                'channels' => array_values($this->channels),
+                'placeholder_values' => $placeholderVals,
+                'scheduled_for' => $scheduled,
+            ]);
+
+            $this->reset(['sourceTemplateId', 'subject', 'body', 'placeholderValues', 'scheduledFor', 'editingScheduledId']);
+            $this->channels = ['email'];
+            $this->mode = 'now';
+            $this->tab = 'history';
+            unset($this->history);
+
+            Flux::modal('confirm-send-modal')->close();
+            Flux::toast(text: 'Scheduled notification updated successfully.', variant: 'success');
+
+            return;
+        }
+
         $notification = ParentNotification::create([
             'institution_id' => $this->institutionId(),
             'template_id' => $this->sourceTemplateId,
@@ -159,9 +191,7 @@ new #[Title('Parent Notifications')] class extends Component
             'subject' => $this->subject,
             'body' => $this->body,
             'channels' => array_values($this->channels),
-            'placeholder_values' => collect($this->customPlaceholders)
-                ->mapWithKeys(fn ($name) => [$name => trim($this->placeholderValues[$name] ?? '')])
-                ->all(),
+            'placeholder_values' => $placeholderVals,
             'scheduled_for' => $scheduled,
             'status' => $demo ? 'sent' : 'pending',
             'delivered_count' => $demo ? $this->parentCount : 0,
@@ -173,11 +203,12 @@ new #[Title('Parent Notifications')] class extends Component
             SendParentNotificationJob::dispatch($notification->id);
         }
 
-        $this->reset(['sourceTemplateId', 'subject', 'body', 'placeholderValues', 'scheduledFor']);
+        $this->reset(['sourceTemplateId', 'subject', 'body', 'placeholderValues', 'scheduledFor', 'editingScheduledId']);
         $this->channels = ['email'];
         $this->mode = 'now';
         $this->tab = 'history';
         unset($this->history);
+        Flux::modal('confirm-send-modal')->close();
 
         Flux::toast(
             text: match (true) {
@@ -187,6 +218,46 @@ new #[Title('Parent Notifications')] class extends Component
             },
             variant: 'success',
         );
+    }
+
+    public function editScheduled(int $id): void
+    {
+        $notification = ParentNotification::where('institution_id', $this->institutionId())->findOrFail($id);
+        abort_unless($notification->isCancellable(), 422, 'Only scheduled or pending notices can be edited.');
+
+        $this->editingScheduledId = $notification->id;
+        $this->sourceTemplateId = $notification->template_id;
+        $this->subject = $notification->subject;
+        $this->body = $notification->body;
+        $this->channels = $notification->channels ?? ['email'];
+        $this->placeholderValues = $notification->placeholder_values ?? [];
+        $this->mode = $notification->scheduled_for ? 'schedule' : 'now';
+        $this->scheduledFor = $notification->scheduled_for?->format('Y-m-d\TH:i') ?? '';
+        $this->tab = 'send';
+        Flux::toast(text: 'Editing scheduled notification.', variant: 'info');
+    }
+
+    public function reuseNotification(int $id): void
+    {
+        $notification = ParentNotification::where('institution_id', $this->institutionId())->findOrFail($id);
+
+        $this->editingScheduledId = null;
+        $this->sourceTemplateId = null;
+        $this->subject = str_starts_with($notification->subject, 'Correction:') ? $notification->subject : 'Correction: '.$notification->subject;
+        $this->body = $notification->body;
+        $this->channels = $notification->channels ?? ['email'];
+        $this->placeholderValues = $notification->placeholder_values ?? [];
+        $this->mode = 'now';
+        $this->tab = 'send';
+        Flux::toast(text: 'Notice loaded into composer for editing / correction.', variant: 'success');
+    }
+
+    public function cancelEditingScheduled(): void
+    {
+        $this->editingScheduledId = null;
+        $this->reset(['sourceTemplateId', 'subject', 'body', 'placeholderValues', 'scheduledFor']);
+        $this->channels = ['email'];
+        $this->mode = 'now';
     }
 
     // =====================================================================
@@ -310,8 +381,7 @@ new #[Title('Parent Notifications')] class extends Component
         }
     },
 
-    insertTag(tagName, target = 'body') {
-        const tag = '{{' + tagName + '}}';
+    insertText(textToInsert, target = 'body') {
         let elementId = '';
         if (target === 'body') elementId = 'composer-body';
         else if (target === 'subject') elementId = 'composer-subject';
@@ -332,7 +402,7 @@ new #[Title('Parent Notifications')] class extends Component
 
             const needLeadingSpace = before.length > 0 && !/[\s\n]$/.test(before);
             const needTrailingSpace = after.length > 0 && !/^[\s\n]/.test(after);
-            const insertVal = (needLeadingSpace ? ' ' : '') + tag + (needTrailingSpace ? ' ' : '');
+            const insertVal = (needLeadingSpace ? ' ' : '') + textToInsert + (needTrailingSpace ? ' ' : '');
 
             el.value = before + insertVal + after;
             const newPos = start + insertVal.length;
@@ -342,11 +412,24 @@ new #[Title('Parent Notifications')] class extends Component
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
-            if (target === 'body') $wire.set('body', ($wire.body ? $wire.body + ' ' : '') + tag);
-            else if (target === 'subject') $wire.set('subject', ($wire.subject ? $wire.subject + ' ' : '') + tag);
-            else if (target === 'tplBody') $wire.set('tplBody', ($wire.tplBody ? $wire.tplBody + ' ' : '') + tag);
-            else if (target === 'tplSubject') $wire.set('tplSubject', ($wire.tplSubject ? $wire.tplSubject + ' ' : '') + tag);
+            if (target === 'body') $wire.set('body', ($wire.body ? $wire.body + ' ' : '') + textToInsert);
+            else if (target === 'subject') $wire.set('subject', ($wire.subject ? $wire.subject + ' ' : '') + textToInsert);
+            else if (target === 'tplBody') $wire.set('tplBody', ($wire.tplBody ? $wire.tplBody + ' ' : '') + textToInsert);
+            else if (target === 'tplSubject') $wire.set('tplSubject', ($wire.tplSubject ? $wire.tplSubject + ' ' : '') + textToInsert);
         }
+    },
+
+    formatDate(isoStr) {
+        if (!isoStr) return '';
+        const parts = isoStr.split('-');
+        if (parts.length !== 3) return isoStr;
+        const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        return dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    },
+
+    insertTag(tagName, target = 'body') {
+        const tag = '{{' + tagName + '}}';
+        this.insertText(tag, target);
     },
 
     insertCustom(target = 'body') {
@@ -416,6 +499,18 @@ new #[Title('Parent Notifications')] class extends Component
     @if ($tab === 'send')
         <div class="grid gap-6 lg:grid-cols-5">
             <div class="lg:col-span-3 space-y-4">
+
+                {{-- Alert when editing a scheduled notice --}}
+                @if ($editingScheduledId)
+                    <div class="p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/30 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shadow-xs">
+                        <div class="flex items-center gap-2">
+                            <flux:icon icon="pencil-square" class="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span><strong>Editing Scheduled Notice:</strong> Saving changes will update the notice before it is sent.</span>
+                        </div>
+                        <button type="button" wire:click="cancelEditingScheduled" class="underline font-semibold hover:text-amber-700 ml-2 shrink-0 cursor-pointer">Cancel Edit</button>
+                    </div>
+                @endif
+
                 <flux:select wire:model.live="sourceTemplateId" label="Start from a template" placeholder="Blank message (type custom notice)">
                     @foreach ($this->templates as $template)
                         <flux:select.option :value="$template->id">{{ $template->name }}</flux:select.option>
@@ -442,7 +537,7 @@ new #[Title('Parent Notifications')] class extends Component
                 <div class="space-y-2">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <flux:label>Message</flux:label>
-                        <span class="text-[11px] text-zinc-400 dark:text-zinc-500">Click or drag tags to insert into message</span>
+                        <span class="text-[11px] text-zinc-400 dark:text-zinc-500">Click tags to pick dates or insert variables</span>
                     </div>
 
                     {{-- Clickable & Draggable Variable Chips Bar --}}
@@ -456,7 +551,7 @@ new #[Title('Parent Notifications')] class extends Component
                             {{-- Auto Placeholders --}}
                             <button type="button" @click="insertTag('parent', 'body')" draggable="true" @dragstart="dragTag($event, 'parent')"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
-                                title="Click to insert at cursor, or drag & drop. Replaced with parent's name.">
+                                title="Click to insert parent's full name">
                                 <flux:icon icon="user" class="size-3 text-indigo-500" />
                                 <span>Parent Name</span>
                                 <span class="text-[10px] font-normal text-indigo-400 font-mono">&#123;&#123;parent&#125;&#125;</span>
@@ -464,7 +559,7 @@ new #[Title('Parent Notifications')] class extends Component
 
                             <button type="button" @click="insertTag('institution', 'body')" draggable="true" @dragstart="dragTag($event, 'institution')"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
-                                title="Click to insert at cursor, or drag & drop. Replaced with your school name.">
+                                title="Click to insert your school name">
                                 <flux:icon icon="building-library" class="size-3 text-indigo-500" />
                                 <span>School Name</span>
                                 <span class="text-[10px] font-normal text-indigo-400 font-mono">&#123;&#123;institution&#125;&#125;</span>
@@ -472,24 +567,99 @@ new #[Title('Parent Notifications')] class extends Component
 
                             <button type="button" @click="insertTag('date', 'body')" draggable="true" @dragstart="dragTag($event, 'date')"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
-                                title="Click to insert today's date automatically.">
+                                title="Click to insert today's date">
                                 <flux:icon icon="calendar" class="size-3 text-indigo-500" />
                                 <span>Today's Date</span>
                                 <span class="text-[10px] font-normal text-indigo-400 font-mono">&#123;&#123;date&#125;&#125;</span>
                             </button>
 
-                            {{-- Common School Variables --}}
-                            <button type="button" @click="insertTag('opening_date', 'body')" draggable="true" @dragstart="dragTag($event, 'opening_date')"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/80 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
-                                title="Term opening date">
-                                <span>🗓️ Opening Date</span>
-                            </button>
+                            {{-- Opening Date with Interactive Calendar Picker --}}
+                            <div x-data="{
+                                open: false,
+                                dateVal: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0]
+                            }" class="relative inline-block">
+                                <button type="button" @click="open = !open"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/90 dark:bg-zinc-800/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
+                                    title="Click to pick an opening date from the calendar">
+                                    <span>🗓️ Opening Date</span>
+                                    <flux:icon icon="chevron-down" class="size-2.5 opacity-60" />
+                                </button>
 
-                            <button type="button" @click="insertTag('closing_date', 'body')" draggable="true" @dragstart="dragTag($event, 'closing_date')"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/80 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
-                                title="Term closing or mid-term break date">
-                                <span>🏖️ Closing Date</span>
-                            </button>
+                                <div x-show="open" @click.outside="open = false" style="display: none;"
+                                    class="absolute left-0 mt-1.5 z-40 w-72 p-3.5 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                                            <flux:icon icon="calendar" class="size-3.5 text-indigo-600" />
+                                            Choose Opening Date
+                                        </p>
+                                        <button type="button" @click="open = false" class="text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] text-zinc-500 mb-1">Pick date on calendar:</label>
+                                        <input type="date" x-model="dateVal"
+                                            class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 dark:text-white" />
+                                    </div>
+                                    <div class="p-2 rounded-md bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 text-[11px]">
+                                        <span class="text-zinc-500">Preview: </span>
+                                        <strong class="text-indigo-700 dark:text-indigo-300" x-text="formatDate(dateVal)"></strong>
+                                    </div>
+                                    <div class="flex flex-col gap-1.5 pt-1">
+                                        <button type="button" @click="insertText(formatDate(dateVal), 'body'); open = false;"
+                                            class="w-full py-1.5 px-3 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <flux:icon icon="calendar" class="size-3.5" />
+                                            <span>Insert Exact Date</span>
+                                        </button>
+                                        <button type="button" @click="insertTag('opening_date', 'body'); open = false;"
+                                            class="w-full py-1 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+                                            Insert as dynamic tag &#123;&#123;opening_date&#125;&#125;
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Closing Date with Interactive Calendar Picker --}}
+                            <div x-data="{
+                                open: false,
+                                dateVal: new Date(Date.now() + 86400000 * 60).toISOString().split('T')[0]
+                            }" class="relative inline-block">
+                                <button type="button" @click="open = !open"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
+                                    title="Click to pick a closing date from the calendar">
+                                    <span>🏖️ Closing Date</span>
+                                    <flux:icon icon="chevron-down" class="size-2.5 opacity-60" />
+                                </button>
+
+                                <div x-show="open" @click.outside="open = false" style="display: none;"
+                                    class="absolute left-0 mt-1.5 z-40 w-72 p-3.5 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                                            <flux:icon icon="calendar" class="size-3.5 text-indigo-600" />
+                                            Choose Closing Date
+                                        </p>
+                                        <button type="button" @click="open = false" class="text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] text-zinc-500 mb-1">Pick date on calendar:</label>
+                                        <input type="date" x-model="dateVal"
+                                            class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 dark:text-white" />
+                                    </div>
+                                    <div class="p-2 rounded-md bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-700 text-[11px]">
+                                        <span class="text-zinc-500">Preview: </span>
+                                        <strong class="text-zinc-800 dark:text-zinc-200" x-text="formatDate(dateVal)"></strong>
+                                    </div>
+                                    <div class="flex flex-col gap-1.5 pt-1">
+                                        <button type="button" @click="insertText(formatDate(dateVal), 'body'); open = false;"
+                                            class="w-full py-1.5 px-3 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                                            <flux:icon icon="calendar" class="size-3.5" />
+                                            <span>Insert Exact Date</span>
+                                        </button>
+                                        <button type="button" @click="insertTag('closing_date', 'body'); open = false;"
+                                            class="w-full py-1 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+                                            Insert as dynamic tag &#123;&#123;closing_date&#125;&#125;
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
 
                             <button type="button" @click="insertTag('fee_balance', 'body')" draggable="true" @dragstart="dragTag($event, 'fee_balance')"
                                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/80 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
@@ -511,7 +681,7 @@ new #[Title('Parent Notifications')] class extends Component
                                     <span>Custom Tag</span>
                                 </button>
                                 <div x-show="open" @click.outside="open = false" style="display: none;"
-                                    class="absolute left-0 mt-1.5 z-30 w-64 p-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
+                                    class="absolute left-0 mt-1.5 z-40 w-64 p-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
                                     <div>
                                         <p class="text-xs font-bold text-zinc-800 dark:text-zinc-100">Add Custom Variable</p>
                                         <p class="text-[11px] text-zinc-400">e.g. bus_route, uniform_fee, agm_venue</p>
@@ -581,6 +751,7 @@ new #[Title('Parent Notifications')] class extends Component
                     </div>
                 </div>
 
+                {{-- Fill in Custom Placeholders with Calendar Pickers --}}
                 @if (count($this->customPlaceholders))
                     <div class="rounded-xl border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 p-4 space-y-3 shadow-xs">
                         <div class="flex items-center justify-between">
@@ -592,11 +763,32 @@ new #[Title('Parent Notifications')] class extends Component
                         </div>
                         <div class="grid gap-3 sm:grid-cols-2">
                             @foreach ($this->customPlaceholders as $name)
-                                <flux:input wire:model.live.debounce.250ms="placeholderValues.{{ $name }}" :label="ucwords(str_replace('_', ' ', $name))" size="sm"
-                                    placeholder="Enter {{ str_replace('_', ' ', $name) }}" />
-                                @error('placeholderValues.' . $name)
-                                    <p class="text-xs text-red-600">{{ $message }}</p>
-                                @enderror
+                                <div class="space-y-1" x-data="{
+                                    pickDate(e) {
+                                        const val = e.target.value;
+                                        if (!val) return;
+                                        const [y, m, d] = val.split('-');
+                                        const dt = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                                        const formatted = dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                                        $wire.set('placeholderValues.{{ $name }}', formatted);
+                                    }
+                                }">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-xs font-medium text-zinc-700 dark:text-zinc-300">{{ ucwords(str_replace('_', ' ', $name)) }}</label>
+                                        @if (str_contains($name, 'date'))
+                                            <label class="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
+                                                <flux:icon icon="calendar" class="size-3" />
+                                                <span>Pick date</span>
+                                                <input type="date" class="sr-only" @change="pickDate($event)" />
+                                            </label>
+                                        @endif
+                                    </div>
+                                    <flux:input wire:model.live.debounce.250ms="placeholderValues.{{ $name }}" size="sm"
+                                        placeholder="Enter {{ str_replace('_', ' ', $name) }}" />
+                                    @error('placeholderValues.' . $name)
+                                        <p class="text-xs text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             @endforeach
                         </div>
                     </div>
@@ -645,9 +837,18 @@ new #[Title('Parent Notifications')] class extends Component
                 </div>
 
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                    <flux:button variant="primary" icon="paper-airplane" wire:click="send" wire:loading.attr="disabled" class="w-full sm:w-auto justify-center">
-                        {{ $mode === 'schedule' ? 'Schedule Notification' : 'Send to '.$this->parentCount.' Parent(s)' }}
-                    </flux:button>
+                    @if ($mode === 'now')
+                        <flux:modal.trigger name="confirm-send-modal">
+                            <flux:button variant="primary" icon="paper-airplane" class="w-full sm:w-auto justify-center">
+                                {{ $editingScheduledId ? 'Update & Send Now' : 'Send to '.$this->parentCount.' Parent(s)' }}
+                            </flux:button>
+                        </flux:modal.trigger>
+                    @else
+                        <flux:button variant="primary" icon="paper-airplane" wire:click="send" wire:loading.attr="disabled" class="w-full sm:w-auto justify-center">
+                            {{ $editingScheduledId ? 'Save Updated Schedule' : 'Schedule Notification' }}
+                        </flux:button>
+                    @endif
+
                     <div wire:loading wire:target="send" class="text-xs text-zinc-500 flex items-center gap-1.5">
                         <flux:icon icon="arrow-path" class="size-3.5 animate-spin" />
                         Processing delivery queue...
@@ -805,14 +1006,26 @@ new #[Title('Parent Notifications')] class extends Component
                                 @endif
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
-                                <flux:button size="sm" variant="subtle" icon="eye"
-                                    wire:click="$set('viewingId', {{ $item->id }})" title="View delivery report" />
-                                @if ($item->isCancellable())
-                                    <flux:modal.trigger name="confirm-cancel-notification">
-                                        <flux:button size="sm" variant="subtle" icon="x-mark" class="text-rose-600"
-                                            wire:click="$set('confirmingCancelId', {{ $item->id }})" title="Cancel scheduled notice" />
-                                    </flux:modal.trigger>
-                                @endif
+                                <div class="flex items-center justify-end gap-1">
+                                    <flux:button size="sm" variant="subtle" icon="eye"
+                                        wire:click="$set('viewingId', {{ $item->id }})" title="View delivery report" />
+
+                                    {{-- Use as Draft / Send Correction --}}
+                                    <flux:button size="sm" variant="subtle" icon="arrow-path"
+                                        wire:click="reuseNotification({{ $item->id }})" title="Use as Draft / Send Correction" />
+
+                                    @if ($item->isCancellable())
+                                        {{-- Edit Scheduled Notice --}}
+                                        <flux:button size="sm" variant="subtle" icon="pencil-square"
+                                            wire:click="editScheduled({{ $item->id }})" title="Edit scheduled notice" />
+
+                                        {{-- Stop / Cancel Notice --}}
+                                        <flux:modal.trigger name="confirm-cancel-notification">
+                                            <flux:button size="sm" variant="subtle" icon="x-mark" class="text-rose-600"
+                                                wire:click="$set('confirmingCancelId', {{ $item->id }})" title="Stop / Cancel notice" />
+                                        </flux:modal.trigger>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -830,6 +1043,50 @@ new #[Title('Parent Notifications')] class extends Component
     @endif
 
     {{-- ============================ MODALS ============================ --}}
+
+    {{-- Pre-Send Broadcast Confirmation Modal --}}
+    <flux:modal name="confirm-send-modal" class="max-w-md w-full">
+        <div class="space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="size-10 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                    <flux:icon icon="paper-airplane" class="size-5" />
+                </div>
+                <div>
+                    <flux:heading size="lg">Confirm Parent Broadcast</flux:heading>
+                    <flux:subheading>Please review delivery details before sending.</flux:subheading>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/60 p-3.5 space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-zinc-500">Recipients:</span>
+                    <strong class="text-zinc-900 dark:text-white">{{ $this->parentCount }} Parent(s)</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-zinc-500">Channels:</span>
+                    <span class="font-semibold text-zinc-900 dark:text-white uppercase">{{ implode(' & ', $channels) }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-zinc-500">Subject:</span>
+                    <span class="font-medium text-zinc-900 dark:text-white truncate max-w-[200px]">{{ $subject ?: '—' }}</span>
+                </div>
+            </div>
+
+            <p class="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200/60 dark:border-amber-800/40 leading-relaxed">
+                <flux:icon icon="information-circle" class="size-3.5 inline mr-1 text-amber-600" />
+                Once dispatched, messages are immediately transmitted to mobile carrier and email networks. Delivery cannot be recalled from parents' mobile phones.
+            </p>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <flux:modal.close><flux:button variant="filled" class="w-full sm:w-auto">Review Notice</flux:button></flux:modal.close>
+                <flux:button variant="primary" icon="paper-airplane" wire:click="send" wire:loading.attr="disabled" class="w-full sm:w-auto">
+                    Confirm & Send Now
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Template Editor Modal --}}
     <flux:modal name="template-form" class="max-w-xl w-full">
         <div class="space-y-4">
             <div>
@@ -943,6 +1200,7 @@ new #[Title('Parent Notifications')] class extends Component
         </div>
     </flux:modal>
 
+    {{-- Confirm Delete Template Modal --}}
     <flux:modal name="confirm-delete-template" class="max-w-md w-full" wire:close="$set('confirmingDeleteTemplateId', null)">
         <div class="space-y-5">
             <div>
@@ -956,19 +1214,21 @@ new #[Title('Parent Notifications')] class extends Component
         </div>
     </flux:modal>
 
+    {{-- Confirm Stop / Cancel Notification Modal --}}
     <flux:modal name="confirm-cancel-notification" class="max-w-md w-full" wire:close="$set('confirmingCancelId', null)">
         <div class="space-y-5">
             <div>
-                <flux:heading size="lg">Cancel this scheduled notification?</flux:heading>
-                <flux:subheading>It will not be sent. You can compose it again later.</flux:subheading>
+                <flux:heading size="lg">Stop / Cancel this notification?</flux:heading>
+                <flux:subheading>If scheduled or currently in progress, remaining deliveries will be stopped immediately.</flux:subheading>
             </div>
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <flux:modal.close><flux:button variant="filled" class="w-full sm:w-auto">Keep it</flux:button></flux:modal.close>
-                <flux:button variant="danger" icon="x-mark" wire:click="cancel" class="w-full sm:w-auto">Cancel notification</flux:button>
+                <flux:modal.close><flux:button variant="filled" class="w-full sm:w-auto">Keep It</flux:button></flux:modal.close>
+                <flux:button variant="danger" icon="x-mark" wire:click="cancel" class="w-full sm:w-auto">Stop Delivery</flux:button>
             </div>
         </div>
     </flux:modal>
 
+    {{-- Delivery Details Modal --}}
     <flux:modal :open="$viewingId !== null" wire:close="$set('viewingId', null)" class="max-w-2xl w-full">
         @if ($this->viewing)
             <div class="space-y-4">

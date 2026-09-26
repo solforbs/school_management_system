@@ -63,6 +63,12 @@ class SendParentNotificationJob implements ShouldQueue
             : User::query()->whereRaw('1 = 0')->get();
 
         foreach ($parents as $parent) {
+            // Check if director requested cancellation mid-send
+            if (ParentNotification::where('id', $notification->id)->value('status') === 'canceled') {
+                Log::info("ParentNotification #{$notification->id} delivery stopped by user request.");
+                break;
+            }
+
             $context = ['institution' => $institutionName, 'parent' => $parent->name];
             $subject = ParentNotification::render($notification->subject, $context, $values);
             $body = ParentNotification::render($notification->body, $context, $values);
@@ -89,8 +95,10 @@ class SendParentNotificationJob implements ShouldQueue
             }
         }
 
+        $isCancelled = ParentNotification::where('id', $notification->id)->value('status') === 'canceled';
+
         $notification->update([
-            'status' => $delivered > 0 ? 'sent' : 'failed',
+            'status' => $isCancelled ? 'canceled' : ($delivered > 0 ? 'sent' : 'failed'),
             'recipients_count' => $attempts,
             'delivered_count' => $delivered,
             'failed_count' => $failed,
