@@ -7,11 +7,12 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Modules\Student\Models\StudentDetails;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Result\Services\ResultAccessService;
+use Modules\Student\Models\StudentDetails;
 
-new #[Title('Student Directory')] class extends Component {
+new #[Title('Student Directory')] class extends Component
+{
     use WithPagination;
 
     /** @var string[] */
@@ -49,12 +50,13 @@ new #[Title('Student Directory')] class extends Component {
 
     public function sortBy(string $column): void
     {
-        if (!in_array($column, self::SORTABLE, true)) {
+        if (! in_array($column, self::SORTABLE, true)) {
             return;
         }
 
         if ($this->sort === $column) {
             $this->direction = $this->direction === 'asc' ? 'desc' : 'asc';
+
             return;
         }
 
@@ -83,14 +85,14 @@ new #[Title('Student Directory')] class extends Component {
 
         return $this->scoped()
             ->with(['student.roles', 'institution', 'schoolClass'])
-            ->when($this->status !== '', fn($query) => $query->where('enrollment_status', $this->status))
-            ->when($this->classId !== '', fn($query) => $query->where('class_id', $this->classId))
-            ->when($this->gender !== '', fn($query) => $query->where('gender', $this->gender))
+            ->when($this->status !== '', fn ($query) => $query->where('enrollment_status', $this->status))
+            ->when($this->classId !== '', fn ($query) => $query->where('class_id', $this->classId))
+            ->when($this->gender !== '', fn ($query) => $query->where('gender', $this->gender))
             ->when($this->search !== '', function ($query) {
-                $term = '%' . $this->search . '%';
+                $term = '%'.$this->search.'%';
 
                 $query->where(function ($q) use ($term) {
-                    $q->where('admission_number', 'like', $term)->orWhere('student_number', 'like', $term)->orWhere('phone', 'like', $term)->orWhereHas('student', fn($q2) => $q2->where('name', 'like', $term)->orWhere('email', 'like', $term));
+                    $q->where('admission_number', 'like', $term)->orWhere('student_number', 'like', $term)->orWhere('phone', 'like', $term)->orWhereHas('student', fn ($q2) => $q2->where('name', 'like', $term)->orWhere('email', 'like', $term));
                 });
             })
             ->orderBy($sort, $direction)
@@ -101,6 +103,18 @@ new #[Title('Student Directory')] class extends Component {
     public function totalStudents()
     {
         return $this->scoped()->count();
+    }
+
+    #[Computed]
+    public function maleStudents()
+    {
+        return $this->scoped()->where('gender', 'male')->count();
+    }
+
+    #[Computed]
+    public function femaleStudents()
+    {
+        return $this->scoped()->where('gender', 'female')->count();
     }
 
     #[Computed]
@@ -127,7 +141,7 @@ new #[Title('Student Directory')] class extends Component {
                 ->get();
         }
 
-        return SchoolClass::when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
+        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
             ->orderBy('name')
             ->get();
     }
@@ -153,7 +167,7 @@ new #[Title('Student Directory')] class extends Component {
                 ->whereIn('class_id', $classIds);
         }
 
-        if (!isAdmin()) {
+        if (! isAdmin()) {
             return $query->where('institution_id', currentInstitutionId() ?? 0);
         }
 
@@ -219,8 +233,30 @@ new #[Title('Student Directory')] class extends Component {
 
     {{-- Consistent Animated KPI Cards (Matching Dashboard Zoom & Hover Effects) --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <x-kpi-card title="Total Students" icon="academic-cap" color="sky" :count="$this->totalStudents"
-            subtext="Official learner headcount" />
+        <x-kpi-card title="Total Students" icon="academic-cap" color="sky" :count="$this->totalStudents">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 mt-1.5">
+                <a href="{{ route('student.index', array_filter(['search' => $this->search, 'class_id' => $this->classId, 'status' => $this->status, 'gender' => $this->gender === 'male' ? null : 'male'])) }}"
+                    wire:navigate.hover
+                    class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50/90 hover:bg-blue-100/90 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[11px] font-semibold border border-blue-200/70 dark:border-blue-800/50 transition shadow-2xs {{ $this->gender === 'male' ? 'ring-2 ring-blue-500 font-bold' : '' }}"
+                    title="{{ $this->gender === 'male' ? 'Clear Male Filter' : 'Filter by Male Learners' }}">
+                    <svg class="size-3 text-blue-600 dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <circle cx="10" cy="14" r="5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5L20 4m0 0h-4.5m4.5 0v4.5" />
+                    </svg>
+                    <span>Male: <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($this->maleStudents) }}</strong></span>
+                </a>
+                <a href="{{ route('student.index', array_filter(['search' => $this->search, 'class_id' => $this->classId, 'status' => $this->status, 'gender' => $this->gender === 'female' ? null : 'female'])) }}"
+                    wire:navigate.hover
+                    class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-pink-50/90 hover:bg-pink-100/90 dark:bg-pink-950/40 dark:hover:bg-pink-900/50 text-pink-700 dark:text-pink-300 text-[11px] font-semibold border border-pink-200/70 dark:border-pink-800/50 transition shadow-2xs {{ $this->gender === 'female' ? 'ring-2 ring-pink-500 font-bold' : '' }}"
+                    title="{{ $this->gender === 'female' ? 'Clear Female Filter' : 'Filter by Female Learners' }}">
+                    <svg class="size-3 text-pink-600 dark:text-pink-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <circle cx="12" cy="9" r="5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14v7m-3-3.5h6" />
+                    </svg>
+                    <span>Female: <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($this->femaleStudents) }}</strong></span>
+                </a>
+            </div>
+        </x-kpi-card>
 
         <x-kpi-card title="Active Roster" icon="check-badge" color="emerald" :count="$this->totalActive"
             subtext="Currently attending learners" href="{{ route('student.index', ['status' => 'active']) }}" />
@@ -264,8 +300,8 @@ new #[Title('Student Directory')] class extends Component {
             <select name="gender" onchange="this.form.submit()"
                 class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 <option value="">All Genders</option>
-                <option value="male" {{ $this->gender === 'male' ? 'selected' : '' }}>Male</option>
-                <option value="female" {{ $this->gender === 'female' ? 'selected' : '' }}>Female</option>
+                <option value="male" {{ $this->gender === 'male' ? 'selected' : '' }}>Male ({{ number_format($this->maleStudents) }})</option>
+                <option value="female" {{ $this->gender === 'female' ? 'selected' : '' }}>Female ({{ number_format($this->femaleStudents) }})</option>
             </select>
         </div>
 
