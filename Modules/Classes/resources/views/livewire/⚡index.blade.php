@@ -9,7 +9,8 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\Classes\Models\SchoolClass;
 
-new #[Title('Class Management')] class extends Component {
+new #[Title('Class Management')] class extends Component
+{
     use WithPagination;
 
     #[Url]
@@ -23,7 +24,7 @@ new #[Title('Class Management')] class extends Component {
     public function delete(int $id): void
     {
         abort_unless(auth()->user()->can('delete classes'), 403);
-        $schoolClass = SchoolClass::when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))->findOrFail($id);
+        $schoolClass = SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))->findOrFail($id);
         $schoolClass->delete();
     }
 
@@ -31,9 +32,13 @@ new #[Title('Class Management')] class extends Component {
     public function classes(): Collection
     {
         return SchoolClass::with(['classTeacher', 'institution'])
-            ->withCount('students')
-            ->when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
-            ->when($this->search !== '', fn($q) => $q->where('name', 'like', '%' . $this->search . '%'))
+            ->withCount([
+                'students',
+                'students as male_students_count' => fn ($q) => $q->where('gender', 'male'),
+                'students as female_students_count' => fn ($q) => $q->where('gender', 'female'),
+            ])
+            ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
+            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
             ->orderBy('name')
             ->get();
     }
@@ -43,6 +48,8 @@ new #[Title('Class Management')] class extends Component {
     $classes = $this->classes;
     $totalClasses = $classes->count();
     $totalStudents = $classes->sum('students_count');
+    $totalMaleStudents = $classes->sum('male_students_count');
+    $totalFemaleStudents = $classes->sum('female_students_count');
     $totalCapacity = $classes->sum(fn($c) => (int) ($c->capacity ?? 0));
     $capacityRate = $totalCapacity > 0 ? round(($totalStudents / $totalCapacity) * 100) : 0;
     $assignedTeachersCount = $classes->filter(fn($c) => (bool) $c->class_teacher_id)->count();
@@ -95,7 +102,24 @@ new #[Title('Class Management')] class extends Component {
         <x-kpi-card title="Total Classes" icon="academic-cap" color="indigo" :count="$totalClasses"
             subtext="active classroom streams" :href="route('classes.index')" />
         <x-kpi-card title="Enrolled Students" icon="users" color="violet" :count="$totalStudents"
-            subtext="assigned to classrooms" :href="$canViewStudents ? route('student.index') : null" />
+            :href="$canViewStudents ? route('student.index') : null">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 mt-1.5">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50/90 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold border border-blue-200/70 dark:border-blue-800/50">
+                    <svg class="size-3 text-blue-600 dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <circle cx="10" cy="14" r="5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5L20 4m0 0h-4.5m4.5 0v4.5" />
+                    </svg>
+                    <span>Male: <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($totalMaleStudents) }}</strong></span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-pink-50/90 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 text-[11px] font-semibold border border-pink-200/70 dark:border-pink-800/50">
+                    <svg class="size-3 text-pink-600 dark:text-pink-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <circle cx="12" cy="9" r="5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14v7m-3-3.5h6" />
+                    </svg>
+                    <span>Female: <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($totalFemaleStudents) }}</strong></span>
+                </span>
+            </div>
+        </x-kpi-card>
         <x-kpi-card title="Class Teachers" icon="user-group" color="emerald" :count="$assignedTeachersCount"
             countSuffix="/{{ $totalClasses }}" subtext="supervisors assigned" :href="$canViewStaff ? route('staff.index') : null" />
         <x-kpi-card title="Capacity Rate" icon="chart-bar" color="sky" :count="$capacityRate" countSuffix="%"
@@ -188,6 +212,12 @@ new #[Title('Class Management')] class extends Component {
                                         {{ $studentCount }}<span
                                             class="text-zinc-400 font-normal">/{{ $capacity ?: '∞' }}</span>
                                     </span>
+
+                                    @if ($studentCount > 0)
+                                        <span class="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">
+                                            ({{ $schoolClass->male_students_count }}M &middot; {{ $schoolClass->female_students_count }}F)
+                                        </span>
+                                    @endif
 
                                     @if ($isOverfilled)
                                         <flux:badge color="red" size="sm" class="font-semibold text-[11px]">

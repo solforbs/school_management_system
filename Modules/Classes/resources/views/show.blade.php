@@ -1,5 +1,7 @@
 @php
     $studentCount = $schoolClass->students->count();
+    $maleCount = $schoolClass->students->where('gender', 'male')->count();
+    $femaleCount = $schoolClass->students->where('gender', 'female')->count();
     $capacity = (int) ($schoolClass->capacity ?? 0);
     $occupancyRate = $capacity > 0 ? round(($studentCount / $capacity) * 100) : 0;
 @endphp
@@ -72,8 +74,24 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <x-kpi-card title="Class Teacher" icon="user" color="emerald" :count="$schoolClass->classTeacher?->name ?? 'Unassigned'"
                 subtext="primary supervisor" />
-            <x-kpi-card title="Enrolled Students" icon="users" color="violet" :count="$studentCount"
-                subtext="assigned to this stream" />
+            <x-kpi-card title="Enrolled Students" icon="users" color="violet" :count="$studentCount">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 mt-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50/90 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold border border-blue-200/70 dark:border-blue-800/50">
+                        <svg class="size-3 text-blue-600 dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <circle cx="10" cy="14" r="5" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5L20 4m0 0h-4.5m4.5 0v4.5" />
+                        </svg>
+                        <span>Male: <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($maleCount) }}</strong></span>
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-pink-50/90 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 text-[11px] font-semibold border border-pink-200/70 dark:border-pink-800/50">
+                        <svg class="size-3 text-pink-600 dark:text-pink-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <circle cx="12" cy="9" r="5" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14v7m-3-3.5h6" />
+                        </svg>
+                        <span>Female: <strong class="font-bold text-zinc-900 dark:text-white">{{ number_format($femaleCount) }}</strong></span>
+                    </span>
+                </div>
+            </x-kpi-card>
             <x-kpi-card title="Room Capacity" icon="chart-bar" color="indigo" :count="$capacity ? $studentCount . ' / ' . $capacity : 'Unlimited'" :subtext="$capacity ? $occupancyRate . '% occupancy' : 'no limit configured'" />
         </div>
 
@@ -81,15 +99,23 @@
         <div
             class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
             <div
-                class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20">
+                class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 bg-zinc-50/50 dark:bg-zinc-800/20">
                 <div>
                     <flux:heading size="md" class="font-semibold text-zinc-900 dark:text-white">Class Roster
                     </flux:heading>
                     <flux:text class="text-xs text-zinc-500">Students enrolled in {{ $schoolClass->name }}</flux:text>
                 </div>
-                <flux:badge size="sm" color="violet" class="font-semibold">
-                    {{ $studentCount }} Students
-                </flux:badge>
+                <div class="flex items-center gap-2">
+                    <flux:badge size="sm" color="blue" class="font-medium text-[11px]">
+                        {{ $maleCount }} Boys
+                    </flux:badge>
+                    <flux:badge size="sm" color="pink" class="font-medium text-[11px]">
+                        {{ $femaleCount }} Girls
+                    </flux:badge>
+                    <flux:badge size="sm" color="violet" class="font-semibold text-[11px]">
+                        {{ $studentCount }} Total
+                    </flux:badge>
+                </div>
             </div>
 
             @if ($schoolClass->students->isEmpty())
