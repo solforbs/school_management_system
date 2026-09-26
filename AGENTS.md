@@ -1,3 +1,78 @@
+=== project state ===
+
+# School Management System — Project State
+
+> This section is the living record of the project. Update it whenever a significant feature is built or a major bug is fixed.
+
+## Application Overview
+A multi-tenant SaaS school management system for Kenyan/African schools (solforbs.com). Built with Laravel 13 + Livewire 4 + Flux UI. Uses nwidart/laravel-modules for feature modules.
+
+## Infrastructure
+- PHP 8.3, Laravel 13, Livewire 4, Flux UI 2.x
+- Spatie permissions, Laravel Socialite (Google OAuth), Laravel Fortify (auth)
+- PhpSpreadsheet for Excel import/export
+- Tether (offline sync client/server)
+- ZKTeco biometric attendance device integration
+- Cloudinary for image storage
+- Laravel Pao + Pest for testing
+
+## Modules Built (18 total)
+
+| Module | Status | Notes |
+|---|---|---|
+| Institution | ✅ Complete | Multi-tenant, plans/subscriptions, demo school |
+| Student | ✅ Complete | CRUD, bulk upload (xlsx/csv), export, enrollment |
+| Teacher | ✅ Complete | CRUD, subject/class assignments, enrollment permission |
+| Parent | ✅ Complete | Scoped to own children, fee visibility |
+| Staff | ✅ Complete | Payroll/payslips |
+| Classes | ✅ Complete | School classes with curriculum links |
+| Subject | ✅ Complete | Subjects, compulsory flag, teacher assignment |
+| Timetable | ✅ Complete | Per-class timetable grid, subject-based |
+| Attendance | ✅ Complete | ZKTeco biometric + manual, parent-visible |
+| Lesson | ✅ Complete | Lesson reports, recovery tracking |
+| Examinations | ✅ Complete | Exam sittings, per-subject results |
+| Result | ✅ Complete | Results entry, subject_id column |
+| ReportCard | ✅ Complete | PDF generation, download tokens |
+| Report | ✅ Complete | Analytics export (chunked, type-safe) |
+| FeeManagement | ✅ Complete | Fee records, payments, Paystack integration |
+| Expenditure | ✅ Complete | Categories, expenditure records |
+| Curriculum | ✅ Complete | CBC/IGCSE/etc, grading bands |
+| Selections | ✅ Complete | Student elective subject selections |
+
+## Auth & Access
+- Roles: SuperAdmin, Director, Teacher, Student, Parent, Staff
+- Google OAuth ("Continue with Google") via Socialite
+- Passkeys support
+- Demo school (shared login, restricted tabs — Settings opens Appearance, not Profile)
+- Teacher self-enrollment permission (`can_enroll_students` flag on teacher_details)
+
+## Recently Completed (last ~2 weeks)
+- Student bulk upload page (xlsx/csv import + spreadsheet grid entry)
+- Teacher self-enrollment permission
+- Demo school: Settings redirects to Appearance (not 403)
+- Analytics export type-safety fix (`lazy()` not `chunk()`)
+- Dashboard layout overflow fixes
+- PWA installable (manifest, install button)
+- Preloader for wire:navigate
+- Chatbot: typing indicator, step-by-step code delivery
+- Security fixes: parent scoping, IDOR, env-write, session hardening
+- Google OAuth: Continue with Google on login page
+
+## Known Gotchas
+- `laravel/socialite` vendor package can be missing after a fresh pull — always run `composer install` if tests throw "Class not found" errors before debugging code.
+- `test_rel.php` in root is a scratch debug file (UTF-16 encoded, ignore it).
+- PHPStan baseline is at `phpstan-baseline.neon` — keep it clean, don't add new entries without good reason.
+
+=== dependency checks ===
+
+# Dependency Health Checks
+
+- When tests fail with `Class "..." not found`, check `vendor/` FIRST before touching any code:
+  1. Run `Test-Path vendor/<package-path>` to confirm the package exists locally.
+  2. If missing, run `composer install` to sync from `composer.lock`.
+  3. Only investigate code after confirming all packages are installed.
+- After any `git pull`, proactively run `composer install` and `npm install` to avoid stale vendor/node_modules.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
