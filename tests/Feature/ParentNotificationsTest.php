@@ -359,3 +359,29 @@ test('in-flight delivery stops when notification is marked canceled', function (
 
     Mail::assertNothingQueued();
 });
+
+test('a director can select and use a pre-made template', function () {
+    [$head, $institution] = director();
+
+    Livewire::actingAs($head)
+        ->test('pages::notifications')
+        ->set('sourceTemplateId', 'premade:fee')
+        ->assertSet('subject', 'School Fee Balance Notice - {{institution}}')
+        ->assertSee('School Fee Balance Reminder');
+});
+
+test('a director can load a pre-made template and customize it into a saved school template', function () {
+    [$head, $institution] = director();
+
+    Livewire::actingAs($head)
+        ->test('pages::notifications')
+        ->call('copyPremadeToCustom', 'fee')
+        ->assertSet('tplName', 'School Fee Balance Reminder')
+        ->set('tplName', 'Term 1 Fee Balance Notice')
+        ->call('saveTemplate')
+        ->assertHasNoErrors();
+
+    $saved = NotificationTemplate::where('institution_id', $institution->id)->firstOrFail();
+    expect($saved->name)->toBe('Term 1 Fee Balance Notice')
+        ->and($saved->created_by)->toBe($head->id);
+});

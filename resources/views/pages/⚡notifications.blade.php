@@ -21,12 +21,60 @@ use Livewire\Component;
  */
 new #[Title('Parent Notifications')] class extends Component
 {
+    /**
+     * Out-of-the-box pre-made notification templates available to all schools.
+     */
+    public const PREMADE_TEMPLATES = [
+        'fee' => [
+            'name' => 'School Fee Balance Reminder',
+            'category' => 'Finance',
+            'subject' => 'School Fee Balance Notice - {{institution}}',
+            'body' => 'Dear {{parent}}, kindly note that the school fees balance for your child is due. We kindly request that you clear the balance before {{closing_date}} via our school Paybill. Thank you for your continued cooperation.',
+            'placeholders' => ['parent', 'institution', 'closing_date'],
+        ],
+        'opening' => [
+            'name' => 'Term Opening & Reopening Notice',
+            'category' => 'Term Dates',
+            'subject' => 'School Reopening Notice - {{institution}}',
+            'body' => 'Dear {{parent}}, {{institution}} will reopen for the new term on {{opening_date}} at 8:00 AM. Kindly ensure learners report on time in full school uniform.',
+            'placeholders' => ['parent', 'institution', 'opening_date'],
+        ],
+        'closing' => [
+            'name' => 'End of Term Closing Notice',
+            'category' => 'Term Dates',
+            'subject' => 'End of Term Closing Notice - {{institution}}',
+            'body' => 'Dear {{parent}}, {{institution}} officially closes for the holiday on {{closing_date}}. We wish all our students and parents a peaceful and safe break. School reopens on {{opening_date}}.',
+            'placeholders' => ['parent', 'institution', 'closing_date', 'opening_date'],
+        ],
+        'midterm' => [
+            'name' => 'Mid-Term Break Notice',
+            'category' => 'Term Dates',
+            'subject' => 'Mid-Term Break Notice - {{institution}}',
+            'body' => 'Dear {{parent}}, {{institution}} will break for mid-term on {{closing_date}} at 12:00 PM and resume on {{opening_date}} at 8:00 AM. Thank you.',
+            'placeholders' => ['parent', 'institution', 'closing_date', 'opening_date'],
+        ],
+        'agm' => [
+            'name' => 'Annual Parents Meeting (AGM)',
+            'category' => 'Events',
+            'subject' => 'Invitation: Parents Meeting (AGM) - {{institution}}',
+            'body' => 'Dear {{parent}}, you are cordially invited to attend the Annual Parents Meeting on {{opening_date}} at 9:00 AM at the school grounds. Your attendance is highly appreciated.',
+            'placeholders' => ['parent', 'institution', 'opening_date'],
+        ],
+        'results' => [
+            'name' => 'Examination Results Release Notice',
+            'category' => 'Academic',
+            'subject' => 'Exam Results Released - {{institution}}',
+            'body' => 'Dear {{parent}}, terminal examination results for your child have been released. Kindly log in to the parent portal or visit the school office to review the report card. Thank you.',
+            'placeholders' => ['parent', 'institution'],
+        ],
+    ];
+
     public string $tab = 'send';
 
     // --- Compose / send ------------------------------------------------
     public ?int $editingScheduledId = null;
 
-    public ?int $sourceTemplateId = null;
+    public int|string|null $sourceTemplateId = null;
 
     public string $subject = '';
 
@@ -112,6 +160,18 @@ new #[Title('Parent Notifications')] class extends Component
 
     public function updatedSourceTemplateId(mixed $value): void
     {
+        if (is_string($value) && str_starts_with($value, 'premade:')) {
+            $key = substr($value, 8);
+            $premade = self::PREMADE_TEMPLATES[$key] ?? null;
+            if ($premade) {
+                $this->subject = $premade['subject'];
+                $this->body = $premade['body'];
+                $this->placeholderValues = [];
+
+                return;
+            }
+        }
+
         $template = $value
             ? NotificationTemplate::where('institution_id', $this->institutionId())->find($value)
             : null;
@@ -119,6 +179,28 @@ new #[Title('Parent Notifications')] class extends Component
         $this->subject = $template->subject ?? '';
         $this->body = $template->body ?? '';
         $this->placeholderValues = [];
+    }
+
+    public function usePremadeTemplate(string $key): void
+    {
+        $this->sourceTemplateId = 'premade:'.$key;
+        $this->updatedSourceTemplateId('premade:'.$key);
+        $this->tab = 'send';
+        Flux::toast(text: 'Template loaded into composer.', variant: 'success');
+    }
+
+    public function copyPremadeToCustom(string $key): void
+    {
+        $premade = self::PREMADE_TEMPLATES[$key] ?? null;
+        if (! $premade) {
+            return;
+        }
+
+        $this->editingTemplateId = null;
+        $this->tplName = $premade['name'];
+        $this->tplSubject = $premade['subject'];
+        $this->tplBody = $premade['body'];
+        Flux::modal('template-form')->show();
     }
 
     public function send(): void
@@ -683,9 +765,13 @@ new #[Title('Parent Notifications')] class extends Component
                     </div>
                 </div>
 
-                <flux:select wire:model.live="sourceTemplateId" label="Or load a saved template" placeholder="Choose a saved template or write from scratch">
+                <flux:select wire:model.live="sourceTemplateId" label="Choose a template" placeholder="Write from scratch or pick a template">
+                    @foreach (self::PREMADE_TEMPLATES as $key => $p)
+                        <flux:select.option value="premade:{{ $key }}">⭐ {{ $p['name'] }} (Pre-made)</flux:select.option>
+                    @endforeach
+
                     @foreach ($this->templates as $template)
-                        <flux:select.option :value="$template->id">{{ $template->name }}</flux:select.option>
+                        <flux:select.option :value="$template->id">🏫 {{ $template->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
 
@@ -1064,7 +1150,7 @@ new #[Title('Parent Notifications')] class extends Component
                             {{ $this->preview['subject'] ?: 'Subject / Title' }}
                         </p>
 
-                        <p class="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed break-words font-sans"
+                        <p class="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-line leading-relaxed break-words"
                            x-text="getPreview(localBody) || '{{ addslashes($this->preview['body']) ?: 'Type your message on the left or click a 1-click starter to see the personalized preview here.' }}'">
                             {{ $this->preview['body'] ?: 'Type your message on the left or click variable chips to see the personalized preview here.' }}
                         </p>
@@ -1080,59 +1166,103 @@ new #[Title('Parent Notifications')] class extends Component
 
     {{-- ========================== TEMPLATES ========================== --}}
     @if ($tab === 'templates')
-        <div class="space-y-4">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div class="space-y-6">
+            {{-- Pre-made Standard System Templates --}}
+            <div class="space-y-3">
                 <div>
-                    <h3 class="text-base font-bold text-zinc-900 dark:text-white">Saved Templates</h3>
-                    <p class="text-xs text-zinc-500">Reusable message templates with placeholders for fast broadcasting.</p>
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60">
+                            Built-in & Ready to Use
+                        </span>
+                    </div>
+                    <h3 class="text-base font-bold text-zinc-900 dark:text-white">Pre-made System Templates</h3>
+                    <p class="text-xs text-zinc-500">Standard notices for Kenyan schools. Click "Use in Notice" to send immediately or "Customize" to save a school-specific copy.</p>
                 </div>
-                <flux:button variant="primary" icon="plus" wire:click="newTemplate" class="w-full sm:w-auto">New template</flux:button>
+
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach (self::PREMADE_TEMPLATES as $key => $p)
+                        <div class="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/80 shadow-xs flex flex-col justify-between gap-3 hover:border-indigo-300 dark:hover:border-indigo-700 transition">
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
+                                        {{ $p['category'] }}
+                                    </span>
+                                    <span class="text-[10px] text-zinc-400 font-mono">
+                                        {{ count($p['placeholders']) }} variables
+                                    </span>
+                                </div>
+                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1">{{ $p['name'] }}</h4>
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">{{ $p['body'] }}</p>
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-700/60">
+                                <flux:button size="xs" variant="primary" icon="paper-airplane" wire:click="usePremadeTemplate('{{ $key }}')" class="flex-1 justify-center">
+                                    Use in Notice
+                                </flux:button>
+                                <flux:button size="xs" variant="subtle" icon="document-duplicate" wire:click="copyPremadeToCustom('{{ $key }}')" title="Customize a copy for your school">
+                                    Customize
+                                </flux:button>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-                <table class="w-full text-left text-sm min-w-[550px]">
-                    <thead class="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 text-[11px] font-bold uppercase tracking-wider">
-                        <tr>
-                            <th class="py-2.5 px-4">Name</th>
-                            <th class="py-2.5 px-4">Subject</th>
-                            <th class="py-2.5 px-4">Placeholders</th>
-                            <th class="py-2.5 px-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
-                        @forelse ($this->templates as $template)
-                            <tr wire:key="tpl-{{ $template->id }}">
-                                <td class="py-3 px-4 font-semibold text-zinc-900 dark:text-white">{{ $template->name }}</td>
-                                <td class="py-3 px-4 text-zinc-600 dark:text-zinc-300">{{ $template->subject }}</td>
-                                <td class="py-3 px-4 text-xs text-zinc-400 font-mono">
-                                    <div class="flex flex-wrap gap-1">
-                                        @forelse ($template->placeholders() as $pl)
-                                            <span class="inline-block px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300">&#123;&#123;{{ $pl }}&#125;&#125;</span>
-                                        @empty
-                                            <span class="text-zinc-400">—</span>
-                                        @endforelse
-                                    </div>
-                                </td>
-                                <td class="py-3 px-4 text-right whitespace-nowrap">
-                                    <flux:button size="sm" variant="subtle" icon="pencil-square"
-                                        wire:click="editTemplate({{ $template->id }})" title="Edit template" />
-                                    <flux:modal.trigger name="confirm-delete-template">
-                                        <flux:button size="sm" variant="subtle" icon="trash" class="text-rose-600"
-                                            wire:click="$set('confirmingDeleteTemplateId', {{ $template->id }})" title="Delete template" />
-                                    </flux:modal.trigger>
-                                </td>
-                            </tr>
-                        @empty
+            {{-- Custom School Templates --}}
+            <div class="space-y-3 pt-2">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-zinc-900 dark:text-white">{{ currentInstitution()->name }} Custom Templates</h3>
+                        <p class="text-xs text-zinc-500">Reusable templates created and managed specifically by your school.</p>
+                    </div>
+                    <flux:button variant="primary" icon="plus" wire:click="newTemplate" class="w-full sm:w-auto">New template</flux:button>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+                    <table class="w-full text-left text-sm min-w-[550px]">
+                        <thead class="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 text-[11px] font-bold uppercase tracking-wider">
                             <tr>
-                                <td colspan="4" class="py-8 text-center text-zinc-400">
-                                    <flux:icon icon="document-text" class="size-8 mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
-                                    <p class="font-medium">No templates created yet.</p>
-                                    <p class="text-xs text-zinc-400 mt-0.5">Click "New template" to build your first reusable notice.</p>
-                                </td>
+                                <th class="py-2.5 px-4">Name</th>
+                                <th class="py-2.5 px-4">Subject</th>
+                                <th class="py-2.5 px-4">Placeholders</th>
+                                <th class="py-2.5 px-4 text-right">Actions</th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            @forelse ($this->templates as $template)
+                                <tr wire:key="tpl-{{ $template->id }}">
+                                    <td class="py-3 px-4 font-semibold text-zinc-900 dark:text-white">{{ $template->name }}</td>
+                                    <td class="py-3 px-4 text-zinc-600 dark:text-zinc-300">{{ $template->subject }}</td>
+                                    <td class="py-3 px-4 text-xs text-zinc-400 font-mono">
+                                        <div class="flex flex-wrap gap-1">
+                                            @forelse ($template->placeholders() as $pl)
+                                                <span class="inline-block px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] text-zinc-600 dark:text-zinc-300">&#123;&#123;{{ $pl }}&#125;&#125;</span>
+                                            @empty
+                                                <span class="text-zinc-400">—</span>
+                                            @endforelse
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 text-right whitespace-nowrap">
+                                        <flux:button size="sm" variant="subtle" icon="pencil-square"
+                                            wire:click="editTemplate({{ $template->id }})" title="Edit template" />
+                                        <flux:modal.trigger name="confirm-delete-template">
+                                            <flux:button size="sm" variant="subtle" icon="trash" class="text-rose-600"
+                                                wire:click="$set('confirmingDeleteTemplateId', {{ $template->id }})" title="Delete template" />
+                                        </flux:modal.trigger>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="py-8 text-center text-zinc-400">
+                                        <flux:icon icon="document-text" class="size-8 mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
+                                        <p class="font-medium">No custom templates created yet.</p>
+                                        <p class="text-xs text-zinc-400 mt-0.5">Click "New template" or click "Customize" on any pre-made template above.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     @endif
