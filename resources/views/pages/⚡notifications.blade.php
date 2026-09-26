@@ -1136,16 +1136,66 @@ new #[Title('Parent Notifications')] class extends Component
                                                         placeholder="e.g. Monday, 5th January 2026"
                                                         class="w-full text-xs" />
                                                 </div>
-                                                <div class="relative shrink-0">
+                                                <div class="relative shrink-0" x-data="{ openCalendarPop: false }">
                                                     <button type="button"
+                                                        @click="openCalendarPop = !openCalendarPop"
                                                         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition active:scale-95"
                                                         title="Pick date from calendar">
                                                         <flux:icon icon="calendar" class="size-3.5" />
                                                         <span>Pick Date</span>
+                                                        <flux:icon icon="chevron-down" class="size-2.5 opacity-80" />
                                                     </button>
-                                                    <input type="date"
-                                                        @change="pickCalendar($event)"
-                                                        class="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10" />
+
+                                                    <div x-show="openCalendarPop" @click.outside="openCalendarPop = false" style="display: none;"
+                                                        class="absolute right-0 mt-1.5 z-50 w-72 p-3.5 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-3">
+                                                        <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-700/60 pb-2">
+                                                             <p class="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                                                                 <flux:icon icon="calendar" class="size-3.5 text-indigo-600" />
+                                                                 Select on Calendar
+                                                             </p>
+                                                             <button type="button" @click="openCalendarPop = false" class="text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer">✕</button>
+                                                        </div>
+
+                                                        <div>
+                                                             <label class="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">Select date on calendar:</label>
+                                                             <input type="date"
+                                                                 @change="pickCalendar($event); openCalendarPop = false;"
+                                                                 class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-zinc-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500 cursor-pointer" />
+                                                        </div>
+
+                                                        <div class="space-y-1 pt-1">
+                                                             <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Suggestions:</p>
+                                                             @if ($name === 'opening_date')
+                                                                 <button type="button" @click="setQuickDate('{{ now()->next(\Carbon\Carbon::MONDAY)->format('l, jS F Y') }}'); openCalendarPop = false;"
+                                                                     class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 flex items-center justify-between cursor-pointer">
+                                                                     <span>Next Monday</span>
+                                                                     <strong>{{ now()->next(\Carbon\Carbon::MONDAY)->format('j M') }}</strong>
+                                                                 </button>
+                                                                 <button type="button" @click="setQuickDate('{{ now()->addWeeks(2)->next(\Carbon\Carbon::MONDAY)->format('l, jS F Y') }}'); openCalendarPop = false;"
+                                                                     class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 border border-zinc-200 flex items-center justify-between cursor-pointer">
+                                                                     <span>In 2 Weeks</span>
+                                                                     <strong>{{ now()->addWeeks(2)->next(\Carbon\Carbon::MONDAY)->format('j M') }}</strong>
+                                                                 </button>
+                                                             @elseif ($name === 'closing_date')
+                                                                 <button type="button" @click="setQuickDate('{{ now()->next(\Carbon\Carbon::FRIDAY)->format('l, jS F Y') }}'); openCalendarPop = false;"
+                                                                     class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 flex items-center justify-between cursor-pointer">
+                                                                     <span>This Friday</span>
+                                                                     <strong>{{ now()->next(\Carbon\Carbon::FRIDAY)->format('j M') }}</strong>
+                                                                 </button>
+                                                                 <button type="button" @click="setQuickDate('{{ now()->addWeek()->next(\Carbon\Carbon::FRIDAY)->format('l, jS F Y') }}'); openCalendarPop = false;"
+                                                                     class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 border border-zinc-200 flex items-center justify-between cursor-pointer">
+                                                                     <span>Next Friday</span>
+                                                                     <strong>{{ now()->addWeek()->next(\Carbon\Carbon::FRIDAY)->format('j M') }}</strong>
+                                                                 </button>
+                                                             @else
+                                                                 <button type="button" @click="setQuickDate('{{ now()->addDays(7)->format('jS F Y') }}'); openCalendarPop = false;"
+                                                                     class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 flex items-center justify-between cursor-pointer">
+                                                                     <span>In 7 Days</span>
+                                                                     <strong>{{ now()->addDays(7)->format('j M') }}</strong>
+                                                                 </button>
+                                                             @endif
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
