@@ -39,6 +39,7 @@
                 </x-slot:sidebar>
 
                 {{-- Sections --}}
+                {{-- Sections --}}
                 <x-stepper.section id="step-1" title="Basics & Branding" description="Set up the primary identity of this institution.">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -47,15 +48,15 @@
                         </div>
 
                         <div class="relative">
-                            <flux:input type="text" name="code" label="Short Code"
+                            <flux:input type="text" name="code" label="Short Code (Optional)"
                                 x-on:input="$el.value = $el.value.toUpperCase()"
                                 maxlength="5"
                                 class="uppercase"
-                                value="{{ old('code') }}" required placeholder="e.g. RA" />
+                                value="{{ old('code') }}" placeholder="Auto-generated if left blank (e.g. RA)" />
                         </div>
 
                         <div>
-                            <flux:select name="type" label="Institution Type">
+                            <flux:select name="type" label="Institution Type (Optional)">
                                 <flux:select.option value="School" :selected="old('type') == 'School'">School</flux:select.option>
                                 <flux:select.option value="College" :selected="old('type') == 'College'">College</flux:select.option>
                                 <flux:select.option value="University" :selected="old('type') == 'University'">University</flux:select.option>
@@ -101,18 +102,18 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <flux:input label="Official Email" type="email" name="email"
-                                value="{{ old('email') }}" placeholder="admin@school.com" />
+                                value="{{ old('email') }}" required placeholder="admin@school.com" />
                         </div>
                         <div>
-                            <flux:input type="url" name="website" label="Website URL"
+                            <flux:input type="url" name="website" label="Website URL (Optional)"
                                 value="{{ old('website') }}" placeholder="https://www.school.com" />
                         </div>
                         <div>
-                            <flux:input type="text" name="phone" label="Main Phone"
+                            <flux:input type="text" name="phone" label="Main Phone (Optional)"
                                 value="{{ old('phone') }}" placeholder="+254..." />
                         </div>
                         <div>
-                            <flux:input type="text" name="alternate_phone" label="Alternative Phone"
+                            <flux:input type="text" name="alternate_phone" label="Alternative Phone (Optional)"
                                 value="{{ old('alternate_phone') }}" />
                         </div>
                     </div>
@@ -126,19 +127,19 @@
                                 value="{{ old('country', 'Kenya') }}" />
                         </div>
                         <div>
-                            <flux:input type="text" name="county" label="State / County"
+                            <flux:input type="text" name="county" label="State / County (Optional)"
                                 value="{{ old('county') }}" />
                         </div>
                         <div>
-                            <flux:input type="text" name="city" label="City / Town"
+                            <flux:input type="text" name="city" label="City / Town (Optional)"
                                 value="{{ old('city') }}" />
                         </div>
                         <div class="md:col-span-3">
-                            <flux:input type="text" name="postal_address" label="Postal Address"
+                            <flux:input type="text" name="postal_address" label="Postal Address (Optional)"
                                 value="{{ old('postal_address') }}" />
                         </div>
                         <div class="md:col-span-3">
-                            <flux:textarea name="physical_address" rows="2" label="Physical Address / Directions">{{ old('physical_address') }}</flux:textarea>
+                            <flux:textarea name="physical_address" rows="2" label="Physical Address / Directions (Optional)">{{ old('physical_address') }}</flux:textarea>
                         </div>
                     </div>
                 </x-stepper.section>

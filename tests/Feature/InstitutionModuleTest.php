@@ -233,3 +233,31 @@ test('livewire institution index handles choose action', function () {
 
     expect($director->refresh()->active_institution_id)->toBe($institution->id);
 });
+
+test('a user can create an institution providing only school name and email', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('institution.store'), [
+        'name' => 'Greenhill Academy',
+        'email' => 'admin@greenhill.ac.ke',
+    ])->assertRedirect(route('institution.index'));
+
+    expect(Institution::count())->toBe(1);
+    $institution = Institution::first();
+    expect($institution->name)->toBe('Greenhill Academy')
+        ->and($institution->email)->toBe('admin@greenhill.ac.ke')
+        ->and($institution->code)->not->toBeEmpty()
+        ->and($institution->type)->toBe('School')
+        ->and($institution->country)->toBe('Kenya')
+        ->and($institution->is_approved)->toBeFalse()
+        ->and($user->hasRole('Director'))->toBeTrue();
+});
+
+test('institution creation fails without school name or email', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('institution.store'), [
+        'name' => '',
+        'email' => '',
+    ])->assertSessionHasErrors(['name', 'email']);
+});

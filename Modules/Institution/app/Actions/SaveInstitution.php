@@ -30,18 +30,18 @@ class SaveInstitution
     public static function createRules(): array
     {
         return [
-            'name' => 'required|string',
-            'code' => 'required',
-            'type' => 'required',
-            'email' => 'required',
-            'phone' => 'required',
-            'alternate_phone' => 'nullable',
-            'website' => 'nullable',
-            'country' => 'nullable',
-            'county' => 'required',
-            'city' => 'required',
-            'postal_address' => 'required',
-            'physical_address' => 'required',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:institutions,email',
+            'code' => 'nullable|string|max:50|unique:institutions,code',
+            'type' => 'nullable|string|in:School,College,University,Training Centre',
+            'phone' => 'nullable|string|max:20',
+            'alternate_phone' => 'nullable|string|max:20',
+            'website' => 'nullable|url|max:255',
+            'country' => 'nullable|string|max:100',
+            'county' => 'nullable|string|max:100',
+            'city' => 'nullable|string|max:100',
+            'postal_address' => 'nullable|string|max:255',
+            'physical_address' => 'nullable|string',
             'logo' => 'nullable|image|max:2048',
         ];
     }
@@ -96,6 +96,18 @@ class SaveInstitution
         }
 
         unset($data['logo_upload']);
+
+        if (empty($data['code'])) {
+            $data['code'] = self::generateUniqueCode($data['name']);
+        }
+
+        if (empty($data['type'])) {
+            $data['type'] = 'School';
+        }
+
+        if (empty($data['country'])) {
+            $data['country'] = 'Kenya';
+        }
 
         // New institutions start unapproved regardless of the column's
         // default (which only exists to grandfather in institutions that
@@ -174,5 +186,32 @@ class SaveInstitution
         $institution->update($data);
 
         return $institution->refresh();
+    }
+
+    public static function generateUniqueCode(string $name): string
+    {
+        $words = preg_split('/\s+/', trim($name)) ?: [];
+        $initials = '';
+        foreach ($words as $word) {
+            $cleaned = preg_replace('/[^A-Za-z0-9]/', '', $word);
+            if (! empty($cleaned)) {
+                $initials .= mb_substr($cleaned, 0, 1);
+            }
+        }
+
+        $base = strtoupper(substr($initials, 0, 4));
+        if (strlen($base) < 2) {
+            $clean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $name));
+            $base = substr($clean, 0, 4) ?: 'SCH';
+        }
+
+        $code = $base;
+        $counter = 1;
+        while (Institution::where('code', $code)->exists()) {
+            $code = $base.$counter;
+            $counter++;
+        }
+
+        return $code;
     }
 }
