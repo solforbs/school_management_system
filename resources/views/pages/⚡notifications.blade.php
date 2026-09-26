@@ -67,6 +67,13 @@ new #[Title('Parent Notifications')] class extends Component
             'body' => 'Dear {{parent}}, terminal examination results for your child have been released. Kindly log in to the parent portal or visit the school office to review the report card. Thank you.',
             'placeholders' => ['parent', 'institution'],
         ],
+        'biometrics' => [
+            'name' => 'New Digital System & Biometric Attendance',
+            'category' => 'Technology & Safety',
+            'subject' => 'New Digital System & Morning Attendance - {{institution}}',
+            'body' => 'Dear {{parent}}, welcome to our new school digital system! We now track student attendance using biometrics every morning when your child arrives safely at school. You will receive direct updates, attendance alerts, and important notices here. Thank you for partnering with {{institution}}.',
+            'placeholders' => ['parent', 'institution'],
+        ],
     ];
 
     public string $tab = 'send';
@@ -167,6 +174,11 @@ new #[Title('Parent Notifications')] class extends Component
                 $this->subject = $premade['subject'];
                 $this->body = $premade['body'];
                 $this->populateDefaultPlaceholders();
+                $this->dispatch('template-loaded',
+                    subject: $this->subject,
+                    body: $this->body,
+                    placeholders: $this->placeholderValues
+                );
 
                 return;
             }
@@ -179,6 +191,11 @@ new #[Title('Parent Notifications')] class extends Component
         $this->subject = $template->subject ?? '';
         $this->body = $template->body ?? '';
         $this->populateDefaultPlaceholders();
+        $this->dispatch('template-loaded',
+            subject: $this->subject,
+            body: $this->body,
+            placeholders: $this->placeholderValues
+        );
     }
 
     private function populateDefaultPlaceholders(): void
@@ -481,33 +498,16 @@ new #[Title('Parent Notifications')] class extends Component
         this.localSubject = $wire.subject || '';
         this.localBody = $wire.body || '';
         this.localPlaceholderValues = { ...($wire.placeholderValues || {}) };
-        this.$watch('$wire.subject', (val) => {
-            if (val !== undefined && val !== this.localSubject) {
-                this.localSubject = val;
-                this.syncInputs();
-            }
-        });
-        this.$watch('$wire.body', (val) => {
-            if (val !== undefined && val !== this.localBody) {
-                this.localBody = val;
-                this.syncInputs();
-            }
-        });
-        this.$watch('$wire.placeholderValues', (val) => {
-            if (val) {
-                this.localPlaceholderValues = { ...val };
-            }
-        });
     },
 
     syncInputs() {
         const b = document.getElementById('composer-body');
         const bEl = b?.tagName === 'TEXTAREA' ? b : b?.querySelector('textarea');
-        if (bEl && bEl.value !== this.localBody) bEl.value = this.localBody;
+        if (bEl) bEl.value = this.localBody;
 
         const s = document.getElementById('composer-subject');
         const sEl = s?.tagName === 'INPUT' ? s : s?.querySelector('input');
-        if (sEl && sEl.value !== this.localSubject) sEl.value = this.localSubject;
+        if (sEl) sEl.value = this.localSubject;
     },
 
     onBodyInput(e) {
@@ -519,29 +519,7 @@ new #[Title('Parent Notifications')] class extends Component
     },
 
     applyPreset(type) {
-        let sub = '';
-        let msg = '';
-        const inst = '{{ addslashes(currentInstitution()->name) }}';
-
-        if (type === 'fee') {
-            sub = 'School Fee Balance Notice - ' + inst;
-            msg = 'Dear @{{parent}}, kindly note that the school fees balance for your child is due. We kindly request that you clear the balance before 30th September 2026 via our school Paybill. Thank you for your continued cooperation.';
-        } else if (type === 'opening') {
-            sub = 'School Reopening Notice - ' + inst;
-            msg = 'Dear @{{parent}}, ' + inst + ' will reopen for the new term on Monday, 5th January 2026 at 8:00 AM. Kindly ensure learners report on time in full school uniform.';
-        } else if (type === 'closing') {
-            sub = 'End of Term Closing Notice - ' + inst;
-            msg = 'Dear @{{parent}}, ' + inst + ' officially closes for the holiday on Friday, 3rd April 2026. We wish all our students and parents a peaceful and safe break. School reopens on 4th May 2026.';
-        } else if (type === 'agm') {
-            sub = 'Invitation: Parents Meeting (AGM) - ' + inst;
-            msg = 'Dear @{{parent}}, you are cordially invited to attend the Annual Parents Meeting on Saturday, 14th March 2026 at 9:00 AM at the school grounds. Your attendance is highly appreciated.';
-        }
-
-        this.localSubject = sub;
-        this.localBody = msg;
-        this.syncInputs();
-        $wire.set('subject', sub);
-        $wire.set('body', msg);
+        $wire.usePremadeTemplate(type);
     },
 
     autoPersonalize() {
@@ -698,7 +676,12 @@ new #[Title('Parent Notifications')] class extends Component
             perCredit: len <= singleLimit ? singleLimit : multiLimit
         };
     }
-}" class="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+}" @template-loaded.window="
+    localSubject = $event.detail.subject || '';
+    localBody = $event.detail.body || '';
+    localPlaceholderValues = { ...($event.detail.placeholders || {}) };
+    syncInputs();
+" class="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
     <div>
         <div class="flex items-center gap-2 mb-1">
             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-200/60">
@@ -758,7 +741,7 @@ new #[Title('Parent Notifications')] class extends Component
                         </label>
                         <span class="text-[11px] text-zinc-500 dark:text-zinc-400">Click to fill standard Kenyan school notices</span>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                         <button type="button" @click="applyPreset('fee')"
                             class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer">
                             <div class="flex items-center gap-1.5">
@@ -790,9 +773,18 @@ new #[Title('Parent Notifications')] class extends Component
                             class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-base">📢</span>
-                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Parents Meeting</span>
+                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Parents AGM</span>
                             </div>
-                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">AGM & consultations</p>
+                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Meeting notice</p>
+                        </button>
+
+                        <button type="button" @click="applyPreset('biometrics')"
+                            class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer col-span-2 sm:col-span-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-base">📱</span>
+                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">New System</span>
+                            </div>
+                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Biometrics attendance</p>
                         </button>
                     </div>
                 </div>
@@ -1095,6 +1087,9 @@ new #[Title('Parent Notifications')] class extends Component
                                          setQuickDate(formatted) {
                                              $wire.set('placeholderValues.{{ $name }}', formatted);
                                              localPlaceholderValues['{{ $name }}'] = formatted;
+                                             const el = document.getElementById('placeholder-input-{{ $name }}');
+                                             const input = el?.tagName === 'INPUT' ? el : el?.querySelector('input');
+                                             if (input) input.value = formatted;
                                          },
                                          pickCalendar(e) {
                                              const val = e.target.value;
@@ -1134,14 +1129,24 @@ new #[Title('Parent Notifications')] class extends Component
                                     @if ($isDate)
                                         <div class="space-y-2 pt-1">
                                             <div class="flex items-center gap-2">
-                                                <flux:input wire:model.live.debounce.250ms="placeholderValues.{{ $name }}"
-                                                    @input="localPlaceholderValues['{{ $name }}'] = $event.target.value"
-                                                    placeholder="e.g. Monday, 5th January 2026"
-                                                    class="w-full text-xs" />
-                                                <label class="inline-flex items-center justify-center p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 cursor-pointer shrink-0 transition" title="Open calendar to pick date">
-                                                    <flux:icon icon="calendar" class="size-4" />
-                                                    <input type="date" class="sr-only" @change="pickCalendar($event)" />
-                                                </label>
+                                                <div class="relative flex-1">
+                                                    <flux:input id="placeholder-input-{{ $name }}"
+                                                        wire:model.live.debounce.250ms="placeholderValues.{{ $name }}"
+                                                        @input="localPlaceholderValues['{{ $name }}'] = $event.target.value"
+                                                        placeholder="e.g. Monday, 5th January 2026"
+                                                        class="w-full text-xs" />
+                                                </div>
+                                                <div class="relative shrink-0">
+                                                    <button type="button"
+                                                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition active:scale-95"
+                                                        title="Pick date from calendar">
+                                                        <flux:icon icon="calendar" class="size-3.5" />
+                                                        <span>Pick Date</span>
+                                                    </button>
+                                                    <input type="date"
+                                                        @change="pickCalendar($event)"
+                                                        class="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10" />
+                                                </div>
                                             </div>
 
                                             <div class="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">

@@ -385,3 +385,14 @@ test('a director can load a pre-made template and customize it into a saved scho
     expect($saved->name)->toBe('Term 1 Fee Balance Notice')
         ->and($saved->created_by)->toBe($head->id);
 });
+
+test('a director can select and use the biometrics onboarding pre-made template', function () {
+    [$head, $institution] = director();
+
+    Livewire::actingAs($head)
+        ->test('pages::notifications')
+        ->set('sourceTemplateId', 'premade:biometrics')
+        ->assertSet('subject', 'New Digital System & Morning Attendance - {{institution}}')
+        ->assertSee('New Digital System & Biometric Attendance')
+        ->assertSee('biometrics');
+});
