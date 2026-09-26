@@ -73,7 +73,9 @@ class AnalyticsExportService
         $this->addSummarySheet($spreadsheet, $periodLabel, [
             'Institutions' => (clone $institutionsQuery)->count(),
             'Users' => (clone $usersQuery)->count(),
-            'Students' => (clone $studentsQuery)->count(),
+            'Students (Total)' => (clone $studentsQuery)->count(),
+            'Students (Male)' => (clone $studentsQuery)->where('gender', 'male')->count(),
+            'Students (Female)' => (clone $studentsQuery)->where('gender', 'female')->count(),
             'Parents' => (clone $parentsQuery)->count(),
             'Fees raised' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount'), 2),
             'Fees collected' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount_paid'), 2),
@@ -115,7 +117,9 @@ class AnalyticsExportService
             ->pluck('zkteco_device_id');
 
         $this->addSummarySheet($spreadsheet, $periodLabel, [
-            'Students' => (clone $studentsQuery)->count(),
+            'Students (Total)' => (clone $studentsQuery)->count(),
+            'Students (Male)' => (clone $studentsQuery)->where('gender', 'male')->count(),
+            'Students (Female)' => (clone $studentsQuery)->where('gender', 'female')->count(),
             'Parents' => (clone $parentsQuery)->count(),
             'Fees raised' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount'), 2),
             'Fees collected' => 'KES '.number_format((float) (clone $feesQuery)->sum('amount_paid'), 2),
