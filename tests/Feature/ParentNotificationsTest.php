@@ -75,13 +75,17 @@ test('the page is closed to anyone without the permission', function () {
     $this->actingAs($parent)->get(route('notifications.index'))->assertForbidden();
 });
 
-test('a director opens the page and sees the composer', function () {
+test('a director opens the page and sees the composer with variable chips', function () {
     [$head] = director();
 
     $this->actingAs($head)->get(route('notifications.index'))
         ->assertOk()
         ->assertSee('Parent Notifications')
-        ->assertSee('Compose & send');
+        ->assertSee('Compose & send')
+        ->assertSee('Parent Name')
+        ->assertSee('School Name')
+        ->assertSee('Opening Date')
+        ->assertSee('Fee Balance');
 });
 
 test('a director saves a template scoped to their school', function () {
