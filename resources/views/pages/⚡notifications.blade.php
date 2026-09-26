@@ -166,7 +166,7 @@ new #[Title('Parent Notifications')] class extends Component
             if ($premade) {
                 $this->subject = $premade['subject'];
                 $this->body = $premade['body'];
-                $this->placeholderValues = [];
+                $this->populateDefaultPlaceholders();
 
                 return;
             }
@@ -178,7 +178,24 @@ new #[Title('Parent Notifications')] class extends Component
 
         $this->subject = $template->subject ?? '';
         $this->body = $template->body ?? '';
+        $this->populateDefaultPlaceholders();
+    }
+
+    private function populateDefaultPlaceholders(): void
+    {
         $this->placeholderValues = [];
+        $text = $this->subject.' '.$this->body;
+        $placeholders = ParentNotification::extractPlaceholders($text);
+
+        if (in_array('opening_date', $placeholders, true)) {
+            $this->placeholderValues['opening_date'] = now()->next(Carbon::MONDAY)->format('l, jS F Y');
+        }
+        if (in_array('closing_date', $placeholders, true)) {
+            $this->placeholderValues['closing_date'] = now()->next(Carbon::FRIDAY)->format('l, jS F Y');
+        }
+        if (in_array('due_date', $placeholders, true)) {
+            $this->placeholderValues['due_date'] = now()->addDays(7)->format('jS F Y');
+        }
     }
 
     public function usePremadeTemplate(string $key): void
@@ -456,12 +473,14 @@ new #[Title('Parent Notifications')] class extends Component
 <div x-data="{
     localSubject: '',
     localBody: '',
+    localPlaceholderValues: {},
     customTagName: '',
     customTagModalOpen: false,
 
     init() {
         this.localSubject = $wire.subject || '';
         this.localBody = $wire.body || '';
+        this.localPlaceholderValues = { ...($wire.placeholderValues || {}) };
         this.$watch('$wire.subject', (val) => {
             if (val !== undefined && val !== this.localSubject) {
                 this.localSubject = val;
@@ -472,6 +491,11 @@ new #[Title('Parent Notifications')] class extends Component
             if (val !== undefined && val !== this.localBody) {
                 this.localBody = val;
                 this.syncInputs();
+            }
+        });
+        this.$watch('$wire.placeholderValues', (val) => {
+            if (val) {
+                this.localPlaceholderValues = { ...val };
             }
         });
     },
@@ -643,6 +667,14 @@ new #[Title('Parent Notifications')] class extends Component
         res = res.replace(new RegExp('\\{\\{\\s*parent\\s*\\}\\}', 'gi'), 'Jane Doe');
         res = res.replace(new RegExp('\\{\\{\\s*institution\\s*\\}\\}', 'gi'), '{{ addslashes(currentInstitution()->name) }}');
         res = res.replace(new RegExp('\\{\\{\\s*date\\s*\\}\\}', 'gi'), '{{ now()->format("j M Y") }}');
+
+        if (this.localPlaceholderValues) {
+            for (const [k, v] of Object.entries(this.localPlaceholderValues)) {
+                if (v && String(v).trim()) {
+                    res = res.replace(new RegExp('\\{\\{\\s*' + k + '\\s*\\}\\}', 'gi'), String(v).trim());
+                }
+            }
+        }
         return res;
     },
 
@@ -1015,40 +1047,142 @@ new #[Title('Parent Notifications')] class extends Component
                     </div>
                 </div>
 
-                {{-- Fill in Custom Placeholders with Calendar Pickers --}}
+                {{-- Prominent "Set Notice Dates & Details" Card --}}
                 @if (count($this->customPlaceholders))
-                    <div class="rounded-xl border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 p-4 space-y-3 shadow-xs">
-                        <div class="flex items-center justify-between">
-                            <p class="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wide flex items-center gap-1.5">
-                                <flux:icon icon="pencil-square" class="size-3.5 text-indigo-600 dark:text-indigo-400" />
-                                Fill in Custom Placeholders ({{ count($this->customPlaceholders) }})
-                            </p>
-                            <span class="text-[11px] text-indigo-600 dark:text-indigo-400">Values applied to all parents</span>
+                    <div class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-800/80 bg-gradient-to-br from-indigo-50/70 via-white to-indigo-50/40 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-indigo-950/20 p-4 sm:p-5 space-y-4 shadow-xs">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="p-2 rounded-xl bg-indigo-600 text-white shadow-xs">
+                                    <flux:icon icon="calendar-days" class="size-4" />
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                        <span>Set Notice Dates & Details</span>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                                            {{ count($this->customPlaceholders) }} required
+                                        </span>
+                                    </h4>
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                        Choose the dates for this specific notice. They will automatically fill in for every parent.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-[11px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-900/40 px-3 py-1 rounded-lg self-start sm:self-auto">
+                                💡 Automatically replaces in message & preview
+                            </div>
                         </div>
-                        <div class="grid gap-3 sm:grid-cols-2">
+
+                        <div class="grid gap-3.5 sm:grid-cols-2">
                             @foreach ($this->customPlaceholders as $name)
-                                <div class="space-y-1" x-data="{
-                                    pickDate(e) {
-                                        const val = e.target.value;
-                                        if (!val) return;
-                                        const [y, m, d] = val.split('-');
-                                        const dt = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-                                        const formatted = dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-                                        $wire.set('placeholderValues.{{ $name }}', formatted);
-                                    }
-                                }">
+                                @php
+                                    $isDate = str_contains($name, 'date');
+                                    $label = match($name) {
+                                        'opening_date' => 'School Reopening Date',
+                                        'closing_date' => 'School Closing / Holiday Date',
+                                        'due_date' => 'Fee Payment Deadline Date',
+                                        default => ucwords(str_replace('_', ' ', $name)),
+                                    };
+                                    $help = match($name) {
+                                        'opening_date' => 'The date learners report back to school',
+                                        'closing_date' => 'The last day of the school term / holiday start',
+                                        'due_date' => 'Final date for school fee clearance',
+                                        default => 'Custom value to include in this notice',
+                                    };
+                                @endphp
+
+                                <div class="p-3.5 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/80 space-y-2 shadow-xs"
+                                     x-data="{
+                                         setQuickDate(formatted) {
+                                             $wire.set('placeholderValues.{{ $name }}', formatted);
+                                             localPlaceholderValues['{{ $name }}'] = formatted;
+                                         },
+                                         pickCalendar(e) {
+                                             const val = e.target.value;
+                                             if (!val) return;
+                                             const [y, m, d] = val.split('-');
+                                             const dt = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                                             const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                             const dayNum = parseInt(d);
+                                             const j = dayNum % 10, k = dayNum % 100;
+                                             let suffix = 'th';
+                                             if (j === 1 && k !== 11) suffix = 'st';
+                                             else if (j === 2 && k !== 12) suffix = 'nd';
+                                             else if (j === 3 && k !== 13) suffix = 'rd';
+                                             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                                             const dayName = days[dt.getDay()];
+                                             const formatted = `${dayName}, ${dayNum}${suffix} ${months[dt.getMonth()]} ${y}`;
+                                             this.setQuickDate(formatted);
+                                         }
+                                     }">
                                     <div class="flex items-center justify-between">
-                                        <label class="text-xs font-medium text-zinc-700 dark:text-zinc-300">{{ ucwords(str_replace('_', ' ', $name)) }}</label>
-                                        @if (str_contains($name, 'date'))
-                                            <label class="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
-                                                <flux:icon icon="calendar" class="size-3" />
-                                                <span>Pick date</span>
-                                                <input type="date" class="sr-only" @change="pickDate($event)" />
+                                        <div>
+                                            <label class="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                                                @if ($isDate)
+                                                    <flux:icon icon="calendar" class="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                @else
+                                                    <flux:icon icon="tag" class="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                @endif
+                                                <span>{{ $label }}</span>
                                             </label>
-                                        @endif
+                                            <p class="text-[11px] text-zinc-400">{{ $help }}</p>
+                                        </div>
+                                        <span class="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded">
+                                            &#123;&#123;{{ $name }}&#125;&#125;
+                                        </span>
                                     </div>
-                                    <flux:input wire:model.live.debounce.250ms="placeholderValues.{{ $name }}" size="sm"
-                                        placeholder="Enter {{ str_replace('_', ' ', $name) }}" />
+
+                                    @if ($isDate)
+                                        <div class="space-y-2 pt-1">
+                                            <div class="flex items-center gap-2">
+                                                <flux:input wire:model.live.debounce.250ms="placeholderValues.{{ $name }}"
+                                                    @input="localPlaceholderValues['{{ $name }}'] = $event.target.value"
+                                                    placeholder="e.g. Monday, 5th January 2026"
+                                                    class="w-full text-xs" />
+                                                <label class="inline-flex items-center justify-center p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 cursor-pointer shrink-0 transition" title="Open calendar to pick date">
+                                                    <flux:icon icon="calendar" class="size-4" />
+                                                    <input type="date" class="sr-only" @change="pickCalendar($event)" />
+                                                </label>
+                                            </div>
+
+                                            <div class="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
+                                                <span class="text-zinc-400 text-[10px] uppercase font-bold">Quick:</span>
+                                                @if ($name === 'opening_date')
+                                                    <button type="button" @click="setQuickDate('{{ now()->next(\Carbon\Carbon::MONDAY)->format('l, jS F Y') }}')"
+                                                        class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
+                                                        Next Mon ({{ now()->next(\Carbon\Carbon::MONDAY)->format('j M') }})
+                                                    </button>
+                                                    <button type="button" @click="setQuickDate('{{ now()->addWeeks(2)->next(\Carbon\Carbon::MONDAY)->format('l, jS F Y') }}')"
+                                                        class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
+                                                        In 2 Weeks
+                                                    </button>
+                                                @elseif ($name === 'closing_date')
+                                                    <button type="button" @click="setQuickDate('{{ now()->next(\Carbon\Carbon::FRIDAY)->format('l, jS F Y') }}')"
+                                                        class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
+                                                        This Fri ({{ now()->next(\Carbon\Carbon::FRIDAY)->format('j M') }})
+                                                    </button>
+                                                    <button type="button" @click="setQuickDate('{{ now()->addWeek()->next(\Carbon\Carbon::FRIDAY)->format('l, jS F Y') }}')"
+                                                        class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
+                                                        Next Fri ({{ now()->addWeek()->next(\Carbon\Carbon::FRIDAY)->format('j M') }})
+                                                    </button>
+                                                @else
+                                                    <button type="button" @click="setQuickDate('{{ now()->addDays(7)->format('jS F Y') }}')"
+                                                        class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
+                                                        In 7 Days ({{ now()->addDays(7)->format('j M') }})
+                                                    </button>
+                                                    <button type="button" @click="setQuickDate('{{ now()->endOfMonth()->format('jS F Y') }}')"
+                                                        class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-300 transition cursor-pointer">
+                                                        End of Month
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @else
+                                        <flux:input wire:model.live.debounce.250ms="placeholderValues.{{ $name }}"
+                                            @input="localPlaceholderValues['{{ $name }}'] = $event.target.value"
+                                            placeholder="Enter {{ str_replace('_', ' ', $name) }}"
+                                            class="w-full text-xs" />
+                                    @endif
+
                                     @error('placeholderValues.' . $name)
                                         <p class="text-xs text-red-600">{{ $message }}</p>
                                     @enderror
@@ -1500,6 +1634,16 @@ new #[Title('Parent Notifications')] class extends Component
                         <span x-text="stats.credits + ' SMS ' + (stats.credits === 1 ? 'credit' : 'credits')"></span>
                     </span>
                     <span class="text-[11px]">Max 2,000 chars</span>
+                </div>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-xs text-indigo-950 dark:text-indigo-200 flex items-start gap-2">
+                <flux:icon icon="information-circle" class="size-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                <div class="space-y-0.5">
+                    <p class="font-bold">How Opening & Closing Dates work in templates:</p>
+                    <p class="text-[11px] text-zinc-600 dark:text-zinc-300">
+                        Tags like <code class="font-mono text-indigo-700 dark:text-indigo-300">@{{opening_date}}</code> or <code class="font-mono text-indigo-700 dark:text-indigo-300">@{{closing_date}}</code> don't have fixed dates yet. Whenever a teacher uses this template to send a notice, the system prompts them to pick the exact dates on a calendar right on the compose screen before sending.
+                    </p>
                 </div>
             </div>
 
