@@ -140,9 +140,9 @@ new #[Title('Institution')] class extends Component
                         <div class="md:col-span-2 mt-2">
                             <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">School Logo</label>
                             
-                            <div class="flex items-center gap-6">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                                 <div class="shrink-0">
-                                    <span class="inline-block size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
+                                    <span class="inline-block size-20 sm:size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
                                         @if($institution->logo)
                                             <img x-show="!photoPreview" src="{{ Storage::url($institution->logo) }}" class="w-full h-full object-contain bg-white">
                                         @else
@@ -155,17 +155,17 @@ new #[Title('Institution')] class extends Component
                                 </div>
                                 
                                 <div class="flex-1">
-                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
+                                    <div class="mt-1 flex justify-center px-4 sm:px-6 pt-4 sm:pt-5 pb-5 sm:pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
                                         <div class="space-y-1 text-center">
-                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-8 text-zinc-400 group-hover:text-blue-500 transition" />
-                                            <div class="flex text-sm text-zinc-600 dark:text-zinc-400 justify-center">
+                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-7 sm:size-8 text-zinc-400 group-hover:text-blue-500 transition" />
+                                            <div class="flex text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 justify-center">
                                                 <label for="file-upload" class="relative cursor-pointer bg-transparent rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
                                                     <span>Upload a new file</span>
                                                     <input id="file-upload" name="logo" type="file" class="sr-only" x-ref="photo" x-on:change="updatePhotoPreview" accept="image/*">
                                                 </label>
                                                 <p class="pl-1">or drag and drop</p>
                                             </div>
-                                            <p class="text-xs text-zinc-500">PNG, JPG up to 2MB</p>
+                                            <p class="text-[11px] sm:text-xs text-zinc-500">PNG, JPG up to 2MB</p>
                                         </div>
                                     </div>
                                 </div>
@@ -271,8 +271,8 @@ new #[Title('Institution')] class extends Component
                 @endhasrole
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle">Cancel</flux:button>
-                    <flux:button type="submit" variant="primary" class="px-6 font-semibold">Update Institution</flux:button>
+                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle" class="min-h-[38px]">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary" class="px-4 sm:px-6 font-semibold min-h-[38px]">Update Institution</flux:button>
                 </x-slot:actions>
 
             </x-stepper.layout>
@@ -348,9 +348,9 @@ new #[Title('Institution')] class extends Component
                         <div class="md:col-span-2 mt-2">
                             <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">School Logo (Optional)</label>
                             
-                            <div class="flex items-center gap-6">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                                 <div class="shrink-0">
-                                    <span class="inline-block size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
+                                    <span class="inline-block size-20 sm:size-24 rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm relative flex items-center justify-center">
                                         <span x-show="!photoPreview" class="text-zinc-400">
                                             <flux:icon icon="photo" class="size-8" />
                                         </span>
@@ -359,17 +359,17 @@ new #[Title('Institution')] class extends Component
                                 </div>
                                 
                                 <div class="flex-1">
-                                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-violet-500 dark:hover:border-violet-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
+                                    <div class="mt-1 flex justify-center px-4 sm:px-6 pt-4 sm:pt-5 pb-5 sm:pb-6 border-2 border-zinc-300 border-dashed rounded-xl dark:border-zinc-700 hover:border-violet-500 dark:hover:border-violet-500 transition bg-zinc-50 dark:bg-zinc-800/50 relative overflow-hidden group">
                                         <div class="space-y-1 text-center">
-                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-8 text-zinc-400 group-hover:text-violet-500 transition" />
-                                            <div class="flex text-sm text-zinc-600 dark:text-zinc-400 justify-center">
+                                            <flux:icon icon="arrow-up-tray" class="mx-auto size-7 sm:size-8 text-zinc-400 group-hover:text-violet-500 transition" />
+                                            <div class="flex text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 justify-center">
                                                 <label for="file-upload" class="relative cursor-pointer bg-transparent rounded-md font-medium text-violet-600 hover:text-violet-500 focus-within:outline-none">
                                                     <span>Upload a file</span>
                                                     <input id="file-upload" name="logo" type="file" class="sr-only" x-ref="photo" x-on:change="updatePhotoPreview" accept="image/*">
                                                 </label>
                                                 <p class="pl-1">or drag and drop</p>
                                             </div>
-                                            <p class="text-xs text-zinc-500">PNG, JPG up to 2MB</p>
+                                            <p class="text-[11px] sm:text-xs text-zinc-500">PNG, JPG up to 2MB</p>
                                         </div>
                                     </div>
                                 </div>
@@ -425,8 +425,8 @@ new #[Title('Institution')] class extends Component
                 </x-stepper.section>
 
                 <x-slot:actions>
-                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle">Cancel</flux:button>
-                    <flux:button type="submit" variant="primary" class="px-6 font-semibold">Create Workspace</flux:button>
+                    <flux:button href="{{ route('institution.index') }}" wire:navigate.hover variant="subtle" class="min-h-[38px]">Cancel</flux:button>
+                    <flux:button type="submit" variant="primary" class="px-4 sm:px-6 font-semibold min-h-[38px]">Create Workspace</flux:button>
                 </x-slot:actions>
 
             </x-stepper.layout>

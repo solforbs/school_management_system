@@ -41,9 +41,9 @@
             </div>
 
             @hasrole('Director')
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                     <flux:button href="{{ route('institution.create') }}" icon="plus" variant="primary"
-                        class="font-semibold shadow-sm px-4">
+                        class="font-semibold shadow-sm px-3.5 sm:px-4 text-xs sm:text-sm min-h-[38px]">
                         Add Institution
                     </flux:button>
                 </div>
@@ -62,10 +62,10 @@
         @endif
 
         {{-- Top Multi-Campus KPI Strip --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {{-- Card 1: Registered Campuses --}}
             <div
-                class="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-sm hover:border-zinc-300 transition duration-150">
+                class="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200/80 shadow-sm hover:border-zinc-300 transition duration-150">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Registered
                         Campuses</span>
@@ -87,7 +87,7 @@
 
             {{-- Card 2: Active Workspace --}}
             <a href="{{ route('dashboard') }}"
-                class="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-sm hover:border-emerald-300 hover:shadow-md transition duration-150 block group">
+                class="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200/80 shadow-sm hover:border-emerald-300 hover:shadow-md transition duration-150 block group">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Active
                         Workspace</span>
@@ -109,7 +109,7 @@
             {{-- Card 3: Total Combined Learners --}}
             @if (currentInstitution()?->isApproved())
                 <a href="{{ route('student.index') }}"
-                    class="bg-white rounded-2xl p-5 border border-zinc-200/80 shadow-sm hover:border-zinc-300 hover:shadow-md transition duration-150 block group">
+                    class="bg-white rounded-2xl p-4 sm:p-5 border border-zinc-200/80 shadow-sm hover:border-zinc-300 hover:shadow-md transition duration-150 block group sm:col-span-2 lg:col-span-1">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Total
                             Enrollment</span>
@@ -133,7 +133,7 @@
 
         {{-- Filter, Search & View Switcher Bar --}}
         <div
-            class="bg-white rounded-2xl p-4 border border-zinc-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            class="bg-white rounded-2xl p-3.5 sm:p-4 border border-zinc-200/80 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
             {{-- Search Bar --}}
             <div class="relative w-full md:w-80">
                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
@@ -145,34 +145,34 @@
             </div>
 
             {{-- Status Filter Chips & View Mode --}}
-            <div class="flex items-center justify-between w-full md:w-auto gap-4">
-                <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center justify-between sm:justify-end w-full md:w-auto gap-2.5 sm:gap-3">
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <button type="button" @click="statusFilter = 'all'"
                         :class="statusFilter === 'all' ? 'bg-zinc-900 text-white shadow-sm font-semibold' :
                             'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'"
-                        class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150">
+                        class="px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-medium transition duration-150 min-h-[34px]">
                         All ({{ $totalCampuses }})
                     </button>
                     <button type="button" @click="statusFilter = 'approved'"
                         :class="statusFilter === 'approved' ? 'bg-emerald-600 text-white shadow-sm font-semibold' :
                             'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'"
-                        class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150">
+                        class="px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-medium transition duration-150 min-h-[34px]">
                         Approved
                     </button>
                 </div>
 
                 {{-- Grid / List View Toggle --}}
-                <div class="flex items-center p-1 bg-zinc-100 rounded-xl border border-zinc-200">
+                <div class="flex items-center p-1 bg-zinc-100 rounded-xl border border-zinc-200 shrink-0">
                     <button type="button" @click="viewMode = 'grid'"
                         :class="viewMode === 'grid' ? 'bg-white text-zinc-900 shadow-sm font-bold' :
                             'text-zinc-500 hover:text-zinc-900'"
-                        class="p-1.5 rounded-lg transition" title="Grid View">
+                        class="p-1.5 rounded-lg transition min-w-[32px] min-h-[32px] flex items-center justify-center" title="Grid View">
                         <flux:icon icon="squares-2x2" class="size-4" />
                     </button>
                     <button type="button" @click="viewMode = 'list'"
                         :class="viewMode === 'list' ? 'bg-white text-zinc-900 shadow-sm font-bold' :
                             'text-zinc-500 hover:text-zinc-900'"
-                        class="p-1.5 rounded-lg transition" title="List View">
+                        class="p-1.5 rounded-lg transition min-w-[32px] min-h-[32px] flex items-center justify-center" title="List View">
                         <flux:icon icon="list-bullet" class="size-4" />
                     </button>
                 </div>
@@ -323,31 +323,33 @@
                     </div>
 
                     {{-- Action Footer --}}
-                    <div class="pt-3 mt-1 border-t border-zinc-100 flex items-center justify-between gap-3">
-                        @if ($isCurrent)
-                            <a href="{{ route('dashboard') }}"
-                                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-sm transition">
-                                <flux:icon icon="arrow-top-right-on-square" class="size-3.5" />
-                                Open Dashboard
-                            </a>
-                        @elseif (institutionOwner($institute->owner->id))
-                            <form action="{{ route('institution.choose', $institute->id) }}" method="POST"
-                                class="inline-block">
-                                @csrf
-                                <button type="submit"
-                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition">
-                                    <flux:icon icon="arrow-path" class="size-3.5" />
-                                    Switch Campus
-                                </button>
-                            </form>
-                        @endif
+                    <div class="pt-3 mt-1 border-t border-zinc-100 flex flex-wrap items-center justify-between gap-2.5">
+                        <div class="flex items-center">
+                            @if ($isCurrent)
+                                <a href="{{ route('dashboard') }}"
+                                    class="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-sm transition min-h-[36px]">
+                                    <flux:icon icon="arrow-top-right-on-square" class="size-3.5" />
+                                    <span>Open Dashboard</span>
+                                </a>
+                            @elseif (institutionOwner($institute->owner->id))
+                                <form action="{{ route('institution.choose', $institute->id) }}" method="POST"
+                                    class="inline-block">
+                                    @csrf
+                                    <button type="submit"
+                                        class="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition min-h-[36px]">
+                                        <flux:icon icon="arrow-path" class="size-3.5" />
+                                        <span>Switch Campus</span>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
 
-                        <div class="flex items-center gap-1">
+                        <div class="flex items-center gap-1.5 ml-auto">
                             <flux:button href="{{ route('institution.show', $institute->id) }}" size="sm"
-                                icon="eye" variant="subtle" tooltip="View Profile" />
+                                icon="eye" variant="subtle" tooltip="View Profile" class="min-h-[36px] min-w-[36px]" />
                             @if (institutionOwner($institute->owner->id))
                                 <flux:button href="{{ route('institution.edit', $institute->id) }}" size="sm"
-                                    icon="pencil-square" variant="subtle" tooltip="Settings" />
+                                    icon="pencil-square" variant="subtle" tooltip="Settings" class="min-h-[36px] min-w-[36px]" />
                             @endif
                         </div>
                     </div>
@@ -370,17 +372,17 @@
         {{-- 2. Clean List Table View (Alternative) --}}
         <div class="bg-white rounded-2xl shadow-sm border border-zinc-200/80 overflow-hidden flex flex-col"
             x-show="viewMode === 'list'">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
+            <div class="responsive-table-container">
+                <table class="w-full text-left text-sm min-w-[720px]">
                     <thead
                         class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                         <tr>
-                            <th class="py-3.5 px-5">Institution</th>
-                            <th class="py-3.5 px-5">Campus Contact</th>
-                            <th class="py-3.5 px-5">Enrollment</th>
-                            <th class="py-3.5 px-5">Status</th>
-                            <th class="py-3.5 px-5">Workspace</th>
-                            <th class="py-3.5 px-5 text-right">Actions</th>
+                            <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Institution</th>
+                            <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Campus Contact</th>
+                            <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Enrollment</th>
+                            <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Status</th>
+                            <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Workspace</th>
+                            <th class="py-3.5 px-4 sm:px-5 text-right whitespace-nowrap">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-100">
@@ -391,44 +393,44 @@
                                     $institute->student_details_count ?? ($institute->studentDetails()->count() ?? 0);
                             @endphp
                             <tr class="hover:bg-zinc-50/60 transition-colors">
-                                <td class="py-4 px-5">
+                                <td class="py-4 px-4 sm:px-5 min-w-[180px]">
                                     <div class="flex items-center gap-3">
                                         @if ($institute->logo)
                                             <img src="{{ Storage::url($institute->logo) }}"
-                                                class="size-9 rounded-xl border border-zinc-200 bg-white object-contain p-0.5">
+                                                class="size-9 rounded-xl border border-zinc-200 bg-white object-contain p-0.5 shrink-0">
                                         @else
                                             <div
-                                                class="size-9 rounded-xl bg-zinc-100 font-bold text-xs flex items-center justify-center text-zinc-700">
+                                                class="size-9 rounded-xl bg-zinc-100 font-bold text-xs flex items-center justify-center text-zinc-700 shrink-0">
                                                 {{ substr($institute->name, 0, 1) }}
                                             </div>
                                         @endif
-                                        <div>
-                                            <div class="font-bold text-zinc-900">{{ $institute->name }}</div>
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-zinc-900 truncate">{{ $institute->name }}</div>
                                             <div class="text-xs text-zinc-400 font-mono">{{ $institute->code ?? '—' }}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
 
-                                <td class="py-4 px-5 text-xs text-zinc-600">
-                                    <div>{{ $institute->email ?? '—' }}</div>
-                                    <div class="text-zinc-400 mt-0.5">{{ $institute->phone ?? '' }}</div>
+                                <td class="py-4 px-4 sm:px-5 text-xs text-zinc-600 min-w-[160px]">
+                                    <div class="truncate">{{ $institute->email ?? '—' }}</div>
+                                    <div class="text-zinc-400 mt-0.5 truncate">{{ $institute->phone ?? '' }}</div>
                                 </td>
 
-                                <td class="py-4 px-5 text-xs font-semibold text-zinc-900">
+                                <td class="py-4 px-4 sm:px-5 text-xs font-semibold text-zinc-900 whitespace-nowrap">
                                     <span x-data="animatedCounter({{ $studentCount }})"
                                         x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span>
                                     Learners
                                 </td>
 
-                                <td class="py-4 px-5">
+                                <td class="py-4 px-4 sm:px-5 whitespace-nowrap">
                                     <span
                                         class="px-2.5 py-0.5 rounded-full text-xs font-bold {{ $institute->is_approved ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
                                         {{ $institute->is_approved ? 'Approved' : 'Pending' }}
                                     </span>
                                 </td>
 
-                                <td class="py-4 px-5">
+                                <td class="py-4 px-4 sm:px-5 whitespace-nowrap">
                                     @if ($isCurrent)
                                         <span
                                             class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -440,20 +442,20 @@
                                             method="POST">
                                             @csrf
                                             <button type="submit"
-                                                class="px-3 py-1 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition">
+                                                class="inline-flex items-center px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition min-h-[32px]">
                                                 Switch
                                             </button>
                                         </form>
                                     @endif
                                 </td>
 
-                                <td class="py-4 px-5 text-right">
+                                <td class="py-4 px-4 sm:px-5 text-right whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-1.5">
                                         <flux:button href="{{ route('institution.show', $institute->id) }}"
-                                            size="sm" icon="eye" variant="subtle" />
+                                            size="sm" icon="eye" variant="subtle" class="min-h-[34px] min-w-[34px]" />
                                         @if (institutionOwner($institute->owner->id))
                                             <flux:button href="{{ route('institution.edit', $institute->id) }}"
-                                                size="sm" icon="pencil-square" variant="subtle" />
+                                                size="sm" icon="pencil-square" variant="subtle" class="min-h-[34px] min-w-[34px]" />
                                         @endif
                                     </div>
                                 </td>

@@ -3,10 +3,10 @@
 
         {{-- Page Header --}}
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div class="flex items-center gap-6">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 min-w-0">
                 {{-- Logo --}}
                 <div class="shrink-0">
-                    <span class="inline-flex size-20 items-center justify-center rounded-2xl bg-white border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden p-2">
+                    <span class="inline-flex size-16 sm:size-20 items-center justify-center rounded-2xl bg-white border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden p-2">
                         @if ($institution->logo)
                             <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" class="w-full h-full object-contain">
                         @else
@@ -18,35 +18,35 @@
                 </div>
                 
                 {{-- Title & Badges --}}
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <h1 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ $institution->name }}</h1>
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ $institution->name }}</h1>
                         
                         {{-- Status Badges --}}
-                        <flux:badge size="sm" :color="$institution->is_active ? 'emerald' : 'zinc'" class="font-semibold">
+                        <flux:badge size="sm" :color="$institution->is_active ? 'emerald' : 'zinc'" class="font-semibold shrink-0">
                             {{ $institution->is_active ? 'Active' : 'Inactive' }}
                         </flux:badge>
                         @if (!$institution->is_approved)
-                            <flux:badge size="sm" color="amber" class="font-semibold">Pending Approval</flux:badge>
+                            <flux:badge size="sm" color="amber" class="font-semibold shrink-0">Pending Approval</flux:badge>
                         @endif
                     </div>
-                    <div class="flex items-center gap-4 text-sm text-zinc-500">
-                        <span class="flex items-center gap-1.5"><flux:icon icon="building-office-2" class="size-4" /> {{ $institution->type ?? 'Not Set' }}</span>
+                    <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-zinc-500">
+                        <span class="flex items-center gap-1.5"><flux:icon icon="building-office-2" class="size-4 shrink-0" /> {{ $institution->type ?? 'Not Set' }}</span>
                         <span>&bull;</span>
-                        <span class="flex items-center gap-1.5"><flux:icon icon="star" class="size-4" /> {{ $institution->plan ? $institution->plan->name : 'No Plan' }}</span>
+                        <span class="flex items-center gap-1.5"><flux:icon icon="star" class="size-4 shrink-0" /> {{ $institution->plan ? $institution->plan->name : 'No Plan' }}</span>
                         <span>&bull;</span>
-                        <span class="flex items-center gap-1.5"><flux:icon icon="clock" class="size-4" /> Updated {{ $institution->updated_at->format('M d, Y') }}</span>
+                        <span class="flex items-center gap-1.5"><flux:icon icon="clock" class="size-4 shrink-0" /> Updated {{ $institution->updated_at->format('M d, Y') }}</span>
                     </div>
                 </div>
             </div>
 
             {{-- Action Buttons --}}
-            <div class="flex items-center gap-3">
-                <flux:button href="{{ route('institution.index') }}" wire:navigate.hover icon="arrow-left" variant="outline">
+            <div class="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+                <flux:button href="{{ route('institution.index') }}" wire:navigate.hover icon="arrow-left" variant="outline" class="min-h-[38px]">
                     Back
                 </flux:button>
                 @if (institutionOwner($institution->owner->id))
-                    <flux:button href="{{ route('institution.edit', $institution->id) }}" wire:navigate.hover icon="pencil-square" variant="primary">
+                    <flux:button href="{{ route('institution.edit', $institution->id) }}" wire:navigate.hover icon="pencil-square" variant="primary" class="min-h-[38px]">
                         Edit Details
                     </flux:button>
                 @endif
@@ -61,11 +61,11 @@
                             label="Revoke Approval"
                             icon="x-circle"
                             variant="subtle"
-                            trigger-class="text-rose-600 hover:bg-rose-50" />
+                            trigger-class="text-rose-600 hover:bg-rose-50 min-h-[38px]" />
                     @else
-                        <form action="{{ route('institution.approve', $institution->id) }}" method="POST">
+                        <form action="{{ route('institution.approve', $institution->id) }}" method="POST" class="inline-block">
                             @csrf
-                            <flux:button type="submit" icon="check-circle" variant="primary" color="emerald">
+                            <flux:button type="submit" icon="check-circle" variant="primary" color="emerald" class="min-h-[38px]">
                                 Approve Institution
                             </flux:button>
                         </form>
