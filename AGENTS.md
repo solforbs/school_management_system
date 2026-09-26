@@ -47,6 +47,7 @@ A multi-tenant SaaS school management system for Kenyan/African schools (solforb
 - Teacher self-enrollment permission (`can_enroll_students` flag on teacher_details)
 
 ## Recently Completed (last ~2 weeks)
+- Comprehensive multi-device responsiveness (Director, Accountant, Teacher, Parent, Student dashboards + global CSS helpers)
 - Student bulk upload page (xlsx/csv import + spreadsheet grid entry)
 - Teacher self-enrollment permission
 - Demo school: Settings redirects to Appearance (not 403)

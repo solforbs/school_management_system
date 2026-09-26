@@ -1,5 +1,5 @@
 {{-- Parent KPI Tiles --}}
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
     <x-kpi-card title="Children" icon="user-group" color="sky" :count="$stats['children_count']" href="{{ route('student.index') }}"
         subtext="enrolled in school" />
 
@@ -13,13 +13,13 @@
 
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
     {{-- My Children List --}}
-    <flux:card class="hover:shadow-md transition-shadow">
-        <flux:heading size="lg" class="mb-4 font-semibold">My Children</flux:heading>
+    <flux:card class="hover:shadow-md transition-shadow p-4 sm:p-5">
+        <flux:heading size="lg" class="mb-4 font-semibold text-base sm:text-lg">My Children</flux:heading>
         <div class="grid grid-cols-1 gap-3">
             @forelse ($stats['children'] as $child)
                 <div
-                    class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3.5 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <div class="flex items-center gap-3 min-w-0">
+                    class="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 sm:p-3.5 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
                         @php
                             $name = $child->student?->name ?? 'Child';
                             $initials = collect(explode(' ', $name))
@@ -28,16 +28,16 @@
                                 ->join('');
                         @endphp
                         <div
-                            class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-50 text-xs font-bold text-sky-600 dark:bg-sky-500/20 dark:text-sky-400 ring-1 ring-inset ring-sky-500/20">
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-50 text-xs font-bold text-sky-600 dark:bg-sky-500/20 dark:text-sky-400 ring-1 ring-inset ring-sky-500/20">
                             {{ $initials }}
                         </div>
-                        <div>
-                            <div class="font-medium text-zinc-900 dark:text-white text-sm">{{ $name }}</div>
-                            <div class="text-xs text-zinc-500">{{ $child->institution?->name }} · Adm:
+                        <div class="min-w-0 flex-1">
+                            <div class="font-medium text-zinc-900 dark:text-white text-xs sm:text-sm truncate">{{ $name }}</div>
+                            <div class="text-xs text-zinc-500 truncate">{{ $child->institution?->name }} · Adm:
                                 {{ $child->admission_number }}</div>
                         </div>
                     </div>
-                    <flux:badge size="sm" :color="$child->is_active ? 'emerald' : 'zinc'" class="font-semibold">
+                    <flux:badge size="sm" :color="$child->is_active ? 'emerald' : 'zinc'" class="font-semibold shrink-0">
                         {{ ucfirst($child->enrollment_status) }}
                     </flux:badge>
                 </div>
@@ -55,9 +55,9 @@
     </flux:card>
 
     {{-- Recent Fees Table --}}
-    <flux:card class="hover:shadow-md transition-shadow">
+    <flux:card class="hover:shadow-md transition-shadow p-4 sm:p-5">
         <div class="flex items-center justify-between mb-4">
-            <flux:heading size="lg" class="font-semibold">Recent Fees</flux:heading>
+            <flux:heading size="lg" class="font-semibold text-base sm:text-lg">Recent Fees</flux:heading>
             @can('view feemanagement')
                 <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm"
                     icon-trailing="chevron-right" class="text-xs">
@@ -65,7 +65,8 @@
                 </flux:button>
             @endcan
         </div>
-        <flux:table class="p-2">
+        <div class="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
+        <flux:table class="p-2 min-w-[380px] sm:min-w-full">
             <flux:table.columns>
                 <flux:table.column>Child</flux:table.column>
                 <flux:table.column>Title</flux:table.column>
@@ -108,5 +109,6 @@
                 @endforelse
             </flux:table.rows>
         </flux:table>
+        </div>
     </flux:card>
 </div>

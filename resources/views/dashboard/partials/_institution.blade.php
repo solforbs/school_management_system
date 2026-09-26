@@ -29,7 +29,7 @@
 @else
     @if (!isset($stats['students_count']))
         {{-- Accountant 4-Card Financial KPI Quadrant --}}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 sm:gap-4 xl:gap-5">
             <x-kpi-card title="Total Invoiced" icon="document-text" color="sky"
                 count="KES {{ $currency($stats['fees_billed']) }}" href="{{ route('feemanagement.index') }}"
                 subtext="gross receivables billed" />
@@ -54,8 +54,8 @@
             @endif
         </div>
     @else
-        {{-- Director Operational Executive KPI Tiles (Spacious 3-Column Grid) --}}
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {{-- Director Operational Executive KPI Tiles (Spacious Responsive Grid) --}}
+        <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 sm:gap-4 xl:gap-5">
             <x-kpi-card title="Enrolled Students" icon="academic-cap" color="sky" :count="$stats['students_count']"
                 href="{{ route('student.index') }}" subtext="official learner headcount" />
             <x-kpi-card title="Registered Parents" icon="users" color="indigo" :count="$stats['parents_count']"
@@ -89,7 +89,7 @@
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {{-- Fee Collection Velocity Meter --}}
         <div
-            class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3 hover:border-zinc-300 transition duration-150 lg:col-span-2">
+            class="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3 hover:border-zinc-300 transition duration-150 lg:col-span-2">
             <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 <div class="min-w-0">
                     <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Fee Collection Velocity</h3>
@@ -107,29 +107,32 @@
                     style="width: {{ $pct($stats['fees_collected'], $stats['fees_billed']) }}%"></div>
             </div>
 
-            <div class="flex flex-wrap items-center justify-between text-xs pt-1 gap-2 font-medium">
-                <span class="text-zinc-600 dark:text-zinc-300">
-                    Collected: <strong class="text-emerald-600 dark:text-emerald-400 font-bold">KES
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 text-xs pt-1 font-medium">
+                <div class="flex items-center justify-between sm:block text-zinc-600 dark:text-zinc-300">
+                    <span class="text-zinc-400 block sm:inline">Collected:</span>
+                    <strong class="text-emerald-600 dark:text-emerald-400 font-bold sm:ml-1">KES
                         {{ $currency($stats['fees_collected']) }}</strong>
-                </span>
-                <span class="text-zinc-500">
-                    Total Billed: <strong class="text-zinc-900 dark:text-zinc-100">KES
+                </div>
+                <div class="flex items-center justify-between sm:block text-zinc-500">
+                    <span class="text-zinc-400 block sm:inline">Total Billed:</span>
+                    <strong class="text-zinc-900 dark:text-zinc-100 sm:ml-1">KES
                         {{ $currency($stats['fees_billed']) }}</strong>
-                </span>
-                <span class="text-rose-600 font-semibold">
-                    Outstanding: KES {{ $currency($stats['fees_outstanding']) }}
-                </span>
+                </div>
+                <div class="flex items-center justify-between sm:block text-rose-600 font-semibold sm:text-right">
+                    <span class="text-rose-500/80 block sm:inline">Outstanding:</span>
+                    <strong class="sm:ml-1">KES {{ $currency($stats['fees_outstanding']) }}</strong>
+                </div>
             </div>
         </div>
 
         {{-- Biometric Hardware Heartbeat --}}
         @isset($stats['devices_count'])
             <div
-                class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3 hover:border-zinc-300 transition duration-150 flex flex-col justify-between">
-                <div class="flex items-center justify-between">
+                class="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3 hover:border-zinc-300 transition duration-150 flex flex-col justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-2">
                     <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Biometric Devices</h3>
                     <span
-                        class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono {{ ($stats['devices_online_count'] ?? 0) > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-zinc-100 text-zinc-600' }}">
+                        class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono shrink-0 {{ ($stats['devices_online_count'] ?? 0) > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'bg-zinc-100 text-zinc-600' }}">
                         {{ $stats['devices_online_count'] ?? 0 }}/{{ $stats['devices_count'] }} Online
                     </span>
                 </div>
@@ -149,7 +152,7 @@
 
     {{-- Recent Fees Card --}}
     <div
-        class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3">
+        class="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
             <div class="min-w-0">
                 <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Recent Fee Receipts</h3>
@@ -165,8 +168,8 @@
         <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
             @forelse ($stats['recent_fees'] as $fee)
                 <div
-                    class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2.5 text-sm hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 px-2 rounded-lg transition-colors">
-                    <div class="flex items-center gap-3 min-w-0">
+                    class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 text-sm hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 px-2 rounded-lg transition-colors">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
                         @php
                             $name = $fee->student?->name ?? 'Unknown';
                             $initials = collect(explode(' ', $name))
@@ -178,13 +181,15 @@
                             class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-100 dark:border-blue-800">
                             {{ $initials }}
                         </div>
-                        <div class="min-w-0">
-                            <span
-                                class="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm">{{ $name }}</span>
-                            <span class="text-zinc-400 text-xs ml-1.5">— {{ $fee->title }}</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                    class="font-bold text-zinc-900 dark:text-zinc-100 text-xs sm:text-sm truncate">{{ $name }}</span>
+                                <span class="text-zinc-400 text-xs truncate max-w-[180px] sm:max-w-none">— {{ $fee->title }}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 shrink-0 ml-auto">
+                    <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pl-11 sm:pl-0">
                         <span class="font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100 whitespace-nowrap">KES
                             {{ $currency($fee->amount) }}</span>
                         <flux:badge size="sm"

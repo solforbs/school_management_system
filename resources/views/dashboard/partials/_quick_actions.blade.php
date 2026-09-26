@@ -3,7 +3,7 @@
 @endphp
 
 <div
-    class="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:overflow-visible sm:pb-0 sm:flex-wrap w-full sm:w-auto -mx-1 px-1 sm:mx-0 sm:px-0">
+    class="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
     @if (currentInstitution()?->isApproved())
         @if ($isAccountant)
             @can('create feemanagement')

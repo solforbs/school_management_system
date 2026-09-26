@@ -263,3 +263,24 @@ select:focus[data-flux-control] {
     .chat-dot { animation: none; opacity: 0.8; }
     .chat-ellipsis::after { animation: none; content: '…'; }
 }
+
+/* --- Global Multi-Device Responsive Architecture --- */
+[data-flux-main] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+.responsive-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+

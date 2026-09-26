@@ -39,17 +39,17 @@
 
 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div class="space-y-1">
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
             <span
-                class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60 flex items-center gap-1.5">
-                <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                {{ $portalBadge }}
+                class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60 flex items-center gap-1.5 max-w-full truncate">
+                <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                <span class="truncate">{{ $portalBadge }}</span>
             </span>
-            <span class="text-xs text-zinc-400">&bull;</span>
-            <span class="text-xs text-zinc-500 font-medium">{{ now()->format('l, d F Y') }}</span>
+            <span class="text-xs text-zinc-400 hidden xs:inline">&bull;</span>
+            <span class="text-xs text-zinc-500 font-medium shrink-0">{{ now()->format('l, d F Y') }}</span>
         </div>
 
-        <flux:heading size="xl" class="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">
+        <flux:heading size="xl" class="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white break-words">
             Welcome back, {{ $greetingName }}
         </flux:heading>
 

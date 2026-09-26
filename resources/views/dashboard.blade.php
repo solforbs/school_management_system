@@ -6,7 +6,7 @@
 @endphp
 
 <x-layouts::app :title="__('Dashboard')">
-    <div class="flex h-full w-full flex-1 flex-col gap-6">
+    <div class="flex h-full w-full flex-1 flex-col gap-4 sm:gap-6 min-w-0">
 
         @include('dashboard.partials._header')
 

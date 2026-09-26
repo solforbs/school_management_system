@@ -1,7 +1,7 @@
 {{-- Admin / System Scoped Analytics Partial --}}
 <div>
     {{-- KPI tiles --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 sm:gap-4 xl:gap-5">
         <x-kpi-card title="Institutions" icon="building-office-2" color="indigo" :count="$stats['institutions_count']"
             href="{{ route('institution.index') }}">
             <div class="flex items-center flex-wrap gap-1.5 mt-0.5">

@@ -1,5 +1,5 @@
 {{-- Student KPI Tiles --}}
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
     <x-kpi-card title="Attendance Today" icon="clock" color="violet" :count="$stats['attendance_today_count']"
         href="{{ route('attendance.index') }}" subtext="today's check-ins" />
 
@@ -12,9 +12,9 @@
 </div>
 
 {{-- Recent Fees Card --}}
-<flux:card class="hover:shadow-md transition-shadow">
+<flux:card class="hover:shadow-md transition-shadow p-4 sm:p-5">
     <div class="flex items-center justify-between mb-4">
-        <flux:heading size="lg" class="font-semibold">My Fee Statements</flux:heading>
+        <flux:heading size="lg" class="font-semibold text-base sm:text-lg">My Fee Statements</flux:heading>
         @can('view feemanagement')
             <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm"
                 icon-trailing="chevron-right" class="text-xs">
@@ -22,7 +22,8 @@
             </flux:button>
         @endcan
     </div>
-    <flux:table class="p-2">
+    <div class="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
+    <flux:table class="p-2 min-w-[380px] sm:min-w-full">
         <flux:table.columns>
             <flux:table.column>Title</flux:table.column>
             <flux:table.column>Amount</flux:table.column>
@@ -33,8 +34,8 @@
             @forelse ($stats['recent_fees'] as $fee)
                 <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
                     <flux:table.cell class="font-medium text-xs">{{ $fee->title }}</flux:table.cell>
-                    <flux:table.cell class="text-xs">{{ $currency($fee->amount) }}</flux:table.cell>
-                    <flux:table.cell class="text-zinc-500 text-xs">{{ $currency($fee->balance) }}</flux:table.cell>
+                    <flux:table.cell class="text-xs font-mono font-semibold">{{ $currency($fee->amount) }}</flux:table.cell>
+                    <flux:table.cell class="text-zinc-500 text-xs font-mono">{{ $currency($fee->balance) }}</flux:table.cell>
                     <flux:table.cell>
                         <flux:badge size="sm"
                             :color="match ($fee->status) {
@@ -62,4 +63,5 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 </flux:card>
