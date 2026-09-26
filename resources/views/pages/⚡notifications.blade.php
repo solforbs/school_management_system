@@ -683,16 +683,10 @@ new #[Title('Parent Notifications')] class extends Component
     syncInputs();
 " class="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
     <div>
-        <div class="flex items-center gap-2 mb-1">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-wide uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400 border border-indigo-200/60">
-                Parent Communication
-            </span>
-        </div>
-        <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Parent Notifications</flux:heading>
-        <flux:text class="text-zinc-500 text-sm mt-0.5">
-            Build the notices parents rely on — term dates, mid-term start, closures — and send them to every parent
-            by SMS, e-mail, or both.
-        </flux:text>
+        <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Parent Notifications</flux:heading>
+        <flux:subheading class="text-zinc-500 text-sm mt-1">
+            Compose and broadcast school announcements, term dates, and fee notices to parents via SMS and email.
+        </flux:subheading>
     </div>
 
     {{-- Tabs --}}
@@ -701,7 +695,7 @@ new #[Title('Parent Notifications')] class extends Component
             <button type="button" wire:click="$set('tab', '{{ $key }}')"
                 @class([
                     'px-4 py-2.5 text-sm font-semibold -mb-px border-b-2 transition whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer',
-                    'border-indigo-500 text-indigo-600 dark:text-indigo-400' => $tab === $key,
+                    'border-zinc-900 text-zinc-900 dark:border-white dark:text-white' => $tab === $key,
                     'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200' => $tab !== $key,
                 ])>
                 @if ($key === 'send')
@@ -723,7 +717,7 @@ new #[Title('Parent Notifications')] class extends Component
 
                 {{-- Alert when editing a scheduled notice --}}
                 @if ($editingScheduledId)
-                    <div class="p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/30 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shadow-xs">
+                    <div class="p-3.5 rounded-lg border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/30 flex items-center justify-between text-xs text-amber-900 dark:text-amber-200 shadow-xs">
                         <div class="flex items-center gap-2">
                             <flux:icon icon="pencil-square" class="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
                             <span><strong>Editing Scheduled Notice:</strong> Saving changes will update the notice before it is sent.</span>
@@ -732,70 +726,70 @@ new #[Title('Parent Notifications')] class extends Component
                     </div>
                 @endif
 
-                {{-- 1-Click Quick Message Starters for Busy Teachers --}}
-                <div class="space-y-2 p-3.5 rounded-2xl border border-indigo-100 dark:border-indigo-900/60 bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-white dark:from-indigo-950/40 dark:via-zinc-900 dark:to-zinc-900 shadow-xs">
+                {{-- Quick Message Starters --}}
+                <div class="space-y-2.5 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50">
                     <div class="flex items-center justify-between">
-                        <label class="text-xs font-bold text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
-                            <flux:icon icon="bolt" class="size-3.5 text-amber-500" />
-                            1-Click Message Starters
-                        </label>
-                        <span class="text-[11px] text-zinc-500 dark:text-zinc-400">Click to fill standard Kenyan school notices</span>
+                        <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <flux:icon icon="sparkles" class="size-3.5 text-zinc-500" />
+                            Quick Templates
+                        </span>
+                        <span class="text-xs text-zinc-500 hidden sm:inline">Pre-filled school announcements</span>
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                         <button type="button" @click="applyPreset('fee')"
-                            class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer">
+                            class="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-750 text-left transition shadow-xs group cursor-pointer">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-base">💰</span>
-                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Fee Reminder</span>
+                                <flux:icon icon="banknotes" class="size-4 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white shrink-0" />
+                                <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">Fee Reminder</span>
                             </div>
-                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Clear balance notice</p>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate">Balance clearance</p>
                         </button>
 
                         <button type="button" @click="applyPreset('opening')"
-                            class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer">
+                            class="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-750 text-left transition shadow-xs group cursor-pointer">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-base">🏫</span>
-                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Term Opening</span>
+                                <flux:icon icon="academic-cap" class="size-4 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white shrink-0" />
+                                <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">Term Opening</span>
                             </div>
-                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Reopening dates</p>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate">Reporting dates</p>
                         </button>
 
                         <button type="button" @click="applyPreset('closing')"
-                            class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer">
+                            class="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-750 text-left transition shadow-xs group cursor-pointer">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-base">🏖️</span>
-                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Term Closing</span>
+                                <flux:icon icon="calendar" class="size-4 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white shrink-0" />
+                                <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">Term Closing</span>
                             </div>
-                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Holidays notice</p>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate">Holiday closure</p>
                         </button>
 
                         <button type="button" @click="applyPreset('agm')"
-                            class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer">
+                            class="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-750 text-left transition shadow-xs group cursor-pointer">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-base">📢</span>
-                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Parents AGM</span>
+                                <flux:icon icon="user-group" class="size-4 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white shrink-0" />
+                                <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">Parents AGM</span>
                             </div>
-                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Meeting notice</p>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate">General meeting</p>
                         </button>
 
                         <button type="button" @click="applyPreset('biometrics')"
-                            class="p-2.5 rounded-xl border border-indigo-200/70 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition shadow-xs group cursor-pointer col-span-2 sm:col-span-1">
+                            class="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-750 text-left transition shadow-xs group cursor-pointer col-span-2 sm:col-span-1">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-base">📱</span>
-                                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">New System</span>
+                                <flux:icon icon="finger-print" class="size-4 text-zinc-600 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white shrink-0" />
+                                <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">Biometrics</span>
                             </div>
-                            <p class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-1">Biometrics attendance</p>
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate">Attendance notice</p>
                         </button>
                     </div>
                 </div>
 
                 <flux:select wire:model.live="sourceTemplateId" label="Choose a template" placeholder="Write from scratch or pick a template">
                     @foreach (self::PREMADE_TEMPLATES as $key => $p)
-                        <flux:select.option value="premade:{{ $key }}">⭐ {{ $p['name'] }} (Pre-made)</flux:select.option>
+                        <flux:select.option value="premade:{{ $key }}">{{ $p['name'] }} (System)</flux:select.option>
                     @endforeach
 
                     @foreach ($this->templates as $template)
-                        <flux:select.option :value="$template->id">🏫 {{ $template->name }}</flux:select.option>
+                        <flux:select.option :value="$template->id">{{ $template->name }} (School)</flux:select.option>
                     @endforeach
                 </flux:select>
 
@@ -803,10 +797,10 @@ new #[Title('Parent Notifications')] class extends Component
                 <div class="space-y-1.5">
                     <div class="flex items-center justify-between">
                         <flux:label>Subject / title</flux:label>
-                        <div class="flex items-center gap-1 text-[11px] text-zinc-500">
-                            <span class="text-zinc-400 hidden sm:inline">Quick insert:</span>
-                            <button type="button" @click="insertTag('institution', 'subject')" class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-zinc-700 transition cursor-pointer text-[10px]">+ School</button>
-                            <button type="button" @click="insertTag('date', 'subject')" class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-zinc-700 transition cursor-pointer text-[10px]">+ Today's Date</button>
+                        <div class="flex items-center gap-1.5 text-xs text-zinc-500">
+                            <span class="text-zinc-400 hidden sm:inline">Insert:</span>
+                            <button type="button" @click="insertTag('institution', 'subject')" class="px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer text-xs">+ School</button>
+                            <button type="button" @click="insertTag('date', 'subject')" class="px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer text-xs">+ Date</button>
                         </div>
                     </div>
                     <flux:input id="composer-subject" wire:model.live.debounce.1200ms="subject" @input="onSubjectInput($event)"
@@ -814,74 +808,74 @@ new #[Title('Parent Notifications')] class extends Component
                     @error('subject') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- Message Textarea with Clickable Variable Chips & SMS Counter --}}
+                {{-- Message Textarea with Variable Insertion Toolbar --}}
                 <div class="space-y-2">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <flux:label>Message</flux:label>
-                        <span class="text-[11px] text-zinc-400 dark:text-zinc-500">Click to insert dates, parent names, or amounts</span>
+                        <span class="text-xs text-zinc-500">Use variable chips to personalize text</span>
                     </div>
 
-                    {{-- Clickable & Draggable Variable Chips Bar --}}
-                    <div class="p-2.5 rounded-xl border border-indigo-100/80 dark:border-indigo-900/50 bg-indigo-50/40 dark:bg-indigo-950/20 backdrop-blur-xs">
+                    {{-- Variable Insertion Toolbar --}}
+                    <div class="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mr-1 flex items-center gap-1">
-                                <flux:icon icon="sparkles" class="size-3 text-indigo-500" />
-                                Easy Tools:
+                            <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                                <flux:icon icon="variable" class="size-3.5 text-zinc-500" />
+                                Insert:
                             </span>
 
-                            {{-- Universal Interactive Date Picker --}}
+                            {{-- Opening Date / Interactive Date Picker --}}
                             <div x-data="{
                                 openDatePop: false,
                                 dateVal: '{{ now()->addDays(7)->format('Y-m-d') }}'
                             }" class="relative inline-block">
                                 <button type="button" @click="openDatePop = !openDatePop"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition active:scale-95 cursor-pointer"
-                                    title="Pick any date or opening date from calendar to insert into message">
-                                    <flux:icon icon="calendar" class="size-3.5" />
-                                    <span>📅 Opening Date / Pick Date</span>
-                                    <flux:icon icon="chevron-down" class="size-2.5 opacity-80" />
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-xs transition cursor-pointer"
+                                    title="Insert opening date or pick any date from calendar">
+                                    <flux:icon icon="calendar" class="size-3.5 text-zinc-500" />
+                                    <span>Opening Date</span>
+                                    <flux:icon icon="chevron-down" class="size-3 opacity-60" />
                                 </button>
 
                                 <div x-show="openDatePop" @click.outside="openDatePop = false" style="display: none;"
-                                    class="absolute left-0 mt-1.5 z-40 w-80 p-4 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-3">
+                                    class="absolute left-0 mt-1.5 z-40 w-80 p-4 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-3">
                                     <div class="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-700/60 pb-2">
-                                        <p class="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                                            <flux:icon icon="calendar" class="size-4 text-indigo-600" />
+                                        <p class="text-xs font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                                            <flux:icon icon="calendar" class="size-4 text-zinc-600 dark:text-zinc-400" />
                                             Select Date to Insert
                                         </p>
-                                        <button type="button" @click="openDatePop = false" class="text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+                                        <button type="button" @click="openDatePop = false" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-xs cursor-pointer"><flux:icon icon="x-mark" class="size-3.5" /></button>
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-zinc-600 dark:text-zinc-300 mb-1">Select date on calendar:</label>
+                                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">Calendar date:</label>
                                         <input type="date" x-model="dateVal"
-                                            class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-zinc-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500" />
+                                            class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-zinc-900 dark:text-white font-medium focus:ring-2 focus:ring-zinc-500" />
                                     </div>
                                     
                                     <div class="space-y-1.5 pt-1">
-                                        <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Click format to insert:</label>
+                                        <label class="block text-xs font-medium text-zinc-500 uppercase tracking-wider">Format preview:</label>
                                         
                                         <button type="button" @click="insertFormattedDate(dateVal, 'natural', 'body'); openDatePop = false;"
-                                            class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 border border-indigo-200/60 flex items-center justify-between cursor-pointer transition">
-                                            <span class="text-[11px] text-zinc-500">Natural English:</span>
+                                            class="w-full py-2 px-2.5 text-xs font-medium rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-850 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between cursor-pointer transition">
+                                            <span class="text-xs text-zinc-500">Natural English:</span>
                                             <strong x-text="formatDateChoice(dateVal, 'natural')"></strong>
                                         </button>
 
                                         <button type="button" @click="insertFormattedDate(dateVal, 'slash', 'body'); openDatePop = false;"
-                                            class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between cursor-pointer transition">
-                                            <span class="text-[11px] text-zinc-500">Standard DD/MM/YYYY:</span>
+                                            class="w-full py-2 px-2.5 text-xs font-medium rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-850 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between cursor-pointer transition">
+                                            <span class="text-xs text-zinc-500">Standard DD/MM/YYYY:</span>
                                             <strong x-text="formatDateChoice(dateVal, 'slash')"></strong>
                                         </button>
 
                                         <button type="button" @click="insertFormattedDate(dateVal, 'day', 'body'); openDatePop = false;"
-                                            class="w-full py-1.5 px-2.5 text-xs font-semibold rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between cursor-pointer transition">
-                                            <span class="text-[11px] text-zinc-500">With Day Name:</span>
+                                            class="w-full py-2 px-2.5 text-xs font-medium rounded-lg bg-zinc-50 hover:bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-850 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between cursor-pointer transition">
+                                            <span class="text-xs text-zinc-500">With Day Name:</span>
                                             <strong x-text="formatDateChoice(dateVal, 'day')"></strong>
                                         </button>
                                     </div>
 
-                                    <div class="pt-1 border-t border-zinc-100 dark:border-zinc-700/60 flex justify-between items-center text-[11px]">
-                                        <button type="button" @click="insertTag('date', 'body'); openDatePop = false;" class="text-zinc-500 hover:text-indigo-600">
-                                            Insert dynamic &#123;&#123;date&#125;&#125;
+                                    <div class="pt-2 border-t border-zinc-100 dark:border-zinc-700/60 flex justify-between items-center text-xs">
+                                        <button type="button" @click="insertTag('opening_date', 'body'); openDatePop = false;" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white underline">
+                                            Insert tag &#123;&#123;opening_date&#125;&#125;
                                         </button>
                                         <button type="button" @click="openDatePop = false" class="text-zinc-400 hover:text-zinc-600">Close</button>
                                     </div>
@@ -890,41 +884,42 @@ new #[Title('Parent Notifications')] class extends Component
 
                             {{-- Parent Name Chip --}}
                             <button type="button" @click="insertTag('parent', 'body')" draggable="true" @dragstart="dragTag($event, 'parent')"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-xs transition cursor-pointer"
                                 title="Click to insert parent's personalized name">
-                                <flux:icon icon="user" class="size-3 text-indigo-500" />
+                                <flux:icon icon="user" class="size-3.5 text-zinc-500" />
                                 <span>Parent Name</span>
                             </button>
 
                             {{-- School Name Chip --}}
                             <button type="button" @click="insertTag('institution', 'body')" draggable="true" @dragstart="dragTag($event, 'institution')"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-xs transition cursor-pointer"
                                 title="Click to insert school name">
-                                <flux:icon icon="building-library" class="size-3 text-indigo-500" />
+                                <flux:icon icon="building-library" class="size-3.5 text-zinc-500" />
                                 <span>School Name</span>
                             </button>
 
                             {{-- Fee Balance / Amount Helper --}}
                             <div x-data="{ openFee: false, feeVal: 'KES 5,000' }" class="relative inline-block">
                                 <button type="button" @click="openFee = !openFee"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-xs transition cursor-pointer"
                                     title="Insert fee balance or amount">
-                                    <span>💰 Fee Balance</span>
-                                    <flux:icon icon="chevron-down" class="size-2 opacity-60" />
+                                    <flux:icon icon="banknotes" class="size-3.5 text-zinc-500" />
+                                    <span>Fee Balance</span>
+                                    <flux:icon icon="chevron-down" class="size-3 opacity-60" />
                                 </button>
                                 <div x-show="openFee" @click.outside="openFee = false" style="display: none;"
-                                    class="absolute left-0 mt-1.5 z-40 w-64 p-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2">
-                                    <p class="text-xs font-bold text-zinc-800 dark:text-zinc-100">Insert Fee Amount</p>
+                                    class="absolute left-0 mt-1.5 z-40 w-64 p-3.5 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
+                                    <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Fee Balance</p>
                                     <input type="text" x-model="feeVal" placeholder="e.g. KES 5,000"
-                                        class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 dark:text-white" />
-                                    <div class="flex flex-col gap-1 pt-1">
+                                        class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-zinc-900 dark:text-white" />
+                                    <div class="flex flex-col gap-1.5 pt-1">
                                         <button type="button" @click="insertText(feeVal, 'body'); openFee = false;"
-                                            class="w-full py-1 px-2 text-xs font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-center">
-                                            Insert Amount as Text
+                                            class="w-full py-1.5 px-2 text-xs font-semibold rounded-md bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 text-center transition cursor-pointer">
+                                            Insert Fixed Amount
                                         </button>
                                         <button type="button" @click="insertTag('fee_balance', 'body'); openFee = false;"
-                                            class="w-full py-1 text-[11px] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 text-center">
-                                            Insert as dynamic tag &#123;&#123;fee_balance&#125;&#125;
+                                            class="w-full py-1 text-xs text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 text-center cursor-pointer">
+                                            Insert Tag &#123;&#123;fee_balance&#125;&#125;
                                         </button>
                                     </div>
                                 </div>
@@ -933,40 +928,41 @@ new #[Title('Parent Notifications')] class extends Component
                             {{-- Reporting Time Pill --}}
                             <div x-data="{ openTime: false }" class="relative inline-block">
                                 <button type="button" @click="openTime = !openTime"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-xs transition cursor-pointer"
                                     title="Reporting time">
-                                    <span>⏰ Reporting Time</span>
-                                    <flux:icon icon="chevron-down" class="size-2 opacity-60" />
+                                    <flux:icon icon="clock" class="size-3.5 text-zinc-500" />
+                                    <span>Reporting Time</span>
+                                    <flux:icon icon="chevron-down" class="size-3 opacity-60" />
                                 </button>
                                 <div x-show="openTime" @click.outside="openTime = false" style="display: none;"
-                                    class="absolute left-0 mt-1.5 z-40 w-48 p-2.5 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-1">
-                                    <p class="text-[11px] font-bold text-zinc-500 mb-1">Quick Times:</p>
-                                    <button type="button" @click="insertText('8:00 AM', 'body'); openTime = false;" class="w-full text-left px-2 py-1 text-xs rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200">8:00 AM</button>
-                                    <button type="button" @click="insertText('7:30 AM', 'body'); openTime = false;" class="w-full text-left px-2 py-1 text-xs rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200">7:30 AM</button>
-                                    <button type="button" @click="insertText('9:00 AM', 'body'); openTime = false;" class="w-full text-left px-2 py-1 text-xs rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200">9:00 AM</button>
-                                    <button type="button" @click="insertTag('reporting_time', 'body'); openTime = false;" class="w-full text-left px-2 py-1 text-[11px] text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded">Dynamic &#123;&#123;reporting_time&#125;&#125;</button>
+                                    class="absolute left-0 mt-1.5 z-40 w-48 p-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-1">
+                                    <p class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Select Time:</p>
+                                    <button type="button" @click="insertText('8:00 AM', 'body'); openTime = false;" class="w-full text-left px-2.5 py-1.5 text-xs rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer">8:00 AM</button>
+                                    <button type="button" @click="insertText('7:30 AM', 'body'); openTime = false;" class="w-full text-left px-2.5 py-1.5 text-xs rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer">7:30 AM</button>
+                                    <button type="button" @click="insertText('9:00 AM', 'body'); openTime = false;" class="w-full text-left px-2.5 py-1.5 text-xs rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 cursor-pointer">9:00 AM</button>
+                                    <button type="button" @click="insertTag('reporting_time', 'body'); openTime = false;" class="w-full text-left px-2.5 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-md cursor-pointer">Tag &#123;&#123;reporting_time&#125;&#125;</button>
                                 </div>
                             </div>
 
                             {{-- Custom Variable Pill with Popover --}}
                             <div x-data="{ open: false }" class="relative inline-block">
                                 <button type="button" @click="open = !open" 
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shadow-xs transition active:scale-95 cursor-pointer">
-                                    <flux:icon icon="plus" class="size-3 text-emerald-600 dark:text-emerald-400" />
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 shadow-xs transition cursor-pointer">
+                                    <flux:icon icon="plus" class="size-3.5 text-zinc-500" />
                                     <span>Custom Tag</span>
                                 </button>
                                 <div x-show="open" @click.outside="open = false" style="display: none;"
-                                    class="absolute left-0 mt-1.5 z-40 w-64 p-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
+                                    class="absolute left-0 mt-1.5 z-40 w-64 p-3.5 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2.5">
                                     <div>
-                                        <p class="text-xs font-bold text-zinc-800 dark:text-zinc-100">Add Custom Variable</p>
-                                        <p class="text-[11px] text-zinc-400">e.g. bus_route, uniform_fee, agm_venue</p>
+                                        <p class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Add Custom Tag</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">e.g. bus_route, uniform_fee, agm_venue</p>
                                     </div>
                                     <input type="text" x-model="customTagName" @keydown.enter.prevent="insertCustom('body'); open = false;"
                                         placeholder="Tag name (e.g. bus_route)" 
-                                        class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
-                                    <div class="flex justify-end gap-1.5">
-                                        <button type="button" @click="open = false" class="px-2.5 py-1 text-xs rounded-md text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">Cancel</button>
-                                        <button type="button" @click="insertCustom('body'); open = false;" class="px-3 py-1 text-xs font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs">Insert</button>
+                                        class="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-500 text-zinc-900 dark:text-white" />
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" @click="open = false" class="px-2.5 py-1 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer">Cancel</button>
+                                        <button type="button" @click="insertCustom('body'); open = false;" class="px-3 py-1 text-xs font-semibold rounded-md bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 shadow-xs cursor-pointer">Insert</button>
                                     </div>
                                 </div>
                             </div>
@@ -978,90 +974,85 @@ new #[Title('Parent Notifications')] class extends Component
                         placeholder="Dear @{{parent}}, kindly pay the school fee balance before 30th September 2026..." />
                     @error('body') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
 
-                    {{-- Smart Auto-Personalize Helper Tip --}}
+                    {{-- Personalize Suggestion --}}
                     <div x-show="localBody && /dear\s+parents?/i.test(localBody) && !localBody.includes(String.fromCharCode(123, 123) + 'parent' + String.fromCharCode(125, 125))" style="display: none;"
-                        class="p-2.5 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-indigo-950 dark:text-indigo-200 shadow-xs">
+                        class="p-3 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-zinc-800 dark:text-zinc-200">
                         <div class="flex items-center gap-2">
-                            <span class="text-base">💡</span>
-                            <span><strong>Tip:</strong> Address each parent personally (e.g. <em>"Dear Jane Doe"</em> instead of <em>"Dear parents"</em>).</span>
+                            <flux:icon icon="information-circle" class="size-4 text-zinc-500 shrink-0" />
+                            <span>Address each parent personally instead of a generic greeting.</span>
                         </div>
                         <button type="button" @click="autoPersonalize()"
-                            class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition active:scale-95 cursor-pointer shrink-0">
-                            ✨ Personalize with Parent's Name
+                            class="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-semibold text-xs shadow-xs transition cursor-pointer shrink-0">
+                            Replace with Parent's Name
                         </button>
                     </div>
 
                     {{-- SMS Credit & Character Live Counter (Calculated instantly in browser) --}}
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-xs"
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-xs text-zinc-500"
                          x-data="{ stats: getSmsStats(localBody) }" x-effect="stats = getSmsStats(localBody)">
                         <template x-if="$wire.channels.includes('sms')">
                             <div class="flex items-center flex-wrap gap-2">
-                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium transition"
-                                    :class="stats.credits <= 1 
-                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40' 
-                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40'">
-                                    <flux:icon icon="chat-bubble-bottom-center-text" class="size-3.5" />
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
+                                    <flux:icon icon="chat-bubble-bottom-center-text" class="size-3.5 text-zinc-500" />
                                     <span x-text="stats.chars + ' chars'"></span>
                                     <span class="opacity-50">·</span>
                                     <span x-text="stats.credits + ' SMS ' + (stats.credits === 1 ? 'credit' : 'credits')"></span>
                                 </span>
 
                                 <template x-if="stats.isUnicode">
-                                    <span class="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1" title="Unicode characters reduce segment length to 70 chars">
+                                    <span class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1" title="Unicode characters reduce segment length to 70 chars">
                                         <flux:icon icon="information-circle" class="size-3.5" />
                                         Special characters (70 chars/credit)
                                     </span>
                                 </template>
 
                                 <template x-if="!stats.isUnicode && stats.credits > 1">
-                                    <span class="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                    <span class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                                         <flux:icon icon="exclamation-triangle" class="size-3.5" />
                                         Multi-part SMS (153 chars/segment)
                                     </span>
                                 </template>
 
                                 @if ($this->parentCount > 0)
-                                    <span class="text-[11px] text-zinc-500 dark:text-zinc-400 hidden sm:inline">
+                                    <span class="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:inline">
                                         (~<span x-text="stats.credits * {{ $this->parentCount }}"></span> total credits for {{ $this->parentCount }} parents)
                                     </span>
                                 @endif
                             </div>
                         </template>
                         <template x-if="!$wire.channels.includes('sms')">
-                            <span class="text-zinc-400 dark:text-zinc-500 text-xs">
+                            <span class="text-zinc-500 text-xs">
                                 <span x-text="(localBody || '').length"></span> / 2,000 characters
                             </span>
                         </template>
 
-                        <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
-                            Auto-filled: <code class="font-mono text-zinc-600 dark:text-zinc-300">@{{parent}}</code> & <code class="font-mono text-zinc-600 dark:text-zinc-300">@{{institution}}</code>
+                        <span class="text-xs text-zinc-500">
+                            Auto-filled: <code class="font-mono text-zinc-700 dark:text-zinc-300">@{{parent}}</code> & <code class="font-mono text-zinc-700 dark:text-zinc-300">@{{institution}}</code>
                         </span>
                     </div>
                 </div>
 
-                {{-- Prominent "Set Notice Dates & Details" Card --}}
+                {{-- Notice Dates & Parameters Card --}}
                 @if (count($this->customPlaceholders))
-                    <div class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-800/80 bg-gradient-to-br from-indigo-50/70 via-white to-indigo-50/40 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-indigo-950/20 p-4 sm:p-5 space-y-4 shadow-xs">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
+                    <div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40 p-4 sm:p-5 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200/80 dark:border-zinc-800 pb-3">
                             <div class="flex items-center gap-2.5">
-                                <div class="p-2 rounded-xl bg-indigo-600 text-white shadow-xs">
+                                <div class="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
                                     <flux:icon icon="calendar-days" class="size-4" />
                                 </div>
                                 <div>
-                                    <h4 class="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                                        <span>Set Notice Dates & Details</span>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
-                                            {{ count($this->customPlaceholders) }} required
-                                        </span>
+                                    <h4 class="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
+                                        <span>Notice Parameters</span>
+                                        <flux:badge size="sm" color="zinc">{{ count($this->customPlaceholders) }} required</flux:badge>
                                     </h4>
-                                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                                        Choose the dates for this specific notice. They will automatically fill in for every parent.
+                                    <p class="text-xs text-zinc-500">
+                                        Specify the exact dates or details for this notice before dispatching.
                                     </p>
                                 </div>
                             </div>
-                            <div class="text-[11px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-900/40 px-3 py-1 rounded-lg self-start sm:self-auto">
-                                💡 Automatically replaces in message & preview
-                            </div>
+                            <span class="text-xs text-zinc-500 hidden sm:inline">
+                                Injected into recipient messages automatically
+                            </span>
                         </div>
 
                         <div class="grid gap-3.5 sm:grid-cols-2">
@@ -1082,7 +1073,7 @@ new #[Title('Parent Notifications')] class extends Component
                                     };
                                 @endphp
 
-                                <div class="p-3.5 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 bg-white dark:bg-zinc-800/80 space-y-2 shadow-xs"
+                                <div class="p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-800 space-y-2.5 shadow-xs"
                                      x-data="{
                                          setQuickDate(formatted) {
                                              $wire.set('placeholderValues.{{ $name }}', formatted);
@@ -1111,19 +1102,15 @@ new #[Title('Parent Notifications')] class extends Component
                                      }">
                                     <div class="flex items-center justify-between">
                                         <div>
-                                            <label class="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                                                @if ($isDate)
-                                                    <flux:icon icon="calendar" class="size-3.5 text-indigo-600 dark:text-indigo-400" />
-                                                @else
-                                                    <flux:icon icon="tag" class="size-3.5 text-indigo-600 dark:text-indigo-400" />
-                                                @endif
+                                            <label class="text-xs font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                                                <flux:icon icon="{{ $isDate ? 'calendar' : 'tag' }}" class="size-3.5 text-zinc-500" />
                                                 <span>{{ $label }}</span>
                                             </label>
-                                            <p class="text-[11px] text-zinc-400">{{ $help }}</p>
+                                            <p class="text-xs text-zinc-500">{{ $help }}</p>
                                         </div>
-                                        <span class="text-[10px] font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded">
+                                        <code class="text-xs font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-700/60 px-1.5 py-0.5 rounded">
                                             &#123;&#123;{{ $name }}&#125;&#125;
-                                        </span>
+                                        </code>
                                     </div>
 
                                     @if ($isDate)
@@ -1139,11 +1126,11 @@ new #[Title('Parent Notifications')] class extends Component
                                                 <div class="relative shrink-0" x-data="{ openCalendarPop: false }">
                                                     <button type="button"
                                                         @click="openCalendarPop = !openCalendarPop"
-                                                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition active:scale-95"
+                                                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-medium cursor-pointer transition"
                                                         title="Pick date from calendar">
-                                                        <flux:icon icon="calendar" class="size-3.5" />
+                                                        <flux:icon icon="calendar" class="size-3.5 text-zinc-500" />
                                                         <span>Pick Date</span>
-                                                        <flux:icon icon="chevron-down" class="size-2.5 opacity-80" />
+                                                        <flux:icon icon="chevron-down" class="size-3 opacity-60" />
                                                     </button>
 
                                                     <div x-show="openCalendarPop" @click.outside="openCalendarPop = false" style="display: none;"
@@ -1474,7 +1461,7 @@ new #[Title('Parent Notifications')] class extends Component
                         <tr wire:key="hist-{{ $item->id }}">
                             <td class="py-3 px-4">
                                 <span class="font-semibold text-zinc-900 dark:text-white">{{ $item->name }}</span>
-                                <span class="block text-[11px] text-zinc-400 truncate max-w-xs">{{ $item->subject }}</span>
+                                <span class="block text-xs text-zinc-400 truncate max-w-xs">{{ $item->subject }}</span>
                             </td>
                             <td class="py-3 px-4 text-xs uppercase text-zinc-500 font-semibold">{{ implode(' + ', $item->channels ?? []) }}</td>
                             <td class="py-3 px-4 text-xs text-zinc-500 whitespace-nowrap">
@@ -1499,7 +1486,7 @@ new #[Title('Parent Notifications')] class extends Component
                                 @endphp
                                 <flux:badge size="sm" :color="$badge[0]">{{ $badge[1] }}</flux:badge>
                                 @if (in_array($item->status, ['sent', 'failed'], true))
-                                    <span class="block text-[11px] text-zinc-400 mt-0.5">
+                                    <span class="block text-xs text-zinc-400 mt-0.5">
                                         {{ $item->delivered_count }} delivered · {{ $item->failed_count }} failed
                                     </span>
                                 @endif
@@ -1612,57 +1599,59 @@ new #[Title('Parent Notifications')] class extends Component
             <div class="space-y-2">
                 <div class="flex items-center justify-between">
                     <flux:label>Message template</flux:label>
-                    <span class="text-[11px] text-zinc-400">Click a variable below to insert</span>
+                    <span class="text-xs text-zinc-500">Click a variable below to insert</span>
                 </div>
 
                 {{-- Template Modal Variable Chips --}}
-                <div class="p-2.5 rounded-xl border border-indigo-100/80 dark:border-indigo-900/50 bg-indigo-50/40 dark:bg-indigo-950/20">
+                <div class="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mr-1">
+                        <span class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mr-1">
                             Insert:
                         </span>
 
                         <button type="button" @click="insertTag('parent', 'tplBody')" draggable="true" @dragstart="dragTag($event, 'parent')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
-                            <flux:icon icon="user" class="size-3 text-indigo-500" />
-                            <span>Parent</span>
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                            <flux:icon icon="user" class="size-3 text-zinc-500" />
+                            <span>Parent Name</span>
                         </button>
 
                         <button type="button" @click="insertTag('institution', 'tplBody')" draggable="true" @dragstart="dragTag($event, 'institution')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
-                            <flux:icon icon="building-library" class="size-3 text-indigo-500" />
-                            <span>School</span>
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                            <flux:icon icon="building-library" class="size-3 text-zinc-500" />
+                            <span>School Name</span>
                         </button>
 
                         <button type="button" @click="insertTag('date', 'tplBody')" draggable="true" @dragstart="dragTag($event, 'date')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 hover:bg-indigo-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
-                            <flux:icon icon="calendar" class="size-3 text-indigo-500" />
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                            <flux:icon icon="calendar" class="size-3 text-zinc-500" />
                             <span>Date</span>
                         </button>
 
                         <button type="button" @click="insertTag('opening_date', 'tplBody')" draggable="true" @dragstart="dragTag($event, 'opening_date')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/80 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
-                            🗓️ Opening Date
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                            <flux:icon icon="calendar" class="size-3 text-zinc-500" />
+                            <span>Opening Date</span>
                         </button>
 
                         <button type="button" @click="insertTag('closing_date', 'tplBody')" draggable="true" @dragstart="dragTag($event, 'closing_date')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/80 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
-                            🏖️ Closing Date
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                            <flux:icon icon="calendar" class="size-3 text-zinc-500" />
+                            <span>Closing Date</span>
                         </button>
 
                         <button type="button" @click="insertTag('fee_balance', 'tplBody')" draggable="true" @dragstart="dragTag($event, 'fee_balance')"
-                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/80 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
-                            💰 Fee Balance
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                            <flux:icon icon="banknotes" class="size-3 text-zinc-500" />
+                            <span>Fee Balance</span>
                         </button>
 
                         {{-- Custom tag inside modal --}}
                         <div x-data="{ open: false }" class="relative inline-block">
                             <button type="button" @click="open = !open" 
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shadow-xs transition active:scale-95 cursor-pointer">
-                                <flux:icon icon="plus" class="size-3 text-emerald-600 dark:text-emerald-400" />
-                                <span>Custom</span>
-                            </button>
-                            <div x-show="open" @click.outside="open = false" style="display: none;"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 shadow-xs transition active:scale-95 cursor-pointer">
+                                <flux:icon icon="plus" class="size-3 text-zinc-500" />
+                                <span>Custom Tag</span>
+                            </button>                            <div x-show="open" @click.outside="open = false" style="display: none;"
                                 class="absolute right-0 mt-1.5 z-40 w-60 p-3 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2">
                                 <p class="text-xs font-bold text-zinc-800 dark:text-zinc-100">Custom Tag</p>
                                 <input type="text" x-model="customTagName" @keydown.enter.prevent="insertCustom('tplBody'); open = false;"
@@ -1688,16 +1677,16 @@ new #[Title('Parent Notifications')] class extends Component
                         <span class="opacity-50">·</span>
                         <span x-text="stats.credits + ' SMS ' + (stats.credits === 1 ? 'credit' : 'credits')"></span>
                     </span>
-                    <span class="text-[11px]">Max 2,000 chars</span>
+                    <span class="text-xs text-zinc-400">Max 2,000 chars</span>
                 </div>
             </div>
 
-            <div class="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 text-xs text-indigo-950 dark:text-indigo-200 flex items-start gap-2">
-                <flux:icon icon="information-circle" class="size-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+            <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 flex items-start gap-2.5">
+                <flux:icon icon="information-circle" class="size-4 text-zinc-500 shrink-0 mt-0.5" />
                 <div class="space-y-0.5">
-                    <p class="font-bold">How Opening & Closing Dates work in templates:</p>
-                    <p class="text-[11px] text-zinc-600 dark:text-zinc-300">
-                        Tags like <code class="font-mono text-indigo-700 dark:text-indigo-300">@{{opening_date}}</code> or <code class="font-mono text-indigo-700 dark:text-indigo-300">@{{closing_date}}</code> don't have fixed dates yet. Whenever a teacher uses this template to send a notice, the system prompts them to pick the exact dates on a calendar right on the compose screen before sending.
+                    <p class="font-semibold text-zinc-900 dark:text-white">How dynamic dates work in templates</p>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        Tags like <code class="font-mono px-1 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">@{{opening_date}}</code> or <code class="font-mono px-1 py-0.5 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">@{{closing_date}}</code> don't have fixed dates yet. When creating a notice, the system prompts you to pick the exact dates on a calendar before sending.
                     </p>
                 </div>
             </div>
@@ -1767,14 +1756,14 @@ new #[Title('Parent Notifications')] class extends Component
                             @foreach ($this->viewing->recipients as $r)
                                 <tr wire:key="rcpt-{{ $r->id }}">
                                     <td class="py-2 px-3 font-medium text-zinc-900 dark:text-white">{{ $r->user?->name ?? '—' }}</td>
-                                    <td class="py-2 px-3 uppercase text-[11px] font-semibold text-zinc-500">{{ $r->channel }}</td>
-                                    <td class="py-2 px-3 text-zinc-500 font-mono text-[11px]">{{ $r->destination ?? '—' }}</td>
+                                    <td class="py-2 px-3 uppercase text-xs font-semibold text-zinc-500">{{ $r->channel }}</td>
+                                    <td class="py-2 px-3 text-zinc-500 font-mono text-xs">{{ $r->destination ?? '—' }}</td>
                                     <td class="py-2 px-3">
                                         <flux:badge size="sm" :color="$r->status === 'sent' ? 'emerald' : ($r->status === 'failed' ? 'red' : 'zinc')">
                                             {{ ucfirst($r->status) }}
                                         </flux:badge>
                                         @if ($r->error)
-                                            <span class="block text-[10px] text-red-500 mt-0.5">{{ $r->error }}</span>
+                                            <span class="block text-xs text-red-500 mt-0.5">{{ $r->error }}</span>
                                         @endif
                                     </td>
                                 </tr>
