@@ -73,6 +73,8 @@ class AnalyticsService
 
             // Students
             'students_count' => StudentDetails::count(),
+            'male_students_count' => StudentDetails::where('gender', 'male')->count(),
+            'female_students_count' => StudentDetails::where('gender', 'female')->count(),
             'active_students_count' => StudentDetails::where('enrollment_status', 'active')->count(),
             'student_growth' => $this->monthlyCounts(StudentDetails::query()),
 
@@ -349,9 +351,14 @@ class AnalyticsService
 
         $devices = Devices::whereIn('institution_id', $institutionIds)->with('zktecoDevice')->get();
         $studentQuery = StudentDetails::whereIn('institution_id', $institutionIds);
+        $genderCounts = (clone $studentQuery)
+            ->selectRaw("SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female")
+            ->first();
 
         return $stats + [
             'students_count' => (clone $studentQuery)->count(),
+            'male_students_count' => (int) ($genderCounts->male ?? 0),
+            'female_students_count' => (int) ($genderCounts->female ?? 0),
             'active_students_count' => (clone $studentQuery)->where('enrollment_status', 'active')->count(),
             'parents_count' => $institution?->parents()->count() ?? 0,
             'devices_count' => $devices->count(),
@@ -471,10 +478,17 @@ class AnalyticsService
             ->whereNotNull('zkteco_device_id')
             ->pluck('zkteco_device_id');
 
+        $teacherStudents = StudentDetails::where('institution_id', $institution->id);
+        $teacherGenderCounts = (clone $teacherStudents)
+            ->selectRaw("SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female")
+            ->first();
+
         return [
             'scope' => 'teacher',
             'institution' => $institution,
-            'students_count' => StudentDetails::where('institution_id', $institution->id)->count(),
+            'students_count' => (clone $teacherStudents)->count(),
+            'male_students_count' => (int) ($teacherGenderCounts->male ?? 0),
+            'female_students_count' => (int) ($teacherGenderCounts->female ?? 0),
             'attendance_today_count' => ZktecoAttendanceLog::whereIn('device_id', $deviceIds)
                 ->whereDate('occurred_at', today())
                 ->count(),
