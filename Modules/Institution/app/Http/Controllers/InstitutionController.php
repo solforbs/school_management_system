@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\Sortable;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Export\TableExportService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -98,10 +99,23 @@ class InstitutionController extends Controller
 
         $data = $request->validate(SaveInstitution::createRules());
 
-        $this->saveInstitution->create($data, $request->user(), $request->file('logo'));
+        try {
+            $this->saveInstitution->create($data, $request->user(), $request->file('logo'));
 
-        return redirect()->route('institution.index')
-            ->with('success', 'Institution created successfully! It will be reviewed by an Admin before it becomes fully active.');
+            return redirect()->route('institution.index')
+                ->with('success', 'Institution created successfully! It will be reviewed by an Admin before it becomes fully active.');
+        } catch (QueryException $e) {
+            Log::error('Institution create database error', ['error' => $e->getMessage()]);
+
+            $friendlyMessage = 'Could not create institution due to a conflict with existing records (such as a duplicate school code or email).';
+
+            return redirect()->back()->withInput()->withErrors(['code' => $friendlyMessage])->with('error', $friendlyMessage);
+        } catch (\Throwable $e) {
+            Log::error('Institution creation failed: '.$e->getMessage());
+
+            return redirect()->back()->withInput()
+                ->with('error', 'Failed to create institution. Please check the entered information and try again.');
+        }
     }
 
     /**
@@ -139,6 +153,15 @@ class InstitutionController extends Controller
 
             return redirect()->route('institution.edit', $institution->id)
                 ->with('success', 'Institution "'.$institution->name.'" has been updated successfully.');
+        } catch (QueryException $e) {
+            Log::error('Institution update database error', [
+                'institution_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $friendlyMessage = 'Could not update institution due to a unique data conflict (such as a duplicate code or email).';
+
+            return redirect()->back()->withInput()->withErrors(['code' => $friendlyMessage])->with('error', $friendlyMessage);
         } catch (\Throwable $e) {
             // \Throwable, not just \Exception, so a logo upload failure of
             // any kind is surfaced instead of silently producing a save with
@@ -150,7 +173,7 @@ class InstitutionController extends Controller
             ]);
 
             return redirect()->back()->withInput()
-                ->with('error', 'An error occurred while updating the institution: '.$e->getMessage());
+                ->with('error', 'An error occurred while updating the institution. Please check the entered information and try again.');
         }
     }
 

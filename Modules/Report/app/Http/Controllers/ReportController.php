@@ -87,14 +87,13 @@ class ReportController extends Controller
 
     private function exportWorkbook(User $user, ?CarbonImmutable $from, ?CarbonImmutable $to, string $label): StreamedResponse
     {
-        @ini_set('memory_limit', '512M');
+        @ini_set('memory_limit', '256M');
 
         ['filename' => $filename, 'spreadsheet' => $spreadsheet] = $this->export->forUser($user, $from, $to, $label);
 
         $writer = new Xlsx($spreadsheet);
 
         return response()->streamDownload(function () use ($writer) {
-            @ini_set('memory_limit', '512M');
             $writer->save('php://output');
         }, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

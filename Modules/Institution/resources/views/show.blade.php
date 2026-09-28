@@ -1,6 +1,15 @@
 <x-layouts::app :title="__('Institution Details')">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
+        @if (session('success'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50/90 dark:bg-emerald-950/40 dark:border-emerald-800/60 p-4 flex items-center justify-between shadow-sm">
+                <div class="flex items-center gap-3">
+                    <flux:icon icon="check-circle" class="size-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">{{ session('success') }}</span>
+                </div>
+            </div>
+        @endif
+
         {{-- Page Header --}}
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
             <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 min-w-0">

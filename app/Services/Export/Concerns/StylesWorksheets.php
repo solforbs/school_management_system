@@ -39,8 +39,14 @@ trait StylesWorksheets
             ->setFillType(Fill::FILL_SOLID)
             ->getStartColor()->setRGB('E5E7EB');
 
+        $useFixedColumnWidth = count($rows) > 500;
         for ($i = 1; $i <= count($headers); $i++) {
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setAutoSize(true);
+            $col = Coordinate::stringFromColumnIndex($i);
+            if ($useFixedColumnWidth) {
+                $sheet->getColumnDimension($col)->setWidth(18);
+            } else {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
         }
 
         $sheet->freezePane('A2');

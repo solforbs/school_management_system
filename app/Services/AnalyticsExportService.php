@@ -64,7 +64,7 @@ class AnalyticsExportService
         $institutionsQuery = Institution::with('owner')->orderBy('id');
         $usersQuery = $this->betweenDates(User::withoutRole('Admin')->with('roles'), $from, $to);
         $studentsQuery = $this->betweenDates(StudentDetails::with(['student', 'institution']), $from, $to);
-        $parentsQuery = $this->betweenDates(User::role('Parent')->with('parent'), $from, $to);
+        $parentsQuery = $this->betweenDates(User::role('Parent')->with('parent')->withCount('children'), $from, $to);
         $feesQuery = $this->betweenDates(Fee::with(['student', 'institution']), $from, $to)->latest();
         $paymentsQuery = $this->betweenDates(Payment::with(['institution', 'plan']), $from, $to)->latest('created_at');
         $devicesQuery = Devices::with(['zktecoDevice', 'institution'])->orderBy('id');
@@ -106,7 +106,7 @@ class AnalyticsExportService
 
         $studentsQuery = $this->betweenDates(StudentDetails::whereIn('institution_id', $institutionIds)->with('student'), $from, $to);
         $parentsQuery = $this->betweenDates(
-            User::role('Parent')->whereHas('children', fn ($q) => $q->whereIn('institution_id', $institutionIds))->with('parent'),
+            User::role('Parent')->whereHas('children', fn ($q) => $q->whereIn('institution_id', $institutionIds))->with('parent')->withCount('children'),
             $from,
             $to,
         );
@@ -162,12 +162,17 @@ class AnalyticsExportService
      * @param  callable(TModel): array<int, mixed>  $map
      * @return array<int, array<int, mixed>>
      */
-    private function mapInChunks(Builder $query, callable $map, int $chunkSize = 500): array
+    private function mapInChunks(Builder $query, callable $map, int $chunkSize = 500, ?int $limit = null): array
     {
         $rows = [];
+        $count = 0;
 
         foreach ($query->lazy($chunkSize) as $model) {
             $rows[] = $map($model);
+            $count++;
+            if ($limit !== null && $count >= $limit) {
+                break;
+            }
         }
 
         return $rows;
@@ -283,7 +288,7 @@ class AnalyticsExportService
                 $parent->email,
                 $parent->parent?->parent_phone,
                 $parent->parent?->parent_occupation,
-                $parent->children->count(),
+                $parent->children_count ?? $parent->children->count(),
                 $parent->created_at?->format('Y-m-d'),
             ]),
         );
@@ -321,7 +326,7 @@ class AnalyticsExportService
                     $fee->due_date?->format('Y-m-d'),
                     $fee->created_at?->format('Y-m-d'),
                 ];
-            }),
+            }, limit: 5000),
         );
     }
 

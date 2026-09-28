@@ -58,12 +58,12 @@ class SaveInstitution
             'education_level' => 'nullable|string|max:100',
             'timezone' => 'required|string|max:50',
             'logo' => 'nullable|image|max:2048',
-            'min_electives' => 'required|integer|min:0',
+            'min_electives' => 'nullable|integer|min:0',
             'max_electives' => 'nullable|integer|gte:min_electives',
 
             // Contact
             'email' => 'required|email|max:255|unique:institutions,email,'.$institution->id,
-            'phone' => 'required|string|max:20',
+            'phone' => 'nullable|string|max:20',
             'alternate_phone' => 'nullable|string|max:20',
             'website' => 'nullable|url|max:255',
 
@@ -181,6 +181,10 @@ class SaveInstitution
             $data['logo'] = $this->imageCompressor->store($logo, 'institutions/logos');
         } else {
             unset($data['logo']);
+        }
+
+        if (array_key_exists('min_electives', $data) && $data['min_electives'] === null) {
+            $data['min_electives'] = 0;
         }
 
         $institution->update($data);

@@ -9,46 +9,49 @@
             subtext="current balance" />
     </div>
 
-    <flux:card class="space-y-3 mt-6">
+    <flux:card class="space-y-3 mt-6 min-w-0 overflow-hidden">
         <div class="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
             <flux:heading size="lg" class="font-bold">Fee Ledger</flux:heading>
             <flux:button href="{{ route('feemanagement.index') }}" wire:navigate.hover variant="ghost" size="sm"
                 class="text-xs font-semibold">View All</flux:button>
         </div>
-        <flux:table class="p-2">
-            <flux:table.columns>
-                <x-sortable-column column="title">Title</x-sortable-column>
-                <x-sortable-column column="amount">Amount</x-sortable-column>
-                <flux:table.column>Balance</flux:table.column>
-                <flux:table.column>Status</flux:table.column>
-            </flux:table.columns>
-            <flux:table.rows>
-                @forelse ($stats['recent_fees'] as $fee)
-                    <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
-                        <flux:table.cell class="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100">
-                            {{ $fee->title }}</flux:table.cell>
-                        <flux:table.cell class="font-bold font-mono text-xs">KES {{ $currency($fee->amount) }}
-                        </flux:table.cell>
-                        <flux:table.cell class="text-zinc-500 font-mono text-xs">KES {{ $currency($fee->balance) }}
-                        </flux:table.cell>
-                        <flux:table.cell>
+        <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
+            @forelse ($stats['recent_fees'] as $fee)
+                <div class="flex items-center justify-between gap-3 py-2.5 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 px-1 rounded-lg transition-colors">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {{ $fee->title }}
+                        </div>
+                        <div class="text-[11px] text-zinc-400">
+                            {{ $fee->created_at?->format('d M Y') }}
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="font-bold font-mono text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                            KES {{ $currency($fee->amount) }}
+                        </div>
+                        <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                            @if ((float) $fee->balance > 0)
+                                <span class="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-medium">Bal: {{ $currency($fee->balance) }}</span>
+                            @endif
                             <flux:badge size="sm"
                                 :color="match ($fee->status) {
-                                                                'paid' => 'emerald',
-                                                                'partial' => 'amber',
-                                                                'overdue' => 'red',
-                                                                default => 'zinc',
-                                                            }"
-                                class="font-semibold text-[11px]">{{ ucfirst($fee->status) }}</flux:badge>
-                        </flux:table.cell>
-                    </flux:table.row>
-                @empty
-                    <flux:table.row>
-                        <flux:table.cell colspan="4" class="text-center py-6 text-zinc-500 text-xs">No fee records
-                            found.</flux:table.cell>
-                    </flux:table.row>
-                @endforelse
-            </flux:table.rows>
-        </flux:table>
+                                    'paid' => 'emerald',
+                                    'partial' => 'amber',
+                                    'overdue' => 'red',
+                                    default => 'zinc',
+                                }"
+                                class="font-semibold text-[10px] uppercase tracking-wider">
+                                {{ ucfirst($fee->status) }}
+                            </flux:badge>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="py-6 text-center text-zinc-500 text-xs">
+                    No fee records found.
+                </div>
+            @endforelse
+        </div>
     </flux:card>
 </div>

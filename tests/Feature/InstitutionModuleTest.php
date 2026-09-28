@@ -261,3 +261,35 @@ test('institution creation fails without school name or email', function () {
         'email' => '',
     ])->assertSessionHasErrors(['name', 'email']);
 });
+
+test('a director can update institution without providing a phone number', function () {
+    $director = User::factory()->create();
+    $director->assignRole('Director');
+
+    $institution = Institution::create([
+        'user_id' => $director->id,
+        'name' => 'Tech Academy',
+        'code' => 'TECH',
+        'type' => 'School',
+        'email' => 'tech@example.com',
+        'phone' => null,
+        'is_approved' => true,
+        'is_active' => true,
+    ]);
+
+    $director->update(['active_institution_id' => $institution->id]);
+
+    $this->actingAs($director)->put(route('institution.update', $institution->id), [
+        'name' => 'Tech Academy Updated',
+        'code' => 'TECH',
+        'type' => 'School',
+        'email' => 'tech@example.com',
+        'phone' => '',
+        'timezone' => 'Africa/Nairobi',
+        'is_active' => 1,
+    ])->assertRedirect(route('institution.edit', $institution->id))
+        ->assertSessionHas('success');
+
+    expect($institution->refresh()->name)->toBe('Tech Academy Updated')
+        ->and($institution->phone)->toBeNull();
+});

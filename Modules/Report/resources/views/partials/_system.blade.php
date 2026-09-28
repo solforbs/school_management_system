@@ -53,10 +53,10 @@
     </div>
 
     {{-- Interactive Animated Trends (ApexCharts) --}}
-    <div class="grid grid-cols-1 gap-5 mt-6 lg:grid-cols-2">
-        <flux:card class="space-y-3">
-            <div class="flex items-center justify-between">
-                <div>
+    <div class="grid grid-cols-1 gap-5 mt-6 lg:grid-cols-2 min-w-0">
+        <flux:card class="space-y-3 min-w-0 overflow-hidden">
+            <div class="flex flex-wrap items-start justify-between gap-2 min-w-0">
+                <div class="min-w-0">
                     <flux:heading size="lg" class="font-bold">Platform Growth</flux:heading>
                     <flux:text class="text-xs text-zinc-400">New institutions and students across all campuses, last 6
                         months</flux:text>
@@ -68,21 +68,25 @@
                 <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-emerald-500"></span>
                     Students</span>
             </div>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 min-w-0">
                 @php
                     $instSeries = [['name' => 'Institutions', 'data' => array_values($stats['institution_growth'])]];
                     $studentSeries = [['name' => 'Students', 'data' => array_values($stats['student_growth'])]];
                     $labels = array_keys($stats['institution_growth']);
                 @endphp
-                <x-charts.apex type="area" :series="$instSeries" :labels="$labels" :colors="['#4f46e5']" :height="140" />
-                <x-charts.apex type="area" :series="$studentSeries" :labels="$labels" :colors="['#10b981']"
-                    :height="140" />
+                <div class="w-full min-w-0 overflow-hidden">
+                    <x-charts.apex type="area" :series="$instSeries" :labels="$labels" :colors="['#4f46e5']" :height="140" />
+                </div>
+                <div class="w-full min-w-0 overflow-hidden">
+                    <x-charts.apex type="area" :series="$studentSeries" :labels="$labels" :colors="['#10b981']"
+                        :height="140" />
+                </div>
             </div>
         </flux:card>
 
-        <flux:card class="space-y-3">
-            <div class="flex items-center justify-between">
-                <div>
+        <flux:card class="space-y-3 min-w-0 overflow-hidden">
+            <div class="flex flex-wrap items-start justify-between gap-2 min-w-0">
+                <div class="min-w-0">
                     <flux:heading size="lg" class="font-bold">Global Fee Collection Velocity</flux:heading>
                     <flux:text class="text-xs text-zinc-400">Total Billed vs. Collected Revenue across all schools
                     </flux:text>
@@ -250,7 +254,7 @@
 
     {{-- Needs attention --}}
     @if ($stats['pending_approvals_count'] > 0)
-        <flux:card class="space-y-3 mt-6">
+        <flux:card class="space-y-3 mt-6 min-w-0 overflow-hidden">
             <div class="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
                 <div>
                     <flux:heading size="lg" class="font-bold">Needs Your Attention</flux:heading>
@@ -259,80 +263,84 @@
                 <flux:badge color="amber" class="font-semibold">{{ $stats['pending_approvals_count'] }} pending
                 </flux:badge>
             </div>
-            <flux:table class="p-2">
-                <flux:table.columns>
-                    <flux:table.column>Name</flux:table.column>
-                    <flux:table.column>Owner</flux:table.column>
-                    <flux:table.column>Type</flux:table.column>
-                    <flux:table.column>Submitted</flux:table.column>
-                    <flux:table.column>Actions</flux:table.column>
-                </flux:table.columns>
-                <flux:table.rows>
-                    @foreach ($stats['pending_institutions'] as $institution)
-                        <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
-                            <flux:table.cell class="font-semibold text-xs sm:text-sm">{{ $institution->name }}
-                            </flux:table.cell>
-                            <flux:table.cell class="text-xs">{{ $institution->owner?->name }}</flux:table.cell>
-                            <flux:table.cell class="text-xs">{{ $institution->type }}</flux:table.cell>
-                            <flux:table.cell class="text-xs text-zinc-400">
-                                {{ $institution->created_at?->diffForHumans() }}</flux:table.cell>
-                            <flux:table.cell>
-                                <div class="flex items-center gap-2">
-                                    <flux:button href="{{ route('institution.show', $institution->id) }}"
-                                        wire:navigate.hover icon="eye" size="sm" variant="subtle">Review
-                                    </flux:button>
-                                    <form action="{{ route('institution.approve', $institution->id) }}" method="POST"
-                                        class="inline">
-                                        @csrf
-                                        <flux:button type="submit" icon="check" size="sm" variant="primary"
-                                            color="emerald">Approve</flux:button>
-                                    </form>
-                                </div>
-                            </flux:table.cell>
-                        </flux:table.row>
-                    @endforeach
-                </flux:table.rows>
-            </flux:table>
+            <div class="overflow-x-auto w-full">
+                <flux:table class="p-2 min-w-[500px] sm:min-w-0">
+                    <flux:table.columns>
+                        <flux:table.column>Name</flux:table.column>
+                        <flux:table.column>Owner</flux:table.column>
+                        <flux:table.column>Type</flux:table.column>
+                        <flux:table.column>Submitted</flux:table.column>
+                        <flux:table.column>Actions</flux:table.column>
+                    </flux:table.columns>
+                    <flux:table.rows>
+                        @foreach ($stats['pending_institutions'] as $institution)
+                            <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
+                                <flux:table.cell class="font-semibold text-xs sm:text-sm">{{ $institution->name }}
+                                </flux:table.cell>
+                                <flux:table.cell class="text-xs">{{ $institution->owner?->name }}</flux:table.cell>
+                                <flux:table.cell class="text-xs">{{ $institution->type }}</flux:table.cell>
+                                <flux:table.cell class="text-xs text-zinc-400">
+                                    {{ $institution->created_at?->diffForHumans() }}</flux:table.cell>
+                                <flux:table.cell>
+                                    <div class="flex items-center gap-2">
+                                        <flux:button href="{{ route('institution.show', $institution->id) }}"
+                                            wire:navigate.hover icon="eye" size="sm" variant="subtle">Review
+                                        </flux:button>
+                                        <form action="{{ route('institution.approve', $institution->id) }}" method="POST"
+                                            class="inline">
+                                            @csrf
+                                            <flux:button type="submit" icon="check" size="sm" variant="primary"
+                                                color="emerald">Approve</flux:button>
+                                        </form>
+                                    </div>
+                                </flux:table.cell>
+                            </flux:table.row>
+                        @endforeach
+                    </flux:table.rows>
+                </flux:table>
+            </div>
         </flux:card>
     @endif
 
     {{-- Recent activity --}}
-    <div class="grid grid-cols-1 gap-5 mt-6 lg:grid-cols-3">
-        <flux:card class="lg:col-span-2 space-y-3">
+    <div class="grid grid-cols-1 gap-5 mt-6 lg:grid-cols-3 min-w-0">
+        <flux:card class="lg:col-span-2 space-y-3 min-w-0 overflow-hidden">
             <flux:heading size="lg" class="font-bold">Recent Institutions</flux:heading>
-            <flux:table class="p-2">
-                <flux:table.columns>
-                    <x-sortable-column column="name">Name</x-sortable-column>
-                    <flux:table.column>Owner</flux:table.column>
-                    <flux:table.column>Status</flux:table.column>
-                    <x-sortable-column column="created_at">Created</x-sortable-column>
-                </flux:table.columns>
-                <flux:table.rows>
-                    @forelse ($stats['recent_institutions'] as $institution)
-                        <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
-                            <flux:table.cell class="font-semibold text-xs sm:text-sm">{{ $institution->name }}
-                            </flux:table.cell>
-                            <flux:table.cell class="text-xs">{{ $institution->owner?->name }}</flux:table.cell>
-                            <flux:table.cell>
-                                <flux:badge size="sm" :color="$institution->is_active ? 'emerald' : 'zinc'"
-                                    class="font-semibold text-[11px]">
-                                    {{ ucfirst($institution->status ?? 'unknown') }}
-                                </flux:badge>
-                            </flux:table.cell>
-                            <flux:table.cell class="text-xs text-zinc-400 font-mono">
-                                {{ $institution->created_at?->format('d M Y') }}</flux:table.cell>
-                        </flux:table.row>
-                    @empty
-                        <flux:table.row>
-                            <flux:table.cell colspan="4" class="text-center py-6 text-zinc-500 text-xs">No
-                                institutions yet.</flux:table.cell>
-                        </flux:table.row>
-                    @endforelse
-                </flux:table.rows>
-            </flux:table>
+            <div class="overflow-x-auto w-full">
+                <flux:table class="p-2 min-w-[420px] sm:min-w-0">
+                    <flux:table.columns>
+                        <x-sortable-column column="name">Name</x-sortable-column>
+                        <flux:table.column>Owner</flux:table.column>
+                        <flux:table.column>Status</flux:table.column>
+                        <x-sortable-column column="created_at">Created</x-sortable-column>
+                    </flux:table.columns>
+                    <flux:table.rows>
+                        @forelse ($stats['recent_institutions'] as $institution)
+                            <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
+                                <flux:table.cell class="font-semibold text-xs sm:text-sm">{{ $institution->name }}
+                                </flux:table.cell>
+                                <flux:table.cell class="text-xs">{{ $institution->owner?->name }}</flux:table.cell>
+                                <flux:table.cell>
+                                    <flux:badge size="sm" :color="$institution->is_active ? 'emerald' : 'zinc'"
+                                        class="font-semibold text-[11px]">
+                                        {{ ucfirst($institution->status ?? 'unknown') }}
+                                    </flux:badge>
+                                </flux:table.cell>
+                                <flux:table.cell class="text-xs text-zinc-400 font-mono">
+                                    {{ $institution->created_at?->format('d M Y') }}</flux:table.cell>
+                            </flux:table.row>
+                        @empty
+                            <flux:table.row>
+                                <flux:table.cell colspan="4" class="text-center py-6 text-zinc-500 text-xs">No
+                                    institutions yet.</flux:table.cell>
+                            </flux:table.row>
+                        @endforelse
+                    </flux:table.rows>
+                </flux:table>
+            </div>
         </flux:card>
 
-        <flux:card class="space-y-3">
+        <flux:card class="space-y-3 min-w-0 overflow-hidden">
             <div class="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
                 <flux:heading size="lg" class="font-bold">Recent Messages</flux:heading>
                 <flux:button href="{{ route('messages.index') }}" wire:navigate.hover size="sm" variant="ghost"
