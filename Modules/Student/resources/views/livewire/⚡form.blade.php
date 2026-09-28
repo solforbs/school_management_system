@@ -122,6 +122,29 @@ new #[Title('Student Form')] class extends Component
             </div>
         </div>
 
+        @if (session('success'))
+            <div class="rounded-xl border border-emerald-200/60 bg-emerald-50 dark:bg-emerald-500/10 dark:border-emerald-500/20 p-4 flex items-center justify-between shadow-sm mb-6">
+                <div class="flex items-center gap-3">
+                    <flux:icon icon="check-circle" class="size-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                        {{ session('success') }}
+                    </div>
+                </div>
+                <a href="{{ route('student.show', $student->id) }}" wire:navigate.hover class="text-xs font-bold text-emerald-700 hover:text-emerald-900 dark:text-emerald-300 underline">
+                    View Profile &rarr;
+                </a>
+            </div>
+        @endif
+
+        @if (session('error') && ! $errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div class="text-sm font-semibold text-red-800 dark:text-red-400">
+                    {{ session('error') }}
+                </div>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
                 <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5" />
@@ -154,7 +177,7 @@ new #[Title('Student Form')] class extends Component
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <flux:input type="text" name="name" label="Full Legal Name" value="{{ old('name', $student->name) }}" placeholder="e.g. Jane Doe" required />
                         
-                        <flux:input type="email" name="email" label="School Email Address" value="{{ old('email', $student->email) }}" placeholder="jane.doe@school.edu" autocomplete="new-password" required />
+                        <flux:input type="email" name="email" label="School Email Address" value="{{ old('email', $student->email) }}" placeholder="jane.doe@school.edu" autocomplete="new-password" />
                         
                         <flux:input type="password" name="password" label="New Password (optional)" placeholder="Leave blank to keep existing password" autocomplete="new-password" />
 
@@ -305,20 +328,44 @@ new #[Title('Student Form')] class extends Component
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Enroll New Student</flux:heading>
-                <flux:text class="text-zinc-500 text-sm mt-1">
-                    Enter the student's personal, academic, and guardian details.
-                </flux:text>
+                <div class="flex flex-wrap items-center gap-2 mt-1">
+                    <flux:text class="text-zinc-500 text-sm">
+                        Enter the student's personal, academic, and guardian details.
+                    </flux:text>
+                    @can('create student')
+                        <span class="text-zinc-300 dark:text-zinc-700 hidden sm:inline">&bull;</span>
+                        <a href="{{ route('student.upload') }}" wire:navigate.hover
+                            class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                            Need to enroll in bulk? Open Bulk Upload & Spreadsheet
+                            <flux:icon icon="arrow-right" class="size-3.5" />
+                        </a>
+                    @endcan
+                </div>
             </div>
             
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2.5 flex-wrap">
                 <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="arrow-left" variant="subtle" class="font-semibold shadow-sm">
                     Back to Directory
                 </flux:button>
+                @can('create student')
+                    <flux:button href="{{ route('student.upload') }}" wire:navigate.hover icon="arrow-up-tray" variant="primary" class="font-semibold shadow-sm">
+                        Bulk Upload
+                    </flux:button>
+                @endcan
             </div>
         </div>
 
         {{-- How many students this school's plan allows, and how many are left. --}}
         <x-student-limit-banner />
+
+        @if (session('error') && ! $errors->any())
+            <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
+                <flux:icon icon="exclamation-circle" class="size-5 text-red-500 mr-3 mt-0.5 shrink-0" />
+                <div class="text-sm font-semibold text-red-800 dark:text-red-400">
+                    {{ session('error') }}
+                </div>
+            </div>
+        @endif
 
         @if ($errors->any())
             <div class="rounded-xl border border-red-200/50 bg-red-50/50 dark:bg-red-500/10 dark:border-red-500/20 p-4 flex items-start shadow-sm mb-6">
@@ -341,9 +388,9 @@ new #[Title('Student Form')] class extends Component
                 
                 <x-slot:sidebar>
                     <x-stepper.step id="academic" title="Academic Info" description="Account & school details." isLast="false" />
-                    <x-stepper.step id="personal" title="Personal Info" description="Demographics & photo." isLast="false" />
+                    <x-stepper.step id="personal" title="Personal Info" description="Demographics & photo (optional)." isLast="false" />
                     <x-stepper.step id="guardian" title="Guardianship" description="Parent & emergency contacts." isLast="false" />
-                    <x-stepper.step id="medical" title="Medical Profile" description="Allergies & special needs." isLast="true" />
+                    <x-stepper.step id="medical" title="Medical Profile" description="Allergies & special needs (optional)." isLast="true" />
                 </x-slot:sidebar>
 
                 {{-- Step 1: Academic --}}
@@ -353,11 +400,11 @@ new #[Title('Student Form')] class extends Component
                             <flux:input type="text" name="name" label="Full Name" value="{{ old('name') }}" placeholder="e.g. John Doe" required />
                         </div>
                         
-                        <flux:input type="email" name="email" label="Student Email" value="{{ old('email') }}" placeholder="john.doe@school.edu" autocomplete="new-password" required />
-                        <flux:input type="password" name="password" label="Temporary Password" placeholder="Minimum 8 characters..." autocomplete="new-password" required />
+                        <flux:input type="email" name="email" label="Student Email (Optional)" value="{{ old('email') }}" placeholder="Auto-generated if left blank (e.g. adm@students.generated)" autocomplete="new-password" />
+                        <flux:input type="password" name="password" label="Temporary Password (Optional)" placeholder="Auto-generated if left blank" autocomplete="new-password" />
                         
-                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number') }}" placeholder="e.g. ADM-2026-001" />
-                        <flux:input type="text" name="student_number" label="Student Number / ID" value="{{ old('student_number') }}" placeholder="e.g. STU-8492" />
+                        <flux:input type="text" name="admission_number" label="Admission Number (Optional)" value="{{ old('admission_number') }}" placeholder="Auto-generated if left blank (e.g. ADM-2026-XXXX)" />
+                        <flux:input type="text" name="student_number" label="Student Number / ID (Optional)" value="{{ old('student_number') }}" placeholder="e.g. STU-8492" />
                         
                         <input type="hidden" name="class_id" value="">
                         <flux:select name="class_id" label="Class / Grade" placeholder="Select classroom...">
@@ -393,9 +440,9 @@ new #[Title('Student Form')] class extends Component
                         </flux:select>
 
                         <div class="md:col-span-2 space-y-2">
-                            <flux:label>Profile Photo <span class="text-rose-500">*</span></flux:label>
-                            <input type="file" name="profile_image" required accept="image/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none cursor-pointer bg-white dark:bg-zinc-800 transition-colors" />
-                            <p class="text-xs text-zinc-500">Required for biometric sync. Supported formats: JPG, PNG, WEBP. Max size 2MB.</p>
+                            <flux:label>Profile Photo <span class="text-xs text-zinc-400 font-normal">(Optional - can be uploaded anytime)</span></flux:label>
+                            <input type="file" name="profile_image" accept="image/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none cursor-pointer bg-white dark:bg-zinc-800 transition-colors" />
+                            <p class="text-xs text-zinc-500">Supported formats: JPG, PNG, WEBP. Max size 2MB. Can also be added later during profile edit for biometric device sync.</p>
                         </div>
 
                         <div class="md:col-span-2">

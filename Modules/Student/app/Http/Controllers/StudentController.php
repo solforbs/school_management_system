@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Export\TableExportService;
 use Exception;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ use Modules\Result\Services\ResultAccessService;
 use Modules\Student\Actions\SaveStudent;
 use Modules\Student\Exceptions\StudentLimitException;
 use Modules\Student\Models\StudentDetails;
+use Modules\Teacher\Models\TeacherDetails;
 
 class StudentController extends Controller
 {
@@ -111,7 +113,18 @@ class StudentController extends Controller
      */
     public function store(Request $request)
     {
-        abort_unless(Auth::user()->can('create student'), 403);
+        $user = Auth::user();
+        $canCreate = $user->can('create student');
+
+        // Check if teacher has explicit enrollment permission
+        if (! $canCreate && $user->hasRole('Teacher')) {
+            $teacherDetails = TeacherDetails::where('teacher_id', $user->id)
+                ->where('institution_id', currentInstitutionId())
+                ->first();
+            $canCreate = $teacherDetails?->can_enroll_students ?? false;
+        }
+
+        abort_unless($canCreate, 403, 'You do not have permission to enroll students.');
 
         // Never trust a client-submitted institution_id for a non-admin -
         // the student is always created under whichever institution is
@@ -137,11 +150,37 @@ class StudentController extends Controller
             }
 
             return redirect()->back()->withInput()->withErrors(['name' => $e->getMessage()]);
-        } catch (Exception $e) {
-            Log::error('Student creation failed: '.$e->getMessage());
+        } catch (QueryException $e) {
+            Log::error('Student create database exception: '.$e->getMessage(), ['exception' => $e]);
 
-            return redirect()->back()->withInput()
-                ->with('error', 'Failed to create student: '.$e->getMessage());
+            $field = 'name';
+            $friendlyMessage = 'Could not enroll student due to a data constraint conflict.';
+
+            if (str_contains($e->getMessage(), 'unique_phone') || str_contains($e->getMessage(), 'parent_phone')) {
+                $field = 'parent_phone';
+                $friendlyMessage = 'This parent phone number is already registered to another parent account.';
+            } elseif (str_contains($e->getMessage(), 'admission_number')) {
+                $field = 'admission_number';
+                $friendlyMessage = 'This admission number is already assigned to another student.';
+            } elseif (str_contains($e->getMessage(), 'student_number')) {
+                $field = 'student_number';
+                $friendlyMessage = 'This student ID number is already in use.';
+            } elseif (str_contains($e->getMessage(), 'email')) {
+                $field = 'email';
+                $friendlyMessage = 'This email address is already in use by another account.';
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([$field => $friendlyMessage])
+                ->with('error', $friendlyMessage);
+        } catch (Exception $e) {
+            Log::error('Student creation failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['name' => 'Unable to enroll student. Please check the entered details and try again.'])
+                ->with('error', 'Unable to enroll student. Please check the entered details and try again.');
         }
     }
 
@@ -161,22 +200,50 @@ class StudentController extends Controller
      */
     public function update(Request $request, $id)
     {
-        abort_unless(Auth::user()->can('update student'), 403);
+        $canUpdate = Auth::user()->can('update student') || Auth::user()->can('edit student');
+        abort_unless($canUpdate, 403);
 
         $student = User::findOrFail($id);
         $this->authorizeStudentAccess($student);
 
-        $validated = $request->validate(SaveStudent::updateRules());
+        $studentDetailsId = $student->studentUserDetails?->id;
+        $validated = $request->validate(SaveStudent::updateRules($student->id, $studentDetailsId));
 
         try {
             $this->saveStudent->update($student, $validated, $request->file('profile_image'));
 
-            return redirect()->back()->with('success', 'Student updated successfully!');
-        } catch (Exception $e) {
-            Log::error('Student update failed: '.$e->getMessage());
+            return redirect()->route('student.show', $student->id)->with('success', 'Student profile updated successfully!');
+        } catch (QueryException $e) {
+            Log::error('Student update database exception: '.$e->getMessage(), ['exception' => $e]);
 
-            return redirect()->back()->withInput()
-                ->with('error', 'Failed to update student: '.$e->getMessage());
+            $field = 'name';
+            $friendlyMessage = 'Could not update student due to a data constraint conflict.';
+
+            if (str_contains($e->getMessage(), 'unique_phone') || str_contains($e->getMessage(), 'parent_phone')) {
+                $field = 'parent_phone';
+                $friendlyMessage = 'This parent phone number is already registered to another parent account.';
+            } elseif (str_contains($e->getMessage(), 'admission_number')) {
+                $field = 'admission_number';
+                $friendlyMessage = 'This admission number is already assigned to another student.';
+            } elseif (str_contains($e->getMessage(), 'student_number')) {
+                $field = 'student_number';
+                $friendlyMessage = 'This student ID number is already in use.';
+            } elseif (str_contains($e->getMessage(), 'email')) {
+                $field = 'email';
+                $friendlyMessage = 'This email address is already in use by another account.';
+            }
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([$field => $friendlyMessage])
+                ->with('error', $friendlyMessage);
+        } catch (Exception $e) {
+            Log::error('Student update failed: '.$e->getMessage(), ['exception' => $e]);
+
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['name' => 'Unable to save student profile changes. Please verify the entered details and try again.'])
+                ->with('error', 'Unable to save student profile changes. Please verify the entered details and try again.');
         }
     }
 

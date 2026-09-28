@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Modules\Institution\Models\Institution;
 use Modules\Parent\Models\ParentDetails;
 use Modules\Student\Exceptions\StudentLimitException;
@@ -43,9 +45,10 @@ class SaveStudent
     {
         return array_merge([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8',
-            'profile_image' => 'required|image|max:2048',
+            'email' => 'nullable|email|max:255|unique:users,email',
+            'password' => 'nullable|string|min:8',
+            'profile_image' => 'nullable|image|max:2048',
+            'admission_number' => 'nullable|string|max:100|unique:student_details,admission_number',
 
             // Either link an existing parent account (a parent can have more
             // than one student) or fill in the fields below to create one.
@@ -83,15 +86,29 @@ class SaveStudent
     /**
      * @return array<string, mixed>
      */
-    public static function updateRules(): array
+    public static function updateRules(?int $studentUserId = null, ?int $studentDetailsId = null): array
     {
         return array_merge([
+            'name' => 'required|string|max:255',
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                $studentUserId ? Rule::unique('users', 'email')->ignore($studentUserId) : 'nullable',
+            ],
+            'password' => 'nullable|string|min:8',
             'profile_image' => 'nullable|image|max:2048',
+            'admission_number' => [
+                'nullable',
+                'string',
+                'max:100',
+                $studentDetailsId ? Rule::unique('student_details', 'admission_number')->ignore($studentDetailsId) : 'nullable',
+            ],
         ], self::sharedRules());
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     private static function sharedRules(): array
     {
@@ -100,7 +117,6 @@ class SaveStudent
             'phone' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
             'gender' => 'nullable|in:male,female,other',
-            'admission_number' => 'nullable|string|max:100',
             'student_number' => 'nullable|string|max:100',
             'class_id' => ['nullable', 'exists:classes,id'],
             'enrollment_status' => 'nullable|in:active,expelled,graduated,suspended,transferred,withdrawn,dropped',
@@ -142,10 +158,22 @@ class SaveStudent
         return DB::transaction(function () use ($data, $institutionId, $photo) {
             $parent = $this->resolveParentForCreate($data, $institutionId);
 
+            $admissionNumber = ! empty($data['admission_number'])
+                ? trim((string) $data['admission_number'])
+                : $this->generateUniqueAdmissionNumber();
+
+            $email = ! empty($data['email'])
+                ? trim((string) $data['email'])
+                : $this->uniqueEmail($data['name'], $admissionNumber);
+
+            $password = ! empty($data['password'])
+                ? Hash::make($data['password'])
+                : Hash::make(Str::random(16));
+
             $student = User::create([
                 'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
+                'email' => $email,
+                'password' => $password,
             ]);
             $student->syncRoles('Student');
 
@@ -156,11 +184,7 @@ class SaveStudent
                 ])
                 ->toArray();
 
-            // student_id is the relation's key. Production also carries a
-            // legacy user_id column this codebase never created (see the
-            // make_legacy_student_details_user_id_nullable migration) - it
-            // duplicates student_id, so it's kept in step where it exists
-            // and skipped entirely where it doesn't.
+            $studentData['admission_number'] = $admissionNumber;
             $studentData['student_id'] = $student->id;
 
             if (Schema::hasColumn('student_details', 'user_id')) {
@@ -181,6 +205,34 @@ class SaveStudent
 
             return $student;
         });
+    }
+
+    /**
+     * Generate an admission number that doesn't collide with existing records.
+     */
+    public function generateUniqueAdmissionNumber(): string
+    {
+        do {
+            $adm = strtoupper('ADM-'.now()->year.'-'.Str::random(6));
+        } while (StudentDetails::where('admission_number', $adm)->exists());
+
+        return $adm;
+    }
+
+    /**
+     * Synthesize a clean, unique student login email when none is provided.
+     */
+    public function uniqueEmail(string $name, string $admissionNumber): string
+    {
+        $base = Str::slug($admissionNumber !== '' ? $admissionNumber : $name, '.') ?: 'student';
+        $email = $base.'@students.generated';
+        $suffix = 1;
+
+        while (User::where('email', $email)->exists()) {
+            $email = $base.'.'.$suffix++.'@students.generated';
+        }
+
+        return $email;
     }
 
     /**
@@ -207,8 +259,23 @@ class SaveStudent
         DB::transaction(function () use ($student, $data, $photo) {
             $studentDetails = StudentDetails::where('student_id', $student->id)->firstOrFail();
 
+            // Update user record (name, email, password if provided)
+            $userUpdates = [];
+            if (! empty($data['name'])) {
+                $userUpdates['name'] = $data['name'];
+            }
+            if (! empty($data['email'])) {
+                $userUpdates['email'] = $data['email'];
+            }
+            if (! empty($data['password'])) {
+                $userUpdates['password'] = Hash::make($data['password']);
+            }
+            if (! empty($userUpdates)) {
+                $student->update($userUpdates);
+            }
+
             $studentData = collect($data)
-                ->except(['parent_name', 'parent_phone', 'parent_email', 'parent_occupation', 'profile_image'])
+                ->except(['name', 'email', 'password', 'parent_name', 'parent_phone', 'parent_email', 'parent_occupation', 'profile_image'])
                 ->toArray();
 
             $studentData['is_active'] = (bool) ($data['is_active'] ?? false);
@@ -259,10 +326,37 @@ class SaveStudent
             return null;
         }
 
+        $phone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
+        $email = ! empty($data['parent_email']) ? trim((string) $data['parent_email']) : null;
+
+        // Check if an existing parent account already matches this phone
+        if ($phone) {
+            $existingParentDetails = ParentDetails::where('parent_phone', $phone)->first();
+            if ($existingParentDetails && $existingParentDetails->parent) {
+                if (! empty($data['parent_name'])) {
+                    $existingParentDetails->parent->update(['name' => $data['parent_name']]);
+                }
+                if (! empty($data['parent_occupation'])) {
+                    $existingParentDetails->update(['parent_occupation' => $data['parent_occupation']]);
+                }
+
+                return $existingParentDetails->parent;
+            }
+        }
+
+        if ($email) {
+            $existingParent = User::role('Parent')->where('email', $email)->first();
+            if ($existingParent) {
+                return $existingParent;
+            }
+        }
+
+        $parentEmail = $email ?: 'parent_'.uniqid().'_'.Str::random(4).'@parents.generated';
+
         $parent = User::create([
             'name' => $data['parent_name'] ?? 'Parent',
-            'email' => $data['parent_email'] ?? 'parent_'.time().'@example.com',
-            'password' => Hash::make($data['parent_phone'] ?? 'password123'),
+            'email' => $parentEmail,
+            'password' => Hash::make($phone ?? 'password123'),
         ]);
         $parent->syncRoles('Parent');
 
@@ -271,7 +365,7 @@ class SaveStudent
             // The school enrolling the student owns the parent account it
             // creates alongside them.
             'institution_id' => $institutionId,
-            'parent_phone' => $data['parent_phone'] ?? null,
+            'parent_phone' => $phone,
             'parent_occupation' => $data['parent_occupation'] ?? null,
         ]);
 
@@ -296,18 +390,84 @@ class SaveStudent
             return;
         }
 
+        $phone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
+        $email = ! empty($data['parent_email']) ? trim((string) $data['parent_email']) : null;
+
+        // 1. If phone matches an existing parent in parent_details, link to that parent directly
+        if ($phone) {
+            $existingDetails = ParentDetails::where('parent_phone', $phone)->first();
+            if ($existingDetails && $existingDetails->parent) {
+                $oldParentId = $studentDetails->parent_id;
+
+                $studentDetails->parent_id = $existingDetails->parent_id;
+                $studentDetails->save();
+
+                if (! empty($data['parent_name'])) {
+                    $existingDetails->parent->update(['name' => $data['parent_name']]);
+                }
+                if (! empty($data['parent_occupation'])) {
+                    $existingDetails->update(['parent_occupation' => $data['parent_occupation']]);
+                }
+
+                // If previous parent was an orphaned generated dummy parent, clean it up
+                if ($oldParentId && $oldParentId !== $existingDetails->parent_id) {
+                    $this->cleanupOrphanedDummyParent($oldParentId);
+                }
+
+                return;
+            }
+        }
+
+        // 2. If email matches an existing parent in users, link to that parent
+        if ($email) {
+            $existingParent = User::role('Parent')->where('email', $email)->first();
+            if ($existingParent) {
+                $oldParentId = $studentDetails->parent_id;
+
+                $studentDetails->parent_id = $existingParent->id;
+                $studentDetails->save();
+
+                if (! empty($data['parent_name'])) {
+                    $existingParent->update(['name' => $data['parent_name']]);
+                }
+
+                $details = ParentDetails::firstOrNew(['parent_id' => $existingParent->id]);
+                if ($phone) {
+                    $details->parent_phone = $phone;
+                }
+                if (! empty($data['parent_occupation'])) {
+                    $details->parent_occupation = $data['parent_occupation'];
+                }
+                $details->institution_id ??= $studentDetails->institution_id;
+                $details->save();
+
+                if ($oldParentId && $oldParentId !== $existingParent->id) {
+                    $this->cleanupOrphanedDummyParent($oldParentId);
+                }
+
+                return;
+            }
+        }
+
+        // 3. Otherwise update current parent or create a new one
         $parent = $studentDetails->parent_id ? User::find($studentDetails->parent_id) : null;
 
         if ($parent) {
-            $parent->update([
-                'name' => $data['parent_name'] ?? $parent->name,
-                'email' => $data['parent_email'] ?? $parent->email,
-            ]);
+            $parentUpdates = [];
+            if (! empty($data['parent_name'])) {
+                $parentUpdates['name'] = $data['parent_name'];
+            }
+            if ($email) {
+                $parentUpdates['email'] = $email;
+            }
+            if (! empty($parentUpdates)) {
+                $parent->update($parentUpdates);
+            }
         } else {
             $parent = User::create([
                 'name' => $data['parent_name'] ?? 'Parent',
-                'email' => $data['parent_email'] ?? 'parent_'.time().'@example.com',
-                'password' => Hash::make($data['parent_phone'] ?? 'password123'),
+                'email' => $email ?: 'parent_'.uniqid().'_'.Str::random(4).'@parents.generated',
+                'password' => Hash::make($phone ?? 'password123'),
             ]);
             $parent->syncRoles('Parent');
 
@@ -316,15 +476,22 @@ class SaveStudent
         }
 
         $details = ParentDetails::firstOrNew(['parent_id' => $parent->id]);
-
-        $details->parent_phone = $data['parent_phone'] ?? null;
+        $details->parent_phone = $phone;
         $details->parent_occupation = $data['parent_occupation'] ?? null;
-
-        // Claim an unowned row for this school, but never move one that
-        // already belongs to another - that would hand the account over.
         $details->institution_id ??= $studentDetails->institution_id;
-
         $details->save();
+    }
+
+    private function cleanupOrphanedDummyParent(int $parentId): void
+    {
+        $hasOtherChildren = StudentDetails::where('parent_id', $parentId)->exists();
+        if (! $hasOtherChildren) {
+            $user = User::find($parentId);
+            if ($user && (str_ends_with($user->email, '@parents.generated') || str_ends_with($user->email, '@example.com'))) {
+                ParentDetails::where('parent_id', $parentId)->delete();
+                $user->delete();
+            }
+        }
     }
 
     /**

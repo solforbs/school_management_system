@@ -199,3 +199,337 @@ test('generated login emails stay unique across duplicate names', function () {
     expect($emails)->toHaveCount(2)
         ->and($emails->unique())->toHaveCount(2);
 });
+
+test('student create form renders bulk upload button and quick switch link', function () {
+    [$director] = directorForUpload();
+
+    $this->actingAs($director)
+        ->get(route('student.create'))
+        ->assertOk()
+        ->assertSee(route('student.upload'))
+        ->assertSee('Bulk Upload')
+        ->assertSee('Need to enroll in bulk?');
+});
+
+test('bulk upload page renders single student navigation button', function () {
+    [$director] = directorForUpload();
+
+    $this->actingAs($director)
+        ->get(route('student.upload'))
+        ->assertOk()
+        ->assertSee(route('student.create'))
+        ->assertSee('Single Student');
+});
+
+test('import rejects duplicate admission numbers in the same batch with a friendly message', function () {
+    [$director] = directorForUpload();
+
+    $component = Livewire::actingAs($director)->test('student::upload');
+
+    $component->set('rows.0', [
+        'name' => 'Alice First',
+        'admission_number' => 'GVA-999-2026',
+        'student_number' => '',
+        'class_name' => '',
+        'gender' => 'female',
+        'guardian_name' => '',
+        'guardian_phone' => '',
+        'enrollment_status' => 'active',
+    ]);
+
+    $component->set('rows.1', [
+        'name' => 'Bob Second',
+        'admission_number' => 'GVA-999-2026',
+        'student_number' => '',
+        'class_name' => '',
+        'gender' => 'male',
+        'guardian_name' => '',
+        'guardian_phone' => '',
+        'enrollment_status' => 'active',
+    ]);
+
+    $component->call('save')->assertHasNoErrors();
+
+    expect($component->get('created'))->toBe(1);
+    $errors = $component->get('rowErrors');
+    expect($errors)->toHaveCount(1)
+        ->and($errors[0])->toContain('Admission number "GVA-999-2026" is duplicated in row 1')
+        ->and($errors[0])->not->toContain('SQLSTATE')
+        ->and($errors[0])->not->toContain('Integrity constraint violation');
+});
+
+test('import rejects admission number already registered in database with a friendly message', function () {
+    [$director, $institution] = directorForUpload();
+
+    // Create an existing student with the target admission number
+    $existingUser = User::factory()->create();
+    $existingUser->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $existingUser->id,
+        'institution_id' => $institution->id,
+        'admission_number' => 'GVA-1-2026',
+        'is_active' => true,
+        'enrollment_status' => 'active',
+    ]);
+
+    $component = Livewire::actingAs($director)->test('student::upload');
+
+    $component->set('rows.0', [
+        'name' => 'Duplicate Student',
+        'admission_number' => 'GVA-1-2026',
+        'student_number' => '',
+        'class_name' => '',
+        'gender' => 'male',
+        'guardian_name' => '',
+        'guardian_phone' => '',
+        'enrollment_status' => 'active',
+    ]);
+
+    $component->call('save')->assertHasNoErrors();
+
+    expect($component->get('created'))->toBe(0);
+    $errors = $component->get('rowErrors');
+    expect($errors)->toHaveCount(1)
+        ->and($errors[0])->toContain('Admission number "GVA-1-2026" is already registered to an existing student in the system')
+        ->and($errors[0])->not->toContain('SQLSTATE')
+        ->and($errors[0])->not->toContain('1062')
+        ->and($errors[0])->not->toContain('Integrity constraint violation');
+});
+
+test('import rejects student number already registered in database with a friendly message', function () {
+    [$director, $institution] = directorForUpload();
+
+    $existingUser = User::factory()->create();
+    $existingUser->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $existingUser->id,
+        'institution_id' => $institution->id,
+        'admission_number' => 'ADM-ORIG-001',
+        'student_number' => 'STU-10492',
+        'is_active' => true,
+        'enrollment_status' => 'active',
+    ]);
+
+    $component = Livewire::actingAs($director)->test('student::upload');
+
+    $component->set('rows.0', [
+        'name' => 'Another Student',
+        'admission_number' => '',
+        'student_number' => 'STU-10492',
+        'class_name' => '',
+        'gender' => 'female',
+        'guardian_name' => '',
+        'guardian_phone' => '',
+        'enrollment_status' => 'active',
+    ]);
+
+    $component->call('save')->assertHasNoErrors();
+
+    expect($component->get('created'))->toBe(0);
+    $errors = $component->get('rowErrors');
+    expect($errors)->toHaveCount(1)
+        ->and($errors[0])->toContain('Student number "STU-10492" is already registered to an existing student in the system')
+        ->and($errors[0])->not->toContain('SQLSTATE');
+});
+
+test('class stats and live roster calculate counts and latest admission accurately', function () {
+    [$director, $institution, $class] = directorForUpload();
+
+    // Enroll 2 students into this class
+    $boy = User::factory()->create(['name' => 'Charlie Brown']);
+    $boy->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $boy->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'GVA-10-2026',
+        'gender' => 'male',
+        'is_active' => true,
+    ]);
+
+    $girl = User::factory()->create(['name' => 'Diana Prince']);
+    $girl->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $girl->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'GVA-11-2026',
+        'gender' => 'female',
+        'is_active' => true,
+    ]);
+
+    $component = Livewire::actingAs($director)
+        ->test('student::upload')
+        ->set('selectedClassId', $class->id);
+
+    $stats = $component->get('classStats');
+    expect($stats['total'])->toBe(2)
+        ->and($stats['male'])->toBe(1)
+        ->and($stats['female'])->toBe(1)
+        ->and($stats['latest_admission'])->toBe('GVA-11-2026');
+
+    $roster = $component->get('classRoster');
+    expect($roster)->toHaveCount(2);
+
+    // Search roster
+    $component->set('rosterSearch', 'Diana');
+    $filteredRoster = $component->get('classRoster');
+    expect($filteredRoster)->toHaveCount(1)
+        ->and($filteredRoster->first()->admission_number)->toBe('GVA-11-2026');
+});
+
+test('newly added rows inherit the active target class name', function () {
+    [$director, $institution, $class] = directorForUpload();
+
+    $component = Livewire::actingAs($director)
+        ->test('student::upload')
+        ->set('selectedClassId', $class->id);
+
+    // Add 5 more rows
+    $component->call('addRows', 5);
+
+    $rows = $component->get('rows');
+    expect(count($rows))->toBe(15);
+    // Last row should inherit the class name
+    expect($rows[14]['class_name'])->toBe($class->name);
+});
+
+test('displays helpful onboarding empty state when institution has zero classes', function () {
+    [$director, $institution] = directorForUpload();
+    // Delete all classes for this school
+    SchoolClass::where('institution_id', $institution->id)->delete();
+
+    $this->actingAs($director)
+        ->get(route('student.upload'))
+        ->assertOk()
+        ->assertSee('No School Classes Found')
+        ->assertSee('Create First Class');
+});
+
+test('draft rows can be restored into the grid', function () {
+    [$director] = directorForUpload();
+
+    $component = Livewire::actingAs($director)->test('student::upload');
+
+    $draft = [
+        [
+            'name' => 'Restored Student',
+            'admission_number' => 'RESTORED-1',
+            'student_number' => '',
+            'class_name' => 'Grade 3',
+            'gender' => 'male',
+            'guardian_name' => 'Parent Name',
+            'guardian_phone' => '0711000000',
+            'enrollment_status' => 'active',
+        ],
+    ];
+
+    $component->call('restoreDraft', $draft);
+
+    $rows = $component->get('rows');
+    expect($rows[0]['name'])->toBe('Restored Student')
+        ->and($rows[0]['admission_number'])->toBe('RESTORED-1');
+});
+
+test('switching class without unsaved entries switches immediately', function () {
+    [$director, $institution, $classA] = directorForUpload();
+    $classB = SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Grade 4',
+        'level' => 'Primary',
+    ]);
+
+    $component = Livewire::actingAs($director)
+        ->test('student::upload')
+        ->assertSet('selectedClassId', $classA->id);
+
+    // Switch to Class B with empty rows
+    $component->call('onClassSelectChange', $classB->id)
+        ->assertSet('selectedClassId', $classB->id)
+        ->assertSet('pendingClassId', null);
+});
+
+test('attempting to switch class with unsaved student rows sets pending class', function () {
+    [$director, $institution, $classA] = directorForUpload();
+    $classB = SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Grade 4',
+        'level' => 'Primary',
+    ]);
+
+    $component = Livewire::actingAs($director)
+        ->test('student::upload')
+        ->set('rows.0.name', 'Unsaved Student')
+        ->set('rows.0.admission_number', 'UNSAVED-01');
+
+    expect($component->instance()->hasUnsavedChanges())->toBeTrue();
+
+    // Trigger class change
+    $component->call('onClassSelectChange', $classB->id);
+
+    // Should NOT have changed selectedClassId yet
+    expect($component->get('selectedClassId'))->toBe($classA->id)
+        ->and($component->get('pendingClassId'))->toBe($classB->id);
+
+    // Cancel switch keeps current class
+    $component->call('cancelSwitchClass');
+    expect($component->get('selectedClassId'))->toBe($classA->id)
+        ->and($component->get('pendingClassId'))->toBeNull();
+});
+
+test('discarding and switching class clears unsaved entries and switches target class', function () {
+    [$director, $institution, $classA] = directorForUpload();
+    $classB = SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Grade 4',
+        'level' => 'Primary',
+    ]);
+
+    $component = Livewire::actingAs($director)
+        ->test('student::upload')
+        ->set('rows.0.name', 'Unsaved Student')
+        ->set('rows.0.admission_number', 'UNSAVED-01')
+        ->call('onClassSelectChange', $classB->id)
+        ->call('discardAndSwitchClass');
+
+    // Should now be on Class B and rows cleared
+    expect($component->get('selectedClassId'))->toBe($classB->id)
+        ->and($component->get('pendingClassId'))->toBeNull();
+
+    $rows = $component->get('rows');
+    expect($rows[0]['name'])->toBe('')
+        ->and($rows[0]['class_name'])->toBe($classB->name);
+});
+
+test('saving and switching class saves students to current class and switches target class', function () {
+    [$director, $institution, $classA] = directorForUpload();
+    $classB = SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Grade 4',
+        'level' => 'Primary',
+    ]);
+
+    $component = Livewire::actingAs($director)
+        ->test('student::upload')
+        ->set('rows.0.name', 'Saved Student')
+        ->set('rows.0.admission_number', 'SAVED-01')
+        ->set('rows.0.class_name', $classA->name)
+        ->call('onClassSelectChange', $classB->id)
+        ->call('saveAndSwitchClass');
+
+    // Student should be saved in DB for Class A
+    $details = StudentDetails::where('admission_number', 'SAVED-01')->first();
+    expect($details)->not->toBeNull()
+        ->and((int) $details->class_id)->toBe((int) $classA->id);
+
+    // And component should have switched to Class B
+    expect($component->get('selectedClassId'))->toBe($classB->id);
+});
+
+test('discardDraft dispatches clear-bulk-draft event', function () {
+    [$director] = directorForUpload();
+
+    Livewire::actingAs($director)->test('student::upload')
+        ->call('discardDraft')
+        ->assertDispatched('clear-bulk-draft');
+});

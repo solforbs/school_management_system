@@ -3,9 +3,12 @@
 namespace Modules\Student\Actions;
 
 use App\Models\User;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Student\Exceptions\StudentLimitException;
+use Modules\Student\Models\StudentDetails;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
@@ -97,11 +100,14 @@ class ImportStudents
 
         $created = 0;
         $errors = [];
+        $seenAdmissionNumbers = [];
+        $seenStudentNumbers = [];
 
         foreach ($rows as $index => $row) {
             $row = array_map(fn ($value) => trim((string) $value), $row);
 
-            if (implode('', $row) === '') {
+            // Skip rows that have no name, admission number, or student ID (even if class or status is pre-selected)
+            if ($row['name'] === '' && $row['admission_number'] === '' && $row['student_number'] === '') {
                 continue;
             }
 
@@ -125,16 +131,52 @@ class ImportStudents
                 $classId = $class->id;
             }
 
+            // Check admission number duplicates before saving
+            if ($row['admission_number'] !== '') {
+                if (isset($seenAdmissionNumbers[$row['admission_number']])) {
+                    $firstRowNumber = $seenAdmissionNumbers[$row['admission_number']] + 1;
+                    $errors[$index] = "Admission number \"{$row['admission_number']}\" is duplicated in row {$firstRowNumber}. Each student must have a unique admission number.";
+
+                    continue;
+                }
+
+                if (StudentDetails::where('admission_number', $row['admission_number'])->exists()) {
+                    $errors[$index] = "Admission number \"{$row['admission_number']}\" is already registered to an existing student in the system.";
+
+                    continue;
+                }
+
+                $seenAdmissionNumbers[$row['admission_number']] = $index;
+            }
+
+            // Check student number duplicates if provided
+            if ($row['student_number'] !== '') {
+                if (isset($seenStudentNumbers[$row['student_number']])) {
+                    $firstRowNumber = $seenStudentNumbers[$row['student_number']] + 1;
+                    $errors[$index] = "Student number \"{$row['student_number']}\" is duplicated in row {$firstRowNumber}.";
+
+                    continue;
+                }
+
+                if (StudentDetails::where('student_number', $row['student_number'])->exists()) {
+                    $errors[$index] = "Student number \"{$row['student_number']}\" is already registered to an existing student in the system.";
+
+                    continue;
+                }
+
+                $seenStudentNumbers[$row['student_number']] = $index;
+            }
+
             $status = strtolower($row['enrollment_status']) ?: 'active';
+            $admissionNumber = $row['admission_number'] ?: $this->generateUniqueAdmissionNumber($seenAdmissionNumbers);
+            $seenAdmissionNumbers[$admissionNumber] = $index;
 
             try {
                 $this->saveStudent->create([
                     'name' => $row['name'],
-                    'email' => $this->uniqueEmail($row['name'], $row['admission_number']),
+                    'email' => $this->uniqueEmail($row['name'], $admissionNumber),
                     'password' => Str::random(16),
-                    // The column is NOT NULL, so a blank cell gets a
-                    // generated number the school can edit later.
-                    'admission_number' => $row['admission_number'] ?: strtoupper('ADM-'.now()->year.'-'.Str::random(6)),
+                    'admission_number' => $admissionNumber,
                     'student_number' => $row['student_number'] ?: null,
                     'class_id' => $classId,
                     'gender' => in_array(strtolower($row['gender']), ['male', 'female', 'other'], true) ? strtolower($row['gender']) : null,
@@ -147,12 +189,43 @@ class ImportStudents
                 $created++;
             } catch (StudentLimitException $e) {
                 $errors[$index] = $e->getMessage();
+            } catch (QueryException $e) {
+                Log::warning('Student bulk import database exception: '.$e->getMessage());
+
+                if ($e->getCode() === '23000' || (isset($e->errorInfo[1]) && $e->errorInfo[1] === 1062)) {
+                    if (str_contains($e->getMessage(), 'admission_number')) {
+                        $errors[$index] = "Admission number \"{$admissionNumber}\" is already in use by another student.";
+                    } elseif (str_contains($e->getMessage(), 'student_number')) {
+                        $errors[$index] = "Student number \"{$row['student_number']}\" is already in use by another student.";
+                    } elseif (str_contains($e->getMessage(), 'email')) {
+                        $errors[$index] = 'A student account with this email address already exists.';
+                    } else {
+                        $errors[$index] = 'A student record with these unique details already exists in the system.';
+                    }
+                } else {
+                    $errors[$index] = 'Could not save this student due to a data constraint. Please check the entered details.';
+                }
             } catch (Throwable $e) {
-                $errors[$index] = 'Could not save this student: '.$e->getMessage();
+                Log::error('Student bulk import unexpected failure: '.$e->getMessage(), ['exception' => $e]);
+                $errors[$index] = 'Could not save this student. Please verify the entered details and try again.';
             }
         }
 
         return ['created' => $created, 'errors' => $errors];
+    }
+
+    /**
+     * Generate an admission number that doesn't collide with existing records or current batch.
+     *
+     * @param  array<string, int>  $seen
+     */
+    private function generateUniqueAdmissionNumber(array $seen): string
+    {
+        do {
+            $adm = strtoupper('ADM-'.now()->year.'-'.Str::random(6));
+        } while (isset($seen[$adm]) || StudentDetails::where('admission_number', $adm)->exists());
+
+        return $adm;
     }
 
     /**
