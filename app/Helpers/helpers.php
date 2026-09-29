@@ -348,3 +348,34 @@ if (! function_exists('getClassName')) {
         return $schoolClass ? $schoolClass->name : 'Unknown Class';
     }
 }
+
+if (! function_exists('raiseMemoryLimit')) {
+    /**
+     * Raise the PHP memory limit only if the current limit is finite and lower
+     * than the requested target. Never lowers an existing higher ceiling.
+     */
+    function raiseMemoryLimit(string $target = '512M'): void
+    {
+        $current = ini_get('memory_limit');
+        if ($current === '-1') {
+            return;
+        }
+
+        $parseBytes = function (string $val): int {
+            $val = trim($val);
+            $last = strtolower($val[strlen($val) - 1] ?? '');
+            $num = (int) $val;
+
+            return match ($last) {
+                'g' => $num * 1024 * 1024 * 1024,
+                'm' => $num * 1024 * 1024,
+                'k' => $num * 1024,
+                default => $num,
+            };
+        };
+
+        if ($parseBytes($current) < $parseBytes($target)) {
+            @ini_set('memory_limit', $target);
+        }
+    }
+}

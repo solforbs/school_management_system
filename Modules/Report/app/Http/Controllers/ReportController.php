@@ -38,7 +38,7 @@ class ReportController extends Controller
 
         abort_unless($user->can('export report'), 403);
 
-        @ini_set('memory_limit', '512M');
+        raiseMemoryLimit('512M');
 
         // Only ever raise the ceiling, never introduce one. Under a SAPI with
         // no limit - CLI, a queue worker, the test suite - set_time_limit(300)
@@ -87,8 +87,6 @@ class ReportController extends Controller
 
     private function exportWorkbook(User $user, ?CarbonImmutable $from, ?CarbonImmutable $to, string $label): StreamedResponse
     {
-        @ini_set('memory_limit', '256M');
-
         ['filename' => $filename, 'spreadsheet' => $spreadsheet] = $this->export->forUser($user, $from, $to, $label);
 
         $writer = new Xlsx($spreadsheet);

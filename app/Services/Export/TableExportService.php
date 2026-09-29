@@ -28,7 +28,7 @@ class TableExportService
      */
     public function excel(iterable $rows, array $headers, string $filename, string $title = 'Export'): StreamedResponse
     {
-        @ini_set('memory_limit', '512M');
+        raiseMemoryLimit('512M');
 
         $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
@@ -38,7 +38,7 @@ class TableExportService
         $writer = new Xlsx($spreadsheet);
 
         return response()->streamDownload(function () use ($writer) {
-            @ini_set('memory_limit', '512M');
+            raiseMemoryLimit('512M');
             $writer->save('php://output');
         }, $this->withExtension($filename, 'xlsx'), [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
