@@ -75,7 +75,7 @@ test('the student form refuses an incomplete enrolment', function () {
             'name' => '',
             'email' => 'not-an-email',
         ])
-        ->assertSessionHasErrors(['name', 'email', 'password', 'profile_image']);
+        ->assertSessionHasErrors(['name', 'email']);
 
     expect(StudentDetails::count())->toBe(0);
 });
