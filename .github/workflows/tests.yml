@@ -99,6 +99,7 @@ jobs:
           extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, bcmath, fileinfo, gd, zip
           tools: composer:v2
           coverage: none
+          ini-values: memory_limit=2G, max_execution_time=0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -132,4 +133,4 @@ jobs:
           php artisan key:generate
 
       - name: Run Pest Test Suite
-        run: php artisan test --compact
+        run: php -d memory_limit=2G artisan test --compact
