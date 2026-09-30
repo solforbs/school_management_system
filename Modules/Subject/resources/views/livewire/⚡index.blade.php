@@ -125,7 +125,7 @@ new #[Title('Academic Subjects')] class extends Component {
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons base-route="subject.export" module="subject" :params="[
                 'search' => $currentSearch,
                 'compulsory' => $currentCompulsory,
@@ -151,15 +151,17 @@ new #[Title('Academic Subjects')] class extends Component {
     @endif
 
     {{-- Top Executive Metrics Strip --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-5">
         <x-kpi-card title="Total Subjects" icon="book-open" color="sky" :count="$totalSubjects"
             subtext="Registered academic disciplines" />
 
         <x-kpi-card title="Compulsory Subjects" icon="academic-cap" color="indigo" :count="$compulsorySubjects"
             subtext="Mandatory curriculum courses" href="{{ route('subject.index', ['compulsory' => 'yes']) }}" />
 
-        <x-kpi-card title="Optional Subjects" icon="sparkles" color="emerald" :count="$optionalSubjects"
-            subtext="Elective learning pathways" href="{{ route('subject.index', ['compulsory' => 'no']) }}" />
+        <div class="col-span-2 sm:col-span-1">
+            <x-kpi-card title="Optional Subjects" icon="sparkles" color="emerald" :count="$optionalSubjects"
+                subtext="Elective learning pathways" href="{{ route('subject.index', ['compulsory' => 'no']) }}" />
+        </div>
     </div>
 
     {{-- Reusable Single-Row Filter Toolbar --}}

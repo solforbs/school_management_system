@@ -103,7 +103,7 @@
             resetRoute="{{ route('student.index') }}"
         >
             {{-- Class Filter --}}
-            <div style="flex: 0 1 200px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_200px]">
                 <select name="class_id" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Classes</option>
@@ -116,7 +116,7 @@
             </div>
 
             {{-- Status Filter --}}
-            <div style="flex: 0 1 150px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_150px]">
                 <select name="status" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Statuses</option>
@@ -129,7 +129,7 @@
             </div>
 
             {{-- Gender Filter --}}
-            <div style="flex: 0 1 130px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_130px]">
                 <select name="gender" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Genders</option>
@@ -177,10 +177,104 @@
             </x-slot:scopeTags>
         </x-filter-toolbar>
 
-        {{-- Smart High-Density 4-Column Student Roster Table (Zero Horizontal Scroll) --}}
+        {{-- Responsive Student Roster (Mobile Cards + Desktop High-Density Table) --}}
         <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
             @if($students->isNotEmpty())
-                <div class="w-full overflow-x-auto">
+                {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100">
+                    @foreach ($students as $student)
+                        @php
+                            $user = $student->student;
+                            $initials = $user ? strtoupper(substr($user->name, 0, 2)) : 'ST';
+                            $className = $student->schoolClass?->name ?? 'Unassigned Class';
+                            $classLevel = $student->schoolClass?->level;
+                            $admNo = $student->admission_number ?? 'ADM-' . str_pad($student->id, 4, '0', STR_PAD_LEFT);
+                            $guardian = $student->guardian_name ?? $student->parent_name ?? 'Not Listed';
+                            $guardianPhone = $student->guardian_phone ?? $student->parent_phone ?? $student->phone;
+                            $status = $student->enrollment_status ?? ($student->is_active ? 'active' : 'inactive');
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 transition-colors">
+                            {{-- Row 1: Avatar, Name, Admission No & Status Pill --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    @if($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
+                                        <img src="{{ asset('storage/' . $student->profile_photo) }}" alt="{{ $user?->name }}" 
+                                            class="size-10 rounded-xl object-cover border border-zinc-200 shrink-0">
+                                    @else
+                                        <div class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">
+                                            {{ $initials }}
+                                        </div>
+                                    @endif
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <a href="{{ $user ? route('student.show', $user->id) : '#' }}" class="font-bold text-zinc-900 hover:text-blue-600 transition text-sm">
+                                                {{ $user?->name ?? 'Student' }}
+                                            </a>
+                                            <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 font-mono text-[10px] font-semibold border border-zinc-200 whitespace-nowrap shrink-0">
+                                                {{ $admNo }}
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-zinc-500 mt-0.5 font-medium truncate">
+                                            <span class="font-semibold text-zinc-800">{{ $className }}</span>
+                                            @if ($classLevel)
+                                                <span class="text-zinc-400 text-[11px]">({{ $classLevel }})</span>
+                                            @endif
+                                            <span class="text-zinc-300">&bull;</span>
+                                            <span class="capitalize">{{ $student->gender ?? 'Learner' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0
+                                    {{ $status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                       ($status === 'suspended' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                       ($status === 'graduated' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-rose-50 text-rose-700 border border-rose-200')) }}">
+                                    <span class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-indigo-500' : 'bg-rose-500')) }}"></span>
+                                    {{ ucfirst($status) }}
+                                </span>
+                            </div>
+
+                            {{-- Row 2: Guardian Contact & Quick Action Buttons --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 text-xs">
+                                <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                                    <div class="flex items-center gap-1 text-zinc-600 truncate text-[11px]">
+                                        <flux:icon icon="user" class="size-3 text-zinc-400 shrink-0" />
+                                        <span class="truncate max-w-[120px]">{{ $guardian }}</span>
+                                    </div>
+                                    @if ($guardianPhone)
+                                        <a href="tel:{{ $guardianPhone }}" class="hover:text-blue-600 transition flex items-center gap-1 text-[11px] font-mono text-zinc-700 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span>{{ $guardianPhone }}</span>
+                                        </a>
+                                    @endif
+                                </div>
+
+                                @if($user)
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <flux:button href="{{ route('student.show', $user->id) }}" size="xs" variant="subtle" title="View Profile">
+                                            View
+                                        </flux:button>
+                                        @can('edit student')
+                                            <flux:button href="{{ route('student.edit', $user->id) }}" size="xs" icon="pencil-square" variant="subtle" title="Edit Student" />
+                                        @endcan
+                                        @can('delete student')
+                                            <form action="{{ route('student.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove student {{ addslashes($user->name) }} from the directory?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="px-2 py-0.5 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition font-medium">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop High-Density 4-Column Table (Hidden on Mobile) --}}
+                <div class="hidden sm:block w-full overflow-x-auto">
                     <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                             <tr>
@@ -280,7 +374,9 @@
                                                         <form action="{{ route('student.destroy', $user->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove student {{ addslashes($user->name) }} from the directory?');">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <flux:button type="submit" size="sm" icon="trash" variant="subtle" class="text-rose-500 hover:text-rose-600 hover:bg-rose-50" tooltip="Delete" />
+                                                            <button type="submit" class="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Delete">
+                                                                <flux:icon icon="trash" class="size-4" />
+                                                            </button>
                                                         </form>
                                                     @endcan
                                                 </div>

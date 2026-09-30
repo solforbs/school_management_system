@@ -115,7 +115,7 @@ new #[Title('Staff Directory')] class extends Component
                 </flux:text>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <x-export-buttons base-route="staff.export" module="staff"
                     :params="['search' => $currentSearch, 'department' => $currentDepartment, 'status' => $currentStatus]" />
                 @can('create staff')
@@ -173,7 +173,7 @@ new #[Title('Staff Directory')] class extends Component
             resetRoute="{{ route('staff.index') }}"
         >
             {{-- Department Filter --}}
-            <div style="flex: 0 1 200px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_200px]">
                 <select name="department" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Departments</option>
@@ -184,7 +184,7 @@ new #[Title('Staff Directory')] class extends Component
             </div>
 
             {{-- Status Filter --}}
-            <div style="flex: 0 1 150px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_150px]">
                 <select name="status" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Statuses</option>
@@ -226,10 +226,102 @@ new #[Title('Staff Directory')] class extends Component
             </x-slot:scopeTags>
         </x-filter-toolbar>
 
-        {{-- Smart Grouped 4-Column Staff Ledger --}}
+        {{-- Responsive Staff Ledger (Mobile Cards + Desktop High-Density Table) --}}
         <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
             @if($staff->isNotEmpty())
-                <div class="w-full overflow-x-auto">
+                {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @foreach ($staff as $member)
+                        @php
+                            $initials = strtoupper(substr($member->name, 0, 2));
+                            $phone = $member->phone ?? '';
+                            $email = $member->user?->email ?? '';
+                            $staffNo = $member->staff_number ?? 'EMP-S-' . str_pad($member->id, 3, '0', STR_PAD_LEFT);
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
+                            {{-- Row 1: Avatar, Name, Staff No & Status --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <a href="{{ route('staff.show', $member->id) }}" wire:navigate.hover class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-sm">
+                                                {{ $member->name }}
+                                            </a>
+                                            <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
+                                                {{ $staffNo }}
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
+                                            <span>{{ $member->job_title ?? 'Staff Personnel' }}</span>
+                                            @if($member->department)
+                                                <span class="text-zinc-300 dark:text-zinc-600">&bull;</span>
+                                                <span class="text-zinc-600 dark:text-zinc-300">{{ $member->department }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="shrink-0">
+                                    @if($member->status === 'active')
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 whitespace-nowrap shrink-0">
+                                            <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                            Active
+                                        </span>
+                                    @elseif($member->status === 'on_leave')
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 whitespace-nowrap shrink-0">
+                                            On Leave
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
+                                            {{ ucfirst($member->status ?? 'Inactive') }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Row 2: Contact, Salary & Quick Action Buttons --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    @if($phone)
+                                        <a href="tel:{{ $phone }}" class="text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono text-[11px]">{{ $phone }}</span>
+                                        </a>
+                                    @endif
+                                    @if($member->salary)
+                                        <span class="font-mono text-[11px] font-bold text-zinc-800 dark:text-zinc-200 shrink-0">
+                                            KES {{ number_format($member->salary) }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('staff.show', $member->id) }}" wire:navigate.hover size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    @can('edit staff')
+                                        <flux:button href="{{ route('staff.edit', $member->id) }}" wire:navigate.hover size="xs" icon="pencil-square" variant="subtle" title="Edit Staff" />
+                                    @endcan
+                                    @can('delete staff')
+                                        <x-confirm-form
+                                            :action="route('staff.destroy', $member->id)"
+                                            title="Delete this staff record?"
+                                            message="This removes their staff record and system access."
+                                            confirm="Delete Staff"
+                                            trigger-class="text-rose-600 hover:text-rose-700 text-xs"
+                                            tooltip="Delete Staff" />
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop High-Density 4-Column Table (Hidden on Mobile) --}}
+                <div class="hidden sm:block w-full overflow-x-auto">
                     <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                             <tr>

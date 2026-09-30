@@ -84,7 +84,7 @@
             resetRoute="{{ route('staff.index') }}"
         >
             {{-- Department Selector --}}
-            <div style="flex: 0 1 220px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_220px]">
                 <select name="department" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Departments ({{ count($departments) }})</option>
@@ -97,7 +97,7 @@
             </div>
 
             {{-- Status Selector --}}
-            <div style="flex: 0 1 150px;">
+            <div class="w-full sm:w-auto sm:flex-[0_1_150px]">
                 <select name="status" onchange="this.form.submit()"
                     class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     <option value="">All Statuses</option>
@@ -138,10 +138,97 @@
             </x-slot:scopeTags>
         </x-filter-toolbar>
 
-        {{-- Smart Grouped 4-Column Staff Ledger (Zero Horizontal Scroll) --}}
+        {{-- Responsive Staff Ledger (Mobile Cards + Desktop High-Density Table) --}}
         <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
             @if($staff->isNotEmpty())
-                <div class="w-full overflow-x-auto">
+                {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+                {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100">
+                    @foreach ($staff as $member)
+                        @php
+                            $initials = strtoupper(substr($member->name, 0, 2));
+                            $phone = $member->phone ?? '';
+                            $email = $member->user?->email ?? '';
+                            $staffNo = $member->staff_number ?? 'EMP-S-' . str_pad($member->id, 3, '0', STR_PAD_LEFT);
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 transition-colors">
+                            {{-- Row 1: Avatar, Name, Staff No & Status --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <a href="{{ route('staff.show', $member->id) }}" class="font-bold text-zinc-900 hover:text-blue-600 transition text-sm">
+                                                {{ $member->name }}
+                                            </a>
+                                            <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 font-mono text-[10px] font-semibold border border-zinc-200 whitespace-nowrap shrink-0">
+                                                {{ $staffNo }}
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-zinc-500 mt-0.5 font-medium truncate">
+                                            <span>{{ $member->job_title ?? 'Staff Personnel' }}</span>
+                                            @if($member->department)
+                                                <span class="text-zinc-300">&bull;</span>
+                                                <span class="text-zinc-600">{{ $member->department }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="shrink-0">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0
+                                        {{ $member->status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                           ($member->status === 'on_leave' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200') }}">
+                                        @if($member->status === 'active')
+                                            <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                        @endif
+                                        {{ ucfirst($member->status ?? 'Active') }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- Row 2: Contact, Salary & Quick Action Buttons --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    @if($phone)
+                                        <a href="tel:{{ $phone }}" class="text-xs font-medium text-zinc-700 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono text-[11px]">{{ $phone }}</span>
+                                        </a>
+                                    @endif
+                                    @if($member->salary)
+                                        <span class="font-mono text-[11px] font-bold text-zinc-800 shrink-0">
+                                            KES {{ number_format($member->salary) }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('staff.show', $member->id) }}" size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    @can('edit staff')
+                                        <flux:button href="{{ route('staff.edit', $member->id) }}" size="xs" icon="pencil-square" variant="subtle" title="Edit Staff" />
+                                    @endcan
+                                    @can('delete staff')
+                                        <form action="{{ route('staff.destroy', $member->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove this staff member?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="px-2 py-0.5 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition font-medium">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop High-Density 4-Column Table (Hidden on Mobile) --}}
+                <div class="hidden sm:block w-full overflow-x-auto">
                     <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                             <tr>

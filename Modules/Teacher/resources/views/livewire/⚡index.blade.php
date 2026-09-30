@@ -142,7 +142,7 @@ new #[Title('Teacher Management')] class extends Component
                 </flux:text>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <x-export-buttons base-route="teacher.export" module="teacher"
                     :params="['search' => $currentSearch, 'department' => $currentDept, 'status' => $currentStatus]" />
                 @can('create teacher')
@@ -193,19 +193,18 @@ new #[Title('Teacher Management')] class extends Component
 
         {{-- Filter Toolbar --}}
         <div class="bg-white dark:bg-zinc-900 rounded-2xl p-3.5 sm:p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col gap-3">
-            <form method="GET" action="{{ route('teacher.index') }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;">
-                <div style="flex: 1 1 260px; position: relative; display: flex; align-items: center;">
-                    <div style="position: absolute; left: 0.875rem; pointer-events: none; color: #a1a1aa; display: flex; align-items: center;">
+            <form method="GET" action="{{ route('teacher.index') }}" class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5">
+                <div class="relative flex-1 w-full sm:w-auto sm:basis-60 items-center">
+                    <div class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center text-zinc-400">
                         <flux:icon icon="magnifying-glass" class="size-4" />
                     </div>
                     <input type="text" name="search" value="{{ $currentSearch }}" placeholder="Search teacher name, ID, or email..." 
-                        style="width: 100%; padding-left: 2.75rem; padding-right: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem;"
-                        class="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs placeholder-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                        class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs py-2.5 sm:py-2 pl-10 pr-4 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 </div>
 
-                <div style="flex: 0 1 220px;">
+                <div class="w-full sm:w-auto sm:flex-[0_1_220px]">
                     <select name="department" onchange="this.form.submit()"
-                        class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                        class="w-full px-3 py-2.5 sm:py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                         <option value="">All Academic Departments</option>
                         @foreach ($departments as $dept)
                             <option value="{{ $dept }}" {{ $currentDept === $dept ? 'selected' : '' }}>{{ $dept }}</option>
@@ -213,9 +212,9 @@ new #[Title('Teacher Management')] class extends Component
                     </select>
                 </div>
 
-                <div style="flex: 0 1 150px;">
+                <div class="w-full sm:w-auto sm:flex-[0_1_150px]">
                     <select name="status" onchange="this.form.submit()"
-                        class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                        class="w-full px-3 py-2.5 sm:py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                         <option value="">All Statuses</option>
                         <option value="active" {{ $currentStatus === 'active' ? 'selected' : '' }}>Active Only</option>
                         <option value="on_leave" {{ $currentStatus === 'on_leave' ? 'selected' : '' }}>On Leave</option>
@@ -224,12 +223,12 @@ new #[Title('Teacher Management')] class extends Component
                     </select>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shrink-0">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button type="submit" class="flex-1 sm:flex-initial text-center justify-center shrink-0 rounded-xl bg-zinc-900 dark:bg-white px-4 py-2.5 sm:py-2 text-xs font-bold text-white dark:text-zinc-900 transition hover:bg-zinc-800 dark:hover:bg-zinc-100 shadow-xs">
                         Filter
                     </button>
                     @if($hasActiveFilters)
-                        <a href="{{ route('teacher.index') }}" wire:navigate.hover class="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-600 dark:text-zinc-400 text-xs font-semibold transition shrink-0" title="Reset Filters">
+                        <a href="{{ route('teacher.index') }}" wire:navigate.hover class="shrink-0 rounded-xl bg-zinc-100 dark:bg-zinc-800 px-3 py-2.5 sm:py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 transition hover:bg-zinc-200 dark:hover:bg-zinc-700" title="Reset Filters">
                             ✕
                         </a>
                     @endif
@@ -274,10 +273,113 @@ new #[Title('Teacher Management')] class extends Component
             @endif
         </div>
 
-        {{-- Clean High-Density 4-Column Table --}}
+        {{-- Responsive Teacher Roster (Mobile Cards + Desktop High-Density Table) --}}
         <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
             @if($teachers->isNotEmpty())
-                <div class="w-full overflow-x-auto">
+                {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @foreach ($teachers as $teacherDetails)
+                        @php
+                            $teacherUser = $teacherDetails->teacher;
+                            $teacherName = $teacherUser?->name ?? 'Unknown Teacher';
+                            $initials = $getInitials($teacherName);
+                            $deptStyle = $getDeptStyle($teacherDetails->department ?? '');
+                            $status = $teacherDetails->status ?? 'active';
+                            $empNo = $teacherDetails->employee_number ?? 'EMP-T-' . str_pad($teacherDetails->id, 3, '0', STR_PAD_LEFT);
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
+                            {{-- Row 1: Avatar, Name, Employee No & Status Pill --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="size-10 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <a href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" wire:navigate.hover class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-sm">
+                                                {{ $teacherName }}
+                                            </a>
+                                            <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
+                                                {{ $empNo }}
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
+                                            @if($teacherDetails->department)
+                                                <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $teacherDetails->department }}</span>
+                                                <span class="text-zinc-300 dark:text-zinc-600">&bull;</span>
+                                            @endif
+                                            <span>{{ $teacherDetails->qualification ?? 'Faculty' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Status & Enroll Badges --}}
+                                <div class="flex flex-col items-end gap-1 shrink-0">
+                                    @if($status === 'active')
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80 whitespace-nowrap shrink-0">
+                                            <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                            Active
+                                        </span>
+                                    @elseif($status === 'on_leave')
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 whitespace-nowrap shrink-0">
+                                            On Leave
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 whitespace-nowrap shrink-0">
+                                            {{ ucfirst($status) }}
+                                        </span>
+                                    @endif
+
+                                    @if($teacherDetails->can_enroll_students)
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-400 border border-green-200/80 shrink-0">
+                                            Enroll Access
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Row 2: Contact Info & Action Buttons --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    @if($teacherDetails->phone)
+                                        <a href="tel:{{ $teacherDetails->phone }}" class="text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono text-[11px]">{{ $teacherDetails->phone }}</span>
+                                        </a>
+                                    @endif
+                                    @if($teacherUser?->email)
+                                        <a href="mailto:{{ $teacherUser->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[150px]">
+                                            <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="truncate text-[11px]">{{ $teacherUser->email }}</span>
+                                        </a>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" wire:navigate.hover size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    <x-impersonate-button :user="$teacherDetails->teacher" />
+                                    @can('edit teacher')
+                                        <flux:button href="{{ route('teacher.edit', $teacherDetails->teacher_id) }}" wire:navigate.hover size="xs" icon="pencil-square" variant="subtle" title="Edit Teacher" />
+                                    @endcan
+                                    @can('delete teacher')
+                                        <x-confirm-form
+                                            :action="route('teacher.destroy', $teacherDetails->teacher_id)"
+                                            title="Remove {{ $teacherName }} from the faculty?"
+                                            message="This removes the teacher's profile and system access."
+                                            confirm="Remove Teacher"
+                                            trigger-class="text-rose-500 hover:text-rose-600 text-xs"
+                                            tooltip="Delete" />
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop High-Density 4-Column Table (Hidden on Mobile) --}}
+                <div class="hidden sm:block w-full overflow-x-auto">
                     <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                             <tr>

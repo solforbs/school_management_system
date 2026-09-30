@@ -65,6 +65,19 @@ new #[Title('Attendance Logs')] class extends Component
         $this->resetPage();
     }
 
+    public function resetFilters(): void
+    {
+        $this->search = '';
+        $this->status = '';
+        $this->class_id = '';
+        $this->from = '';
+        $this->to = '';
+        $this->resetPage();
+        $this->selected = [];
+        $this->selectAllOnPage = false;
+        $this->selectAllMatching = false;
+    }
+
     #[Computed]
     public function institution(): ?Institution
     {
@@ -340,7 +353,7 @@ new #[Title('Attendance Logs')] class extends Component
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons base-route="attendance.export" module="attendance" label="Export Logs" :params="[
                 'search' => $search,
                 'status' => $status,
@@ -377,7 +390,7 @@ new #[Title('Attendance Logs')] class extends Component
         </div>
     @else
         {{-- Animated KPI Metrics Grid --}}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
             <x-kpi-card title="Today's Check-ins" icon="clock" color="violet" :count="$todayLogs" subtext="total daily logs" />
             <x-kpi-card title="Present On Campus" icon="check-circle" color="emerald" :count="$presentToday"
                 subtext="marked in attendance" />
@@ -388,62 +401,107 @@ new #[Title('Attendance Logs')] class extends Component
         </div>
 
         {{-- Filter Toolbar --}}
-        <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 space-y-3.5">
+        <div x-data="{ mobileFiltersOpen: {{ $hasActiveFilters ? 'true' : 'false' }} }"
+            class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 sm:p-4 space-y-3">
             {{-- Quick Date Preset Pills --}}
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-                <span class="text-zinc-400 font-medium mr-1 flex items-center gap-1">
+            <div class="flex items-center gap-1.5 text-xs overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <span class="text-zinc-400 font-medium mr-1 flex items-center gap-1 shrink-0">
                     <flux:icon icon="calendar" class="size-3.5" />
                     Preset:
                 </span>
                 <button type="button" wire:click="setDateRange"
-                    class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isAllTime ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 {{ $isAllTime ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                     All Time
                 </button>
                 <button type="button" wire:click="setDateRange('{{ $todayStr }}', '{{ $todayStr }}')"
-                    class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isToday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 {{ $isToday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                     ⚡ Today
                 </button>
                 <button type="button" wire:click="setDateRange('{{ $yesterdayStr }}', '{{ $yesterdayStr }}')"
-                    class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isYesterday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 {{ $isYesterday ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                     Yesterday
                 </button>
                 <button type="button" wire:click="setDateRange('{{ $startOfWeekStr }}', '{{ $endOfWeekStr }}')"
-                    class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isThisWeek ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 {{ $isThisWeek ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                     This Week
                 </button>
                 <button type="button" wire:click="setDateRange('{{ $startOfMonthStr }}', '{{ $endOfMonthStr }}')"
-                    class="px-2.5 py-1 rounded-lg font-medium transition-all {{ $isThisMonth ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
+                    class="px-2.5 py-1 rounded-lg font-medium transition-all shrink-0 {{ $isThisMonth ? 'bg-indigo-600 text-white shadow-xs' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700' }}">
                     This Month
                 </button>
             </div>
 
-            <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 pt-1 border-t border-zinc-100 dark:border-zinc-800">
-                <div class="flex-1 relative">
-                    <flux:input x-ref="searchInput" wire:model.live.debounce.300ms="search" icon="magnifying-glass"
-                        placeholder="Search student name, ADM... (Press '/' to focus)" />
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                {{-- Search & Mobile Toggle Row --}}
+                <div class="flex items-center gap-2 w-full lg:w-auto lg:flex-1">
+                    <div class="flex-1 relative min-w-0">
+                        <flux:input x-ref="searchInput" wire:model.live.debounce.300ms="search" icon="magnifying-glass"
+                            placeholder="Search student name, ADM... (Press '/' to focus)" class="w-full" />
+                    </div>
+
+                    {{-- Mobile Filter Trigger Button --}}
+                    <button type="button" @click="mobileFiltersOpen = !mobileFiltersOpen"
+                        class="lg:hidden shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border shadow-xs"
+                        :class="mobileFiltersOpen || {{ $hasActiveFilters ? 'true' : 'false' }} 
+                            ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900' 
+                            : 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'">
+                        <flux:icon icon="adjustments-horizontal" class="size-4" />
+                        <span>Filters</span>
+                        @if($hasActiveFilters)
+                            <span class="size-2 rounded-full bg-emerald-400 shrink-0"></span>
+                        @endif
+                    </button>
                 </div>
 
-                <flux:select wire:model.live="status" placeholder="All Statuses" class="w-full sm:w-40">
-                    <flux:select.option value="">All Statuses</flux:select.option>
-                    <flux:select.option value="CheckIn">Check In</flux:select.option>
-                    <flux:select.option value="CheckOut">Check Out</flux:select.option>
-                    <flux:select.option value="OvertimeIn">Overtime In</flux:select.option>
-                    <flux:select.option value="OvertimeOut">Overtime Out</flux:select.option>
-                    <flux:select.option value="BreakIn">Break In</flux:select.option>
-                    <flux:select.option value="BreakOut">Break Out</flux:select.option>
-                </flux:select>
+                {{-- Filter Controls (Collapsible on Mobile < lg, Inline on Desktop >= lg) --}}
+                <div class="w-full lg:w-auto lg:flex lg:items-center lg:gap-2.5"
+                    :class="mobileFiltersOpen ? 'flex flex-col sm:grid sm:grid-cols-2 gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800 lg:border-0 lg:pt-0' : 'hidden lg:flex'">
+                    
+                    <div class="w-full lg:w-40">
+                        <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 lg:hidden">Status</label>
+                        <flux:select wire:model.live="status" placeholder="All Statuses" class="w-full">
+                            <flux:select.option value="">All Statuses</flux:select.option>
+                            <flux:select.option value="CheckIn">Check In</flux:select.option>
+                            <flux:select.option value="CheckOut">Check Out</flux:select.option>
+                            <flux:select.option value="OvertimeIn">Overtime In</flux:select.option>
+                            <flux:select.option value="OvertimeOut">Overtime Out</flux:select.option>
+                            <flux:select.option value="BreakIn">Break In</flux:select.option>
+                            <flux:select.option value="BreakOut">Break Out</flux:select.option>
+                        </flux:select>
+                    </div>
 
-                <flux:select wire:model.live="class_id" placeholder="All Classes" class="w-full sm:w-44">
-                    <flux:select.option value="">All Classes</flux:select.option>
-                    @foreach ($classes as $class)
-                        <flux:select.option value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+                    <div class="w-full lg:w-44">
+                        <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 lg:hidden">Class</label>
+                        <flux:select wire:model.live="class_id" placeholder="All Classes" class="w-full">
+                            <flux:select.option value="">All Classes</flux:select.option>
+                            @foreach ($classes as $class)
+                                <flux:select.option value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <flux:input type="date" wire:model.live="from" class="w-full sm:w-40" />
-                    <span class="text-zinc-400 text-xs font-medium">to</span>
-                    <flux:input type="date" wire:model.live="to" class="w-full sm:w-40" />
+                    {{-- Responsive Date Range (Stacked on mobile phone, 2-col on tablet/sm, inline on lg) --}}
+                    <div class="col-span-full sm:col-span-2 lg:col-span-1 flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+                        <div class="w-full sm:flex-1 lg:w-36">
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 lg:hidden">From Date</label>
+                            <flux:input type="date" wire:model.live="from" class="w-full" />
+                        </div>
+                        <span class="hidden lg:inline text-zinc-400 text-xs font-medium shrink-0">to</span>
+                        <div class="w-full sm:flex-1 lg:w-36">
+                            <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 lg:hidden">To Date</label>
+                            <flux:input type="date" wire:model.live="to" class="w-full" />
+                        </div>
+                    </div>
+
+                    @if($hasActiveFilters)
+                        <div class="col-span-full sm:col-span-2 lg:col-span-1 flex items-center justify-end pt-1 lg:pt-0">
+                            <button type="button" wire:click="resetFilters"
+                                class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition w-full lg:w-auto">
+                                <flux:icon icon="x-mark" class="size-3.5" />
+                                <span>Clear Filters</span>
+                            </button>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -480,8 +538,84 @@ new #[Title('Attendance Logs')] class extends Component
 
         {{-- Attendance Table Card --}}
         <div class="bg-white dark:bg-zinc-900 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden flex flex-col">
-            <div class="overflow-x-auto">
-                <flux:table class="p-2">
+            {{-- Mobile Stacked Cards (Visible on screen < 640px) --}}
+            <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($logs as $log)
+                    @php
+                        $initials = collect(explode(' ', $log['student_name']))
+                            ->map(fn($w) => strtoupper(substr($w, 0, 1)))
+                            ->take(2)
+                            ->join('');
+                    @endphp
+                    <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
+                        {{-- Row 1: Checkbox, Avatar, Name, Admission No & Status Badge --}}
+                        <div class="flex items-start justify-between gap-2.5">
+                            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                @if ($canDelete)
+                                    <input type="checkbox" wire:model.live="selected" value="{{ $log['id'] }}"
+                                        class="rounded border-zinc-300 dark:border-zinc-600 shrink-0" />
+                                @endif
+                                <div class="size-10 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 ring-1 ring-inset ring-violet-500/20 flex items-center justify-center font-bold text-xs shrink-0">
+                                    {{ $initials }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-bold text-sm text-zinc-900 dark:text-white leading-snug">
+                                            {{ $log['student_name'] }}
+                                        </span>
+                                        <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
+                                            {{ $log['admission_number'] }}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate flex items-center gap-1.5">
+                                        <flux:icon icon="cpu-chip" class="size-3 text-zinc-400 shrink-0" />
+                                        <span class="truncate">{{ $log['device_name'] }}</span>
+                                        <span class="text-zinc-300 dark:text-zinc-600">&bull;</span>
+                                        <span class="text-[11px]">{{ $log['verify_mode_label'] }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <flux:badge :color="$log['status_color']" size="sm" class="font-semibold text-[11px] whitespace-nowrap shrink-0">
+                                {{ $log['status_label'] }}
+                            </flux:badge>
+                        </div>
+
+                        {{-- Row 2: Timestamp & Actions --}}
+                        <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+                            <div class="flex items-center gap-1.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+                                <flux:icon icon="clock" class="size-3 text-zinc-400 shrink-0" />
+                                <span>{{ $log['occurred_at'] }}</span>
+                            </div>
+
+                            @if ($canDelete)
+                                <flux:modal.trigger name="confirm-delete-log">
+                                    <flux:button type="button" size="xs" icon="trash" variant="ghost"
+                                        class="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 text-xs"
+                                        wire:click="confirmDelete({{ $log['id'] }})">
+                                        Delete
+                                    </flux:button>
+                                </flux:modal.trigger>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="p-6">
+                        <x-empty-state icon="clock" color="violet" title="No Attendance Records"
+                            description="Real-time check-in logs and biometric scans will appear here automatically.">
+                            @if ($canTakeAttendance)
+                                <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover
+                                    icon="clipboard-document-check" variant="primary">
+                                    Take Attendance
+                                </flux:button>
+                            @endif
+                        </x-empty-state>
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Desktop Table View --}}
+            <div class="hidden sm:block overflow-x-auto">
+                <flux:table class="p-2 min-w-[720px]">
                     <flux:table.columns>
                         @if ($canDelete)
                             <flux:table.column class="w-8">

@@ -63,7 +63,7 @@ new #[Title('Curricula & Frameworks')] class extends Component {
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons base-route="curriculum.export" module="curriculum" :params="['search' => $this->search]" />
             @can('create curriculum')
                 <flux:button href="{{ route('curriculum.create') }}" wire:navigate.hover icon="plus" variant="primary"
@@ -86,13 +86,15 @@ new #[Title('Curricula & Frameworks')] class extends Component {
     @endif
 
     {{-- Animated KPI Metrics Grid --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
         <x-kpi-card title="Active Frameworks" icon="book-open" color="indigo" :count="$totalFrameworks"
             subtext="curricula registered" :href="route('curriculum.index')" />
         <x-kpi-card title="Institutions Enrolled" icon="building-library" color="sky" :count="$activeInstitutions"
             subtext="campuses adhering" :href="isAdmin() ? route('institution.index') : null" />
-        <x-kpi-card title="Class Streams" icon="academic-cap" color="emerald" :count="$totalFrameworks"
-            subtext="structured pathways" :href="$canManageClasses ? route('classes.index') : null" />
+        <div class="col-span-2 sm:col-span-1">
+            <x-kpi-card title="Class Streams" icon="academic-cap" color="emerald" :count="$totalFrameworks"
+                subtext="structured pathways" :href="$canManageClasses ? route('classes.index') : null" />
+        </div>
     </div>
 
     {{-- Curricula Table Card --}}

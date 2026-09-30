@@ -16,7 +16,7 @@
         {{-- Top Navigation & Breadcrumbs --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-                <div class="flex items-center gap-2 mb-1.5">
+                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                     <a href="{{ route('student.index') }}" wire:navigate.hover class="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
                         <flux:icon icon="arrow-left" class="size-3.5" />
                         <span>Back to Student Directory</span>
@@ -30,15 +30,15 @@
                 </flux:text>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 w-full sm:w-auto">
                 @if($guardianPhone)
-                    <a href="tel:{{ $guardianPhone }}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition">
+                    <a href="tel:{{ $guardianPhone }}" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition">
                         <flux:icon icon="phone" class="size-3.5 text-zinc-500" />
                         <span>Call Guardian</span>
                     </a>
                 @endif
                 @can('edit student')
-                    <flux:button href="{{ route('student.edit', $student->id) }}" wire:navigate.hover icon="pencil-square" variant="primary" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('student.edit', $student->id) }}" wire:navigate.hover icon="pencil-square" variant="primary" class="font-semibold shadow-sm flex-1 sm:flex-initial justify-center">
                         Edit Profile
                     </flux:button>
                 @endcan
@@ -56,38 +56,38 @@
         @endif
 
         {{-- Executive Identity Banner --}}
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div class="flex items-center gap-5">
+        <div class="bg-white rounded-3xl p-5 sm:p-8 border border-zinc-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
+            <div class="flex items-start sm:items-center gap-4">
                 @if($details?->profile_photo && Storage::disk('public')->exists($details->profile_photo))
                     <img src="{{ asset('storage/' . $details->profile_photo) }}" alt="{{ $student->name }}" 
-                        class="size-20 rounded-2xl object-cover border border-zinc-200 shadow-sm">
+                        class="size-16 sm:size-20 rounded-2xl object-cover border border-zinc-200 shadow-sm shrink-0">
                 @else
-                    <div class="size-20 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-2xl shadow-sm">
+                    <div class="size-16 sm:size-20 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-xl sm:text-2xl shadow-sm shrink-0">
                         {{ $initials }}
                     </div>
                 @endif
 
-                <div>
-                    <div class="flex items-center gap-2.5 flex-wrap">
-                        <h2 class="text-xl font-black text-zinc-900 tracking-tight">{{ $student->name }}</h2>
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="text-lg sm:text-xl font-black text-zinc-900 tracking-tight truncate">{{ $student->name }}</h2>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0
                             {{ $status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                                ($status === 'suspended' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-zinc-100 text-zinc-700 border border-zinc-200') }}">
                             {{ ucfirst($status) }}
                         </span>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-1.5 font-mono">
-                        <span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-800 font-bold border border-zinc-200/80">{{ $admNo }}</span>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-1 font-mono">
+                        <span class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-800 font-bold border border-zinc-200/80 whitespace-nowrap">{{ $admNo }}</span>
                         <span class="text-zinc-300">&bull;</span>
-                        <span class="font-sans font-semibold text-zinc-700">{{ $className }}</span>
+                        <span class="font-sans font-semibold text-zinc-700 truncate">{{ $className }}</span>
                         <span class="text-zinc-300">&bull;</span>
-                        <span class="font-sans text-zinc-500">{{ $student->email }}</span>
+                        <span class="font-sans text-zinc-500 truncate">{{ $student->email }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="flex sm:flex-col items-end justify-between w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-zinc-100 text-xs">
+            <div class="flex sm:flex-col items-start sm:items-end justify-between w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-100 text-xs">
                 <span class="text-zinc-400">Enrolled Since</span>
                 <span class="font-bold text-zinc-900 mt-0.5">{{ $student->created_at->format('F d, Y') }}</span>
             </div>
@@ -100,13 +100,13 @@
             <div class="lg:col-span-2 flex flex-col gap-6">
 
                 {{-- Personal & Contact Information Card --}}
-                <div class="bg-white rounded-3xl p-6 border border-zinc-200/80 shadow-sm space-y-4">
+                <div class="bg-white rounded-3xl p-5 sm:p-6 border border-zinc-200/80 shadow-sm space-y-4">
                     <div class="flex items-center gap-2 pb-3 border-b border-zinc-100">
                         <flux:icon icon="user" class="size-4 text-zinc-500" />
                         <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-700">Personal & Demographic Details</h3>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5 text-xs">
                         <div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Date of Birth</span>
                             <div class="font-bold text-zinc-900">
@@ -122,7 +122,7 @@
                             <div class="font-bold text-zinc-900 capitalize">{{ $details?->gender ?? 'Unspecified' }}</div>
                         </div>
 
-                        <div>
+                        <div class="col-span-2 sm:col-span-1">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Direct Phone</span>
                             <div class="font-bold text-zinc-900 font-mono">{{ $details?->phone ?: 'None Provided' }}</div>
                         </div>
@@ -146,16 +146,16 @@
                         <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-700">Primary Guardian & Emergency Contact</h3>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 text-xs">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5 text-xs">
                         <div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Guardian Name</span>
-                            <div class="font-bold text-zinc-900">{{ $guardianName }}</div>
+                            <div class="font-bold text-zinc-900 truncate">{{ $guardianName }}</div>
                             <span class="text-zinc-500 text-[11px]">{{ $details?->guardian_relationship ?? 'Parent' }}</span>
                         </div>
 
                         <div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Guardian Phone</span>
-                            <div class="font-bold text-zinc-900 font-mono">
+                            <div class="font-bold text-zinc-900 font-mono truncate">
                                 @if($guardianPhone)
                                     <a href="tel:{{ $guardianPhone }}" class="hover:text-blue-600 transition">{{ $guardianPhone }}</a>
                                 @else
@@ -164,7 +164,7 @@
                             </div>
                         </div>
 
-                        <div>
+                        <div class="col-span-2 sm:col-span-1">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Guardian Email</span>
                             <div class="font-bold text-zinc-900 truncate">
                                 @if($guardianEmail)

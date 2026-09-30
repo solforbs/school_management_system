@@ -163,7 +163,7 @@ new #[Title('Examinations')] class extends Component {
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons
                 base-route="examinations.export"
                 module="examination"
@@ -201,7 +201,7 @@ new #[Title('Examinations')] class extends Component {
     @endif
 
     {{-- Animated KPI Metrics Grid --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <x-kpi-card title="Total Exams" icon="document-text" color="amber" :count="$totalExams"
             subtext="registered assessments" :href="route('examinations.index')" />
         <x-kpi-card title="Upcoming Tests" icon="clock" color="sky" :count="$upcomingExams"

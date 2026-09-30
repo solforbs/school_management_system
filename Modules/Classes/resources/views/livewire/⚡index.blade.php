@@ -75,7 +75,7 @@ new #[Title('Class Management')] class extends Component
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons base-route="classes.export" module="classes" :params="['search' => $this->search]" />
             @can('create classes')
                 <flux:button href="{{ route('classes.create') }}" wire:navigate.hover icon="plus" variant="primary"
@@ -98,7 +98,7 @@ new #[Title('Class Management')] class extends Component
     @endif
 
     {{-- Animated KPI Metrics Grid --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <x-kpi-card title="Total Classes" icon="academic-cap" color="indigo" :count="$totalClasses"
             subtext="active classroom streams" :href="route('classes.index')" />
         <x-kpi-card title="Enrolled Students" icon="users" color="violet" :count="$totalStudents"

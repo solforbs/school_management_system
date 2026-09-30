@@ -106,7 +106,7 @@ new #[Title('Parent Management')] class extends Component
                 </flux:text>
             </div>
             
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <x-export-buttons base-route="parent.export" module="parent"
                     :params="['search' => request('search'), 'filter' => request('filter')]" />
                 @can('create parent')
@@ -156,7 +156,7 @@ new #[Title('Parent Management')] class extends Component
         </div>
 
         {{-- Filter & Search Toolbar --}}
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             <form action="{{ route('parent.index') }}" method="GET" class="relative w-full md:w-96 flex items-center gap-2">
                 @if(request('filter'))
                     <input type="hidden" name="filter" value="{{ request('filter') }}">
@@ -165,7 +165,7 @@ new #[Title('Parent Management')] class extends Component
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                         <flux:icon icon="magnifying-glass" class="size-4" />
                     </div>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by child ADM, student name, parent phone..." 
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search child ADM, name, phone..." 
                         style="width: 100%; padding-left: 2.75rem !important; padding-right: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem;" class="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs placeholder-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 </div>
                 <button type="submit" class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shrink-0">
@@ -178,17 +178,17 @@ new #[Title('Parent Management')] class extends Component
                 @endif
             </form>
 
-            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
                 <a href="{{ route('parent.index', ['search' => request('search')]) }}"
-                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold {{ !request('filter') ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' }}">
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold shrink-0 {{ !request('filter') ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' }}">
                     All Guardians
                 </a>
                 <a href="{{ route('parent.index', ['filter' => 'with_students', 'search' => request('search')]) }}"
-                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold {{ request('filter') === 'with_students' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' }}">
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold shrink-0 {{ request('filter') === 'with_students' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' }}">
                     Enrolled
                 </a>
                 <a href="{{ route('parent.index', ['filter' => 'multi_child', 'search' => request('search')]) }}"
-                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold {{ request('filter') === 'multi_child' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' }}">
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold shrink-0 {{ request('filter') === 'multi_child' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200' }}">
                     Multi-Child
                 </a>
             </div>
@@ -197,8 +197,103 @@ new #[Title('Parent Management')] class extends Component
         {{-- Parents Ledger Table --}}
         <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
             @if($parents->count() > 0)
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
+                {{-- Mobile Stacked Cards (Visible on screen < 640px) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                    @foreach($parents as $parent)
+                        @php
+                            $studentNames = $parent->children->map(fn($c) => $c->student?->name)->filter()->join(', ');
+                            $hasStudents = $parent->children->isNotEmpty();
+                            $initials = strtoupper(substr($parent->name, 0, 2));
+                            $phone = $parent->parent?->parent_phone ?? '';
+                            $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors"
+                            x-show="matches({
+                                name: '{{ addslashes($parent->name) }}',
+                                email: '{{ addslashes($parent->email) }}',
+                                phone: '{{ addslashes($phone) }}',
+                                occupation: '{{ addslashes($occupation) }}',
+                                students: '{{ addslashes($studentNames) }}',
+                                has_students: {{ $hasStudents ? 'true' : 'false' }},
+                                children_count: {{ $parent->children->count() }}
+                            })">
+                            {{-- Row 1: Avatar, Name, Role & Verification Badge --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <a href="{{ route('parent.show', $parent->id) }}" wire:navigate.hover
+                                            class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-sm truncate block">
+                                            {{ $parent->name }}
+                                        </a>
+                                        <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
+                                            <span>{{ $occupation }}</span>
+                                            @if($parent->children->isNotEmpty())
+                                                <span class="text-zinc-300 dark:text-zinc-600">&bull;</span>
+                                                <span class="text-zinc-700 dark:text-zinc-300 font-semibold">{{ $parent->children->count() }} {{ Str::plural('learner', $parent->children->count()) }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Verification Status Badge --}}
+                                @if($parent->email_verified_at)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 whitespace-nowrap shrink-0">
+                                        <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                        Verified
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 whitespace-nowrap shrink-0">
+                                        Unverified
+                                    </span>
+                                @endif
+                            </div>
+
+                            {{-- Row 2: Contact Info, Linked Students & Actions --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    @if($phone)
+                                        <a href="tel:{{ $phone }}" class="text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono text-[11px]">{{ $phone }}</span>
+                                        </a>
+                                    @endif
+                                    @if($parent->email)
+                                        <a href="mailto:{{ $parent->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[140px]">
+                                            <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="truncate text-[11px]">{{ $parent->email }}</span>
+                                        </a>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('parent.show', $parent->id) }}" wire:navigate.hover size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    <x-impersonate-button :user="$parent" />
+                                    @can('edit parent')
+                                        <flux:button href="{{ route('parent.edit', $parent->id) }}" wire:navigate.hover size="xs" icon="pencil-square" variant="subtle" title="Edit Profile" />
+                                    @endcan
+                                    @can('delete parent')
+                                        <x-confirm-form
+                                            :action="route('parent.destroy', $parent->id)"
+                                            title="Delete this parent account?"
+                                            message="Linked students are unlinked, not deleted."
+                                            confirm="Delete Account"
+                                            trigger-class="text-rose-600 hover:text-rose-700 text-xs"
+                                            tooltip="Delete Account" />
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop Table (hidden on mobile, visible on sm+) --}}
+                <div class="hidden sm:block overflow-x-auto">
+                    <table class="w-full text-left text-sm min-w-[720px]">
                         <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                             <tr>
                                 <th class="py-3.5 px-5">Parent / Guardian</th>

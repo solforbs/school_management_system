@@ -51,18 +51,18 @@
         @endif
 
         {{-- Employee Hero Profile Card --}}
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-zinc-200/80 shadow-sm relative overflow-hidden">
-            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
-                <div class="flex items-start gap-4">
+        <div class="bg-white rounded-3xl p-5 sm:p-8 border border-zinc-200/80 shadow-sm relative overflow-hidden">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-5 sm:gap-6">
+                <div class="flex items-start gap-3.5 sm:gap-4">
                     <div
-                        class="size-16 rounded-2xl bg-zinc-100 border border-zinc-200 text-zinc-800 font-black text-xl flex items-center justify-center shadow-sm shrink-0">
+                        class="size-14 sm:size-16 rounded-2xl bg-zinc-100 border border-zinc-200 text-zinc-800 font-black text-lg sm:text-xl flex items-center justify-center shadow-sm shrink-0">
                         {{ $initials }}
                     </div>
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2.5">
-                            <h3 class="text-xl font-black text-zinc-900">{{ $staff->name }}</h3>
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-lg sm:text-xl font-black text-zinc-900 truncate">{{ $staff->name }}</h3>
                             <span
-                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0
                                 {{ $staff->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200' }}">
                                 <span
                                     class="size-1.5 rounded-full {{ $staff->is_active ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
@@ -70,28 +70,28 @@
                             </span>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-zinc-500 font-medium">
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 text-xs text-zinc-500 font-medium">
                             <span class="font-bold text-zinc-800">{{ $staff->job_title ?? 'Staff Member' }}</span>
                             <span class="text-zinc-300">&bull;</span>
-                            <span class="font-mono text-zinc-600">{{ $staffNo }}</span>
+                            <span class="font-mono text-zinc-600 font-bold whitespace-nowrap">{{ $staffNo }}</span>
                             <span class="text-zinc-300">&bull;</span>
-                            <span>{{ $staff->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span>
+                            <span class="truncate">{{ $staff->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span>
                         </div>
                     </div>
                 </div>
 
                 {{-- Direct Rapid Outreach Actions --}}
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
                     @if ($phone)
                         <a href="tel:{{ $phone }}"
-                            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition">
+                            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold transition">
                             <flux:icon icon="phone" class="size-3.5" />
                             <span>Call Phone</span>
                         </a>
                     @endif
                     @if ($email)
                         <a href="mailto:{{ $email }}"
-                            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shadow-sm">
+                            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shadow-sm">
                             <flux:icon icon="envelope" class="size-3.5" />
                             <span>Send Email</span>
                         </a>
@@ -99,46 +99,46 @@
                 </div>
             </div>
 
-            {{-- Employment & Contract Specification Grid --}}
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-zinc-100">
-                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+            {{-- Employment & Contract Specification Grid (Compact 2-col on mobile, 3-col on desktop) --}}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 mt-6 pt-6 border-t border-zinc-100 text-xs">
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100">
                     <span
-                        class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Department</span>
+                        class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Department</span>
                     <span
-                        class="text-sm font-black text-zinc-900">{{ $staff->department ?? 'General Operations' }}</span>
+                        class="text-xs sm:text-sm font-black text-zinc-900 truncate block">{{ $staff->department ?? 'General Operations' }}</span>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Contract &
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Contract &
                         Schedule</span>
                     <span
-                        class="text-sm font-black text-zinc-900">{{ ucfirst(str_replace('_', ' ', $staff->employment_type ?? 'Full Time')) }}</span>
+                        class="text-xs sm:text-sm font-black text-zinc-900 truncate block">{{ ucfirst(str_replace('_', ' ', $staff->employment_type ?? 'Full Time')) }}</span>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Monthly
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Monthly
                         Salary</span>
-                    <span class="text-sm font-black text-zinc-900 font-mono">
+                    <span class="text-xs sm:text-sm font-black text-zinc-900 font-mono truncate block">
                         {{ $staff->salary ? 'KES ' . number_format($staff->salary, 2) : '—' }}
                     </span>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Appointment
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Appointment
                         Date</span>
-                    <span class="text-sm font-black text-zinc-900">{{ $hireDate }}</span>
+                    <span class="text-xs sm:text-sm font-black text-zinc-900 truncate block">{{ $hireDate }}</span>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Contact
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Contact
                         Phone</span>
-                    <span class="text-sm font-black text-zinc-900 font-mono">{{ $phone ?: '—' }}</span>
+                    <span class="text-xs sm:text-sm font-black text-zinc-900 font-mono truncate block">{{ $phone ?: '—' }}</span>
                 </div>
 
-                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">System
+                <div class="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-zinc-50 border border-zinc-100">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">System
                         Privilege</span>
-                    <span class="text-sm font-black text-zinc-900">{{ $systemRole }}</span>
+                    <span class="text-xs sm:text-sm font-black text-zinc-900 truncate block">{{ $systemRole }}</span>
                 </div>
             </div>
 
@@ -156,7 +156,7 @@
         {{-- Recent Payroll & Salary Disbursements --}}
         @can('view payroll')
             <div class="space-y-4">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-2">
                     <div>
                         <h3 class="text-base font-bold text-zinc-900">Salary Disbursements & Payroll History</h3>
                         <p class="text-xs text-zinc-500 mt-0.5">Historical compensation disbursements for
@@ -170,7 +170,46 @@
                     @endcan
                 </div>
 
-                <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
+                {{-- Mobile Stacked Cards (sm:hidden) --}}
+                <div class="block sm:hidden space-y-2.5">
+                    @forelse ($payments as $payment)
+                        <div class="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-xs flex flex-col gap-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-bold text-xs text-zinc-900">
+                                    {{ $payment->period?->format('F Y') ?? 'Period' }}
+                                </span>
+                                <span
+                                    class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0
+                                    {{ $payment->status === 'paid'
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                        : ($payment->status === 'cancelled'
+                                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                            : 'bg-amber-50 text-amber-700 border border-amber-200') }}">
+                                    <span
+                                        class="size-1.5 rounded-full {{ $payment->status === 'paid' ? 'bg-emerald-500' : ($payment->status === 'cancelled' ? 'bg-rose-500' : 'bg-amber-500') }}"></span>
+                                    {{ ucfirst($payment->status) }}
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs pt-1.5 border-t border-zinc-100">
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] uppercase font-bold text-zinc-400">Gross</span>
+                                    <span class="font-mono text-zinc-700">KES {{ number_format($payment->gross_amount, 2) }}</span>
+                                </div>
+                                <div class="flex flex-col text-right">
+                                    <span class="text-[10px] uppercase font-bold text-zinc-400">Net Disbursement</span>
+                                    <span class="font-mono font-bold text-zinc-900">KES {{ number_format($payment->net_amount, 2) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="bg-white p-6 rounded-2xl border border-zinc-200 text-center text-xs text-zinc-400 italic">
+                            No payment disbursements logged yet.
+                        </div>
+                    @endforelse
+                </div>
+
+                {{-- Desktop Multi-Column Table (hidden sm:block) --}}
+                <div class="hidden sm:flex bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex-col">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead

@@ -149,7 +149,7 @@ new #[Title('Report Cards')] class extends Component
                 </flux:text>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <x-export-buttons base-route="reportcard.export" module="reportcard" :params="[
                     'search' => $currentSearch,
                     'class_id' => $currentClass,
@@ -186,7 +186,7 @@ new #[Title('Report Cards')] class extends Component
         @endif
 
         {{-- Top Executive Metrics Strip --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-5">
             <x-kpi-card 
                 title="Evaluated Learners" 
                 icon="academic-cap" 
@@ -203,13 +203,15 @@ new #[Title('Report Cards')] class extends Component
                 subtext="Overall mean achievement" 
             />
             
-            <x-kpi-card 
-                title="Distinction Honors" 
-                icon="sparkles" 
-                color="emerald" 
-                :count="$distinctionCount" 
-                subtext="Scoring 80% and above" 
-            />
+            <div class="col-span-2 sm:col-span-1">
+                <x-kpi-card 
+                    title="Distinction Honors" 
+                    icon="sparkles" 
+                    color="emerald" 
+                    :count="$distinctionCount" 
+                    subtext="Scoring 80% and above" 
+                />
+            </div>
         </div>
 
         {{-- Reusable Single-Row Filter Toolbar --}}

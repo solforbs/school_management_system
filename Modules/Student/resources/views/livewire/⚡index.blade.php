@@ -201,7 +201,7 @@ new #[Title('Student Directory')] class extends Component
             </flux:text>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons base-route="student.export" module="student"
                 :params="['search' => $this->search, 'status' => $this->status, 'class_id' => $this->classId, 'gender' => $this->gender]" />
             @can('create student')
@@ -269,9 +269,9 @@ new #[Title('Student Directory')] class extends Component
     <x-filter-toolbar action="{{ route('student.index') }}" placeholder="Search student name, admission no, or phone..."
         :search="$this->search" :hasActiveFilters="$hasActiveFilters" resetRoute="{{ route('student.index') }}">
         {{-- Class Filter --}}
-        <div style="flex: 0 1 200px;">
+        <div class="w-full sm:w-auto sm:flex-[0_1_200px]">
             <select name="class_id" onchange="this.form.submit()"
-                class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 <option value="">All Classes</option>
                 @foreach ($this->classes as $c)
                     <option value="{{ $c->id }}" {{ $this->classId == $c->id ? 'selected' : '' }}>
@@ -282,9 +282,9 @@ new #[Title('Student Directory')] class extends Component
         </div>
 
         {{-- Status Filter --}}
-        <div style="flex: 0 1 150px;">
+        <div class="w-full sm:w-auto sm:flex-[0_1_150px]">
             <select name="status" onchange="this.form.submit()"
-                class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 <option value="">All Statuses</option>
                 <option value="active" {{ $this->status === 'active' ? 'selected' : '' }}>Active Only</option>
                 <option value="inactive" {{ $this->status === 'inactive' ? 'selected' : '' }}>Inactive</option>
@@ -296,9 +296,9 @@ new #[Title('Student Directory')] class extends Component
         </div>
 
         {{-- Gender Filter --}}
-        <div style="flex: 0 1 130px;">
+        <div class="w-full sm:w-auto sm:flex-[0_1_130px]">
             <select name="gender" onchange="this.form.submit()"
-                class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                class="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 <option value="">All Genders</option>
                 <option value="male" {{ $this->gender === 'male' ? 'selected' : '' }}>Male ({{ number_format($this->maleStudents) }})</option>
                 <option value="female" {{ $this->gender === 'female' ? 'selected' : '' }}>Female ({{ number_format($this->femaleStudents) }})</option>
@@ -344,13 +344,122 @@ new #[Title('Student Directory')] class extends Component
         </x-slot:scopeTags>
     </x-filter-toolbar>
 
-    {{-- Smart High-Density 4-Column Student Roster Table (Zero Horizontal Scroll) --}}
-    <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
+    {{-- Responsive Student Roster (Mobile Cards + Desktop High-Density Table) --}}
+    <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
         @if ($this->students->isNotEmpty())
-            <div class="w-full overflow-x-auto">
+            {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+            <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                @foreach ($this->students as $student)
+                    @php
+                        $user = $student->student ?? ($student->user ?? $student);
+                        $initials = collect(explode(' ', $user?->name ?? ''))
+                            ->map(fn($w) => strtoupper(substr($w, 0, 1)))
+                            ->take(2)
+                            ->join('');
+                        $admNo = $student->admission_number ?? 'ADM-' . str_pad($student->id, 4, '0', STR_PAD_LEFT);
+                        $guardian = $student->guardian_name ?? ($student->parent_name ?? 'Not Listed');
+                        $guardianPhone = $student->guardian_phone ?? ($student->parent_phone ?? $student->phone);
+                        $status = $student->enrollment_status ?? ($student->is_active ? 'active' : 'inactive');
+                        $schoolClass = $student->schoolClass ?? null;
+                        $className = $schoolClass?->name ?? 'Unassigned Class';
+                        $classLevel = $schoolClass?->level ?? null;
+                    @endphp
+                    <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
+                        {{-- Row 1: Avatar, Name, Admission No & Status Pill --}}
+                        <div class="flex items-start justify-between gap-2.5">
+                            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                @if ($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
+                                    <img src="{{ asset('storage/' . $student->profile_photo) }}"
+                                        alt="{{ $user?->name }}"
+                                        class="size-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0">
+                                @else
+                                    <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
+                                        {{ $initials }}
+                                    </div>
+                                @endif
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <a href="{{ $user ? route('student.show', $user->id) : '#' }}"
+                                            wire:navigate.hover
+                                            class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-sm">
+                                            {{ $user?->name ?? 'Student' }}
+                                        </a>
+                                        <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
+                                            {{ $admNo }}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
+                                        <span class="font-semibold text-zinc-800 dark:text-zinc-200">{{ $className }}</span>
+                                        @if ($classLevel)
+                                            <span class="text-zinc-400 text-[11px]">({{ $classLevel }})</span>
+                                        @endif
+                                        <span class="text-zinc-300 dark:text-zinc-600">&bull;</span>
+                                        <span class="capitalize">{{ $student->gender ?? 'Learner' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Status Badge --}}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0
+                                {{ $status === 'active'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
+                                    : ($status === 'suspended'
+                                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60'
+                                        : ($status === 'graduated'
+                                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800/60'
+                                            : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60')) }}">
+                                <span class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-indigo-500' : 'bg-rose-500')) }}"></span>
+                                {{ ucfirst($status) }}
+                            </span>
+                        </div>
+
+                        {{-- Row 2: Guardian Contact & Quick Action Buttons --}}
+                        <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
+                            <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                                <div class="flex items-center gap-1 text-zinc-600 dark:text-zinc-400 truncate text-[11px]">
+                                    <flux:icon icon="user" class="size-3 text-zinc-400 shrink-0" />
+                                    <span class="truncate max-w-[120px]">{{ $guardian }}</span>
+                                </div>
+                                @if ($guardianPhone)
+                                    <a href="tel:{{ $guardianPhone }}" class="hover:text-blue-600 transition flex items-center gap-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-300 shrink-0">
+                                        <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                        <span>{{ $guardianPhone }}</span>
+                                    </a>
+                                @endif
+                            </div>
+
+                            @if ($user)
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('student.show', $user->id) }}"
+                                        wire:navigate.hover size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    <x-impersonate-button :user="$user" />
+                                    @can('edit student')
+                                        <flux:button href="{{ route('student.edit', $user->id) }}"
+                                            wire:navigate.hover size="xs" icon="pencil-square" variant="subtle" title="Edit Student" />
+                                    @endcan
+                                    @can('delete student')
+                                        <x-confirm-form
+                                            :action="route('student.destroy', $user->id)"
+                                            title="Remove {{ $user->name }} from the directory?"
+                                            message="This deletes the student's record and login. Recorded results are kept."
+                                            confirm="Remove Student"
+                                            trigger-class="text-rose-500 hover:text-rose-600 text-xs"
+                                            tooltip="Delete" />
+                                    @endcan
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Desktop High-Density 4-Column Table (Hidden on Mobile) --}}
+            <div class="hidden sm:block w-full overflow-x-auto">
                 <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                     <thead
-                        class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
+                        class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                         <tr>
                             <th class="py-3.5 px-5 w-4/12">Student Profile & Admission</th>
                             <th class="py-3.5 px-5 w-3/12">Class Stream & Gender</th>
@@ -358,7 +467,7 @@ new #[Title('Student Directory')] class extends Component
                             <th class="py-3.5 px-5 w-2/12 text-right">Status & Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-100">
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                         @foreach ($this->students as $student)
                             @php
                                 $user = $student->student ?? ($student->user ?? $student);
@@ -376,30 +485,30 @@ new #[Title('Student Directory')] class extends Component
                                 $className = $schoolClass?->name ?? 'Unassigned Class';
                                 $classLevel = $schoolClass?->level ?? null;
                             @endphp
-                            <tr class="hover:bg-zinc-50/60 transition-colors">
+                            <tr class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
                                 {{-- Col 1: Student Profile & Admission --}}
                                 <td class="py-4 px-5">
                                     <div class="flex items-center gap-3">
                                         @if ($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
                                             <img src="{{ asset('storage/' . $student->profile_photo) }}"
                                                 alt="{{ $user?->name }}"
-                                                class="size-10 rounded-xl object-cover border border-zinc-200 shrink-0">
+                                                class="size-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0">
                                         @else
                                             <div
-                                                class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">
+                                                class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
                                                 {{ $initials }}
                                             </div>
                                         @endif
                                         <div class="min-w-0 flex-1">
                                             <a href="{{ $user ? route('student.show', $user->id) : '#' }}"
                                                 wire:navigate.hover
-                                                class="font-bold text-zinc-900 hover:text-blue-600 transition truncate block">
+                                                class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition truncate block">
                                                 {{ $user?->name ?? 'Student' }}
                                             </a>
                                             <div
                                                 class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">
                                                 <span
-                                                    class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-semibold border border-zinc-200 text-[11px]">{{ $admNo }}</span>
+                                                    class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200 dark:border-zinc-700 text-[11px]">{{ $admNo }}</span>
                                                 @if ($student->student_number)
                                                     <span class="text-zinc-300">&bull;</span>
                                                     <span
@@ -412,23 +521,23 @@ new #[Title('Student Directory')] class extends Component
 
                                 {{-- Col 2: Class Stream & Gender --}}
                                 <td class="py-4 px-5 text-xs">
-                                    <div class="font-bold text-zinc-900">
+                                    <div class="font-bold text-zinc-900 dark:text-white">
                                         {{ $className }}
                                     </div>
                                     <div class="text-[11px] text-zinc-500 mt-1 flex items-center gap-1.5">
                                         @if ($classLevel)
                                             <span
-                                                class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 font-medium border border-zinc-200/60">{{ $classLevel }}</span>
+                                                class="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium border border-zinc-200/60 dark:border-zinc-700">{{ $classLevel }}</span>
                                             <span class="text-zinc-300">&bull;</span>
                                         @endif
                                         <span
-                                            class="capitalize text-zinc-600 font-medium">{{ $student->gender ?? 'Unspecified' }}</span>
+                                            class="capitalize text-zinc-600 dark:text-zinc-400 font-medium">{{ $student->gender ?? 'Unspecified' }}</span>
                                     </div>
                                 </td>
 
                                 {{-- Col 3: Guardian & Contact --}}
                                 <td class="py-4 px-5 text-xs">
-                                    <div class="font-medium text-zinc-900 flex items-center gap-1.5">
+                                    <div class="font-medium text-zinc-900 dark:text-white flex items-center gap-1.5">
                                         <flux:icon icon="user" class="size-3.5 text-zinc-400 shrink-0" />
                                         <span class="truncate">{{ $guardian }}</span>
                                     </div>
@@ -449,12 +558,12 @@ new #[Title('Student Directory')] class extends Component
                                         <span
                                             class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
                                                 {{ $status === 'active'
-                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
                                                     : ($status === 'suspended'
-                                                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60'
                                                         : ($status === 'graduated'
-                                                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                                            : 'bg-rose-50 text-rose-700 border border-rose-200')) }}">
+                                                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800/60'
+                                                            : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60')) }}">
                                             <span
                                                 class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-indigo-500' : 'bg-rose-500')) }}"></span>
                                             {{ ucfirst($status) }}

@@ -43,7 +43,7 @@
             </div>
             
             @can('create parent')
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     <flux:button href="{{ route('parent.create') }}" icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
                         Add Parent
                     </flux:button>
@@ -90,7 +90,7 @@
         </div>
 
         {{-- Filter & Search Toolbar --}}
-        <div class="bg-white rounded-2xl p-4 border border-zinc-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="bg-white rounded-2xl p-4 border border-zinc-200/80 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             {{-- Search Bar Form --}}
             <form action="{{ route('parent.index') }}" method="GET" class="relative w-full md:w-96 flex items-center gap-2">
                 @if(request('filter'))
@@ -114,17 +114,17 @@
             </form>
 
             {{-- Filter Chips --}}
-            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
                 <a href="{{ route('parent.index', ['search' => request('search')]) }}"
-                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold {{ !request('filter') ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200' }}">
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold shrink-0 {{ !request('filter') ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200' }}">
                     All Guardians
                 </a>
                 <a href="{{ route('parent.index', ['filter' => 'with_students', 'search' => request('search')]) }}"
-                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold {{ request('filter') === 'with_students' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200' }}">
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold shrink-0 {{ request('filter') === 'with_students' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200' }}">
                     Enrolled
                 </a>
                 <a href="{{ route('parent.index', ['filter' => 'multi_child', 'search' => request('search')]) }}"
-                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold {{ request('filter') === 'multi_child' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200' }}">
+                    class="px-3.5 py-1.5 rounded-xl text-xs transition duration-150 font-semibold shrink-0 {{ request('filter') === 'multi_child' ? 'bg-zinc-900 text-white shadow-sm' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200' }}">
                     Multi-Child
                 </a>
             </div>
@@ -133,8 +133,102 @@
         {{-- Parents Ledger Table --}}
         <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
             @if($parents->count() > 0)
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
+                {{-- Mobile Stacked Cards (Visible on screen < 640px) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100">
+                    @foreach($parents as $parent)
+                        @php
+                            $studentNames = $parent->children->map(fn($c) => ($c->student?->name ?? '') . ' ' . ($c->admission_number ?? '') . ' ' . ($c->student_number ?? '') . ' ' . $c->student_id)->filter()->implode(' ');
+                            $hasStudents = $parent->children->isNotEmpty();
+                            $initials = strtoupper(substr($parent->name, 0, 2));
+                            $phone = $parent->parent?->parent_phone ?? '';
+                            $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 transition-colors"
+                            x-show="matches({
+                                name: '{{ addslashes($parent->name) }}',
+                                email: '{{ addslashes($parent->email) }}',
+                                phone: '{{ addslashes($phone) }}',
+                                occupation: '{{ addslashes($occupation) }}',
+                                students: '{{ addslashes($studentNames) }}',
+                                has_students: {{ $hasStudents ? 'true' : 'false' }},
+                                children_count: {{ $parent->children->count() }}
+                            })">
+                            {{-- Row 1: Avatar, Name, Role & Status Badge --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <a href="{{ route('parent.show', $parent->id) }}"
+                                            class="font-bold text-zinc-900 hover:text-blue-600 transition text-sm truncate block">
+                                            {{ $parent->name }}
+                                        </a>
+                                        <div class="text-xs text-zinc-500 mt-0.5 font-medium truncate">
+                                            <span>{{ $occupation }}</span>
+                                            @if($parent->children->isNotEmpty())
+                                                <span class="text-zinc-300">&bull;</span>
+                                                <span class="text-zinc-700 font-semibold">{{ $parent->children->count() }} {{ Str::plural('learner', $parent->children->count()) }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Status Badge --}}
+                                @if($hasStudents)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">
+                                        <span class="size-1.5 rounded-full bg-emerald-500"></span>
+                                        Active
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200 whitespace-nowrap shrink-0">
+                                        Inactive
+                                    </span>
+                                @endif
+                            </div>
+
+                            {{-- Row 2: Contact Info & Action Buttons --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    @if($phone)
+                                        <a href="tel:{{ $phone }}" class="text-xs font-medium text-zinc-700 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono text-[11px]">{{ $phone }}</span>
+                                        </a>
+                                    @endif
+                                    @if($parent->email)
+                                        <a href="mailto:{{ $parent->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[140px]">
+                                            <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="truncate text-[11px]">{{ $parent->email }}</span>
+                                        </a>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('parent.show', $parent->id) }}" size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    @can('edit parent')
+                                        <flux:button href="{{ route('parent.edit', $parent->id) }}" size="xs" icon="pencil-square" variant="subtle" title="Edit Parent" />
+                                    @endcan
+                                    @can('delete parent')
+                                        <form action="{{ route('parent.destroy', $parent->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove this guardian profile?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="px-2 py-0.5 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition font-medium">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop Table View (hidden on mobile, visible on sm and up) --}}
+                <div class="hidden sm:block overflow-x-auto">
+                    <table class="w-full text-left text-sm min-w-[720px]">
                         <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                             <tr>
                                 <th class="py-3.5 px-5">Parent / Guardian</th>

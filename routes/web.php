@@ -69,7 +69,7 @@ Route::post('impersonate/leave', [ImpersonationController::class, 'leave'])
 Route::post('demo/leave', [DemoAccessController::class, 'leave'])
     ->middleware('auth')->name('demo.leave');
 
-Route::middleware(['auth', 'verified',  HasInstitution::class])->prefix('dashboard')->group(function () {
+Route::middleware(['auth', 'verified', HasInstitution::class])->prefix('dashboard')->group(function () {
     Route::get('', DashboardController::class)->name('dashboard');
     // Sign in as another user. Who may do this to whom is enforced in
     // Impersonation::canImpersonate().

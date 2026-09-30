@@ -102,21 +102,20 @@
 
         {{-- Compact, Sleek, Guaranteed Horizontal Filter Bar (No Overlaps) --}}
         <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-zinc-200/80 shadow-sm flex flex-col gap-3">
-            <form method="GET" action="{{ route('teacher.index') }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;">
+            <form method="GET" action="{{ route('teacher.index') }}" class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5">
                 {{-- Search Bar (With Guaranteed Left Padding) --}}
-                <div style="flex: 1 1 260px; position: relative; display: flex; align-items: center;">
-                    <div style="position: absolute; left: 0.875rem; pointer-events: none; color: #a1a1aa; display: flex; align-items: center;">
+                <div class="relative flex-1 w-full sm:w-auto sm:basis-60 items-center">
+                    <div class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center text-zinc-400">
                         <flux:icon icon="magnifying-glass" class="size-4" />
                     </div>
                     <input type="text" name="search" value="{{ $currentSearch }}" placeholder="Search teacher name, ID, or email..." 
-                        style="width: 100%; padding-left: 2.75rem; padding-right: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem;"
-                        class="bg-zinc-50 border border-zinc-200 rounded-xl text-xs placeholder-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                        class="w-full bg-zinc-50 border border-zinc-200 rounded-xl text-xs py-2.5 sm:py-2 pl-10 pr-4 text-zinc-900 placeholder-zinc-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                 </div>
 
                 {{-- Department Dropdown --}}
-                <div style="flex: 0 1 220px;">
+                <div class="w-full sm:w-auto sm:flex-[0_1_220px]">
                     <select name="department" onchange="this.form.submit()"
-                        class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                        class="w-full px-3 py-2.5 sm:py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                         <option value="">All Academic Departments</option>
                         @foreach ($departments as $dept)
                             <option value="{{ $dept }}" {{ $currentDept === $dept ? 'selected' : '' }}>{{ $dept }}</option>
@@ -125,9 +124,9 @@
                 </div>
 
                 {{-- Status Dropdown --}}
-                <div style="flex: 0 1 150px;">
+                <div class="w-full sm:w-auto sm:flex-[0_1_150px]">
                     <select name="status" onchange="this.form.submit()"
-                        class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
+                        class="w-full px-3 py-2.5 sm:py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-medium text-zinc-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                         <option value="">All Statuses</option>
                         <option value="active" {{ $currentStatus === 'active' ? 'selected' : '' }}>Active Only</option>
                         <option value="on_leave" {{ $currentStatus === 'on_leave' ? 'selected' : '' }}>On Leave</option>
@@ -137,12 +136,12 @@
                 </div>
 
                 {{-- Buttons --}}
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button type="submit" class="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition shrink-0">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button type="submit" class="flex-1 sm:flex-initial text-center justify-center shrink-0 rounded-xl bg-zinc-900 px-4 py-2.5 sm:py-2 text-xs font-bold text-white transition hover:bg-zinc-800 shadow-xs">
                         Filter
                     </button>
                     @if($hasActiveFilters)
-                        <a href="{{ route('teacher.index') }}" class="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-xs font-semibold transition shrink-0" title="Reset Filters">
+                        <a href="{{ route('teacher.index') }}" class="shrink-0 rounded-xl bg-zinc-100 px-3 py-2.5 sm:py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-200" title="Reset Filters">
                             ✕
                         </a>
                     @endif
@@ -188,10 +187,85 @@
             @endif
         </div>
 
-        {{-- Clean High-Density 4-Column Table (Spacious, Zero Overlaps, Fully Clickable) --}}
+        {{-- Responsive Teacher Roster (Mobile Cards + Desktop High-Density Table) --}}
         <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
             @if($teachers->isNotEmpty())
-                <div class="w-full overflow-x-auto">
+                {{-- Mobile Fluid Stacked Cards View (< sm) --}}
+                <div class="block sm:hidden divide-y divide-zinc-100">
+                    @foreach ($teachers as $teacherDetails)
+                        @php
+                            $teacherUser = $teacherDetails->teacher;
+                            $teacherName = $teacherUser?->name ?? 'Unknown Teacher';
+                            $initials = $getInitials($teacherName);
+                            $deptStyle = $getDeptStyle($teacherDetails->department ?? '');
+                            $status = $teacherDetails->status ?? 'active';
+                            $empNo = $teacherDetails->employee_number ?? 'EMP-T-' . str_pad($teacherDetails->id, 3, '0', STR_PAD_LEFT);
+                        @endphp
+                        <div class="p-3.5 space-y-2 hover:bg-zinc-50/60 transition-colors">
+                            {{-- Row 1: Avatar, Name, Employee No & Status Pill --}}
+                            <div class="flex items-start justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="size-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                                        {{ $initials }}
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <a href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" class="font-bold text-zinc-900 hover:text-blue-600 transition text-sm">
+                                                {{ $teacherName }}
+                                            </a>
+                                            <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 font-mono text-[10px] font-semibold border border-zinc-200 whitespace-nowrap shrink-0">
+                                                {{ $empNo }}
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-zinc-500 mt-0.5 font-medium truncate">
+                                            @if($teacherDetails->department)
+                                                <span class="font-semibold text-zinc-700">{{ $teacherDetails->department }}</span>
+                                                <span class="text-zinc-300">&bull;</span>
+                                            @endif
+                                            <span>{{ $teacherDetails->qualification ?? 'Faculty' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0
+                                    {{ $status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200' }}">
+                                    <span class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400' }}"></span>
+                                    {{ ucfirst(str_replace('_', ' ', $status)) }}
+                                </span>
+                            </div>
+
+                            {{-- Row 2: Contact Info & Action Buttons --}}
+                            <div class="flex items-center justify-between gap-2 pt-1 border-t border-zinc-100 text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+                                    @if($teacherDetails->phone)
+                                        <a href="tel:{{ $teacherDetails->phone }}" class="text-xs font-medium text-zinc-700 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
+                                            <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono text-[11px]">{{ $teacherDetails->phone }}</span>
+                                        </a>
+                                    @endif
+                                    @if($teacherUser?->email)
+                                        <a href="mailto:{{ $teacherUser->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[150px]">
+                                            <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
+                                            <span class="truncate text-[11px]">{{ $teacherUser->email }}</span>
+                                        </a>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <flux:button href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" size="xs" variant="subtle" title="View Profile">
+                                        View
+                                    </flux:button>
+                                    @can('edit teacher')
+                                        <flux:button href="{{ route('teacher.edit', $teacherDetails->teacher_id) }}" size="xs" icon="pencil-square" variant="subtle" title="Edit Teacher" />
+                                    @endcan
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Desktop High-Density 4-Column Table (Hidden on Mobile) --}}
+                <div class="hidden sm:block w-full overflow-x-auto">
                     <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                             <tr>

@@ -111,13 +111,13 @@ new #[Title('Fee Invoices')] class extends Component
                 </flux:text>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <x-export-buttons
                     base-route="feemanagement.export"
                     module="feemanagement"
                     :params="['search' => $currentSearch, 'status' => $currentStatus, 'fee_type' => $currentType, 'class_id' => $currentClass]" />
                 @can('create feemanagement')
-                    <flux:button href="{{ route('feemanagement.receipts.create') }}" wire:navigate.hover icon="camera" variant="subtle" class="font-semibold shadow-sm">
+                    <flux:button href="{{ route('feemanagement.receipts.create') }}" wire:navigate.hover icon="camera" variant="subtle" class="font-semibold shadow-sm text-xs sm:text-sm">
                         Scan Receipt
                     </flux:button>
                     <x-confirm-form
@@ -130,8 +130,8 @@ new #[Title('Fee Invoices')] class extends Component
                         label="Send Reminders"
                         icon="bell"
                         variant="subtle"
-                        trigger-class="font-semibold shadow-sm" />
-                    <flux:button href="{{ route('feemanagement.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-4">
+                        trigger-class="font-semibold shadow-sm text-xs sm:text-sm" />
+                    <flux:button href="{{ route('feemanagement.create') }}" wire:navigate.hover icon="plus" variant="primary" class="font-semibold shadow-sm px-3 sm:px-4 text-xs sm:text-sm">
                         Issue Fee Invoice
                     </flux:button>
                 @endcan
@@ -149,7 +149,7 @@ new #[Title('Fee Invoices')] class extends Component
         @endif
 
         {{-- Top Executive Financial KPI Strip --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-5">
             <x-kpi-card 
                 title="Total Invoiced" 
                 icon="banknotes" 
@@ -167,14 +167,16 @@ new #[Title('Fee Invoices')] class extends Component
                 href="{{ route('feemanagement.index', ['status' => 'paid']) }}" 
             />
             
-            <x-kpi-card 
-                title="Outstanding Balance" 
-                icon="exclamation-circle" 
-                color="rose" 
-                :count="'KES ' . number_format($outstandingBalance, 2)" 
-                subtext="Pending student balances" 
-                href="{{ route('feemanagement.index', ['status' => 'pending']) }}" 
-            />
+            <div class="col-span-2 sm:col-span-1">
+                <x-kpi-card 
+                    title="Outstanding Balance" 
+                    icon="exclamation-circle" 
+                    color="rose" 
+                    :count="'KES ' . number_format($outstandingBalance, 2)" 
+                    subtext="Pending student balances" 
+                    href="{{ route('feemanagement.index', ['status' => 'pending']) }}" 
+                />
+            </div>
         </div>
 
         {{-- Reusable Single-Row Filter Toolbar --}}
