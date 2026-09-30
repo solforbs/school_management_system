@@ -107,8 +107,8 @@
                             <p class="text-[11px] text-zinc-400 mt-0.5">There are no examination papers linked to this subject yet.</p>
                         </div>
                     @else
-                        <div class="border border-zinc-200/80 rounded-2xl overflow-hidden">
-                            <table class="w-full text-left text-xs table-fixed">
+                        <div class="border border-zinc-200/80 rounded-2xl overflow-x-auto">
+                            <table class="w-full text-left text-xs table-fixed min-w-[480px]">
                                 <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 font-bold uppercase tracking-wider text-[10px]">
                                     <tr>
                                         <th class="py-3 px-4 w-5/12">Assessment Title & Class</th>

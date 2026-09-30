@@ -202,8 +202,8 @@ new #[Title('Academic Subjects')] class extends Component {
     <div
         class="bg-white dark:bg-zinc-900 shadow-xs border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
         @if ($subjects->isNotEmpty())
-            <div class="w-full">
-                <table class="w-full text-left text-sm table-fixed">
+            <div class="w-full overflow-x-auto">
+                <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                     <thead
                         class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-[11px] font-bold uppercase tracking-wider">
                         <tr>

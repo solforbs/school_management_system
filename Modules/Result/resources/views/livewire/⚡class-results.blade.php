@@ -239,9 +239,9 @@ new #[Title('Class Results')] class extends Component {
         </flux:select>
     </div>
 
-    <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden">
+    <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-x-auto">
         @if ($this->results->isNotEmpty())
-            <table class="w-full text-left text-sm">
+            <table class="w-full text-left text-sm min-w-[640px]">
                 <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                     <tr>
                         <th class="py-3.5 px-5">Student</th>

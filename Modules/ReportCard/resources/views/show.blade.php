@@ -91,8 +91,8 @@
                         ->get();
                 @endphp
 
-                <div class="border border-zinc-200 rounded-xl overflow-hidden">
-                    <table class="w-full text-left text-sm">
+                <div class="border border-zinc-200 rounded-xl overflow-x-auto">
+                    <table class="w-full text-left text-sm min-w-[560px]">
                         <thead
                             class="bg-zinc-50 text-zinc-600 border-b border-zinc-200 text-xs font-semibold uppercase">
                             <tr>

@@ -180,8 +180,8 @@
         {{-- Smart High-Density 4-Column Student Roster Table (Zero Horizontal Scroll) --}}
         <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">
             @if($students->isNotEmpty())
-                <div class="w-full">
-                    <table class="w-full text-left text-sm table-fixed">
+                <div class="w-full overflow-x-auto">
+                    <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 text-zinc-500 border-b border-zinc-200/80 text-xs font-bold uppercase tracking-wider">
                             <tr>
                                 <th class="py-3.5 px-5 w-4/12">Student Profile & Admission</th>

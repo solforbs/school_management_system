@@ -229,8 +229,8 @@ new #[Title('Staff Directory')] class extends Component
         {{-- Smart Grouped 4-Column Staff Ledger --}}
         <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
             @if($staff->isNotEmpty())
-                <div class="w-full">
-                    <table class="w-full text-left text-sm table-fixed">
+                <div class="w-full overflow-x-auto">
+                    <table class="w-full text-left text-sm table-fixed min-w-[720px]">
                         <thead class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-b border-zinc-200/80 dark:border-zinc-700 text-xs font-bold uppercase tracking-wider">
                             <tr>
                                 <th class="py-3.5 px-5 w-4/12">Staff Personnel &amp; ID</th>
