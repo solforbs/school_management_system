@@ -10,6 +10,13 @@ use Modules\ReportCard\Models\GradingBand;
 
 // use Modules\Curriculum\Database\Factories\CurriculumFactory;
 
+/**
+ * @property int $id
+ * @property int $institution_id
+ * @property string $name
+ * @property string $system
+ * @property string $status
+ */
 class Curriculum extends Model
 {
     use HasFactory, TetherSyncable;

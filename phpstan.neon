@@ -16,3 +16,4 @@ parameters:
     scanDirectories:
         - vendor/spatie/laravel-sitemap/src
         - vendor/laravel/socialite/src
+        - Modules/

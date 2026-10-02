@@ -5,6 +5,8 @@ namespace Modules\Classes\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Modules\Curriculum\Models\Curriculum;
 use Modules\Examinations\Models\Examination;
@@ -25,6 +27,9 @@ use Modules\Timetable\Models\TimetableEntry;
  * @property int|null $capacity
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Institution|null $institution
+ * @property-read Curriculum|null $curriculum
+ * @property-read User|null $classTeacher
  */
 class SchoolClass extends Model
 {
@@ -45,7 +50,7 @@ class SchoolClass extends Model
         'capacity',
     ];
 
-    public function institution()
+    public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
@@ -56,42 +61,45 @@ class SchoolClass extends Model
      * classes across curricula, in which case the school-wide scale
      * applies.
      */
-    public function curriculum()
+    public function curriculum(): BelongsTo
     {
         return $this->belongsTo(Curriculum::class);
     }
 
-    public function classTeacher()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function classTeacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'class_teacher_id');
     }
 
-    public function students()
+    public function students(): HasMany
     {
         return $this->hasMany(StudentDetails::class, 'class_id');
     }
 
-    public function subjectTeachers()
+    public function subjectTeachers(): HasMany
     {
         return $this->hasMany(SubjectTeacher::class, 'class_id');
     }
 
-    public function timetableEntries()
+    public function timetableEntries(): HasMany
     {
         return $this->hasMany(TimetableEntry::class, 'class_id');
     }
 
-    public function lessons()
+    public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class, 'class_id');
     }
 
-    public function results()
+    public function results(): HasMany
     {
         return $this->hasMany(Result::class, 'class_id');
     }
 
-    public function examinations()
+    public function examinations(): HasMany
     {
         return $this->hasMany(Examination::class, 'class_id');
     }

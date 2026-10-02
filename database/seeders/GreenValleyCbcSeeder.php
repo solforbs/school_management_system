@@ -40,7 +40,7 @@ class GreenValleyCbcSeeder extends Seeder
             ]
         );
 
-        if ($curriculum->system !== 'cbc') {
+        if (! $curriculum->isCbc()) {
             $curriculum->update(['system' => 'cbc']);
         }
 
