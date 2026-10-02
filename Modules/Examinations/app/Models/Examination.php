@@ -113,4 +113,12 @@ class Examination extends Model
 
         return trim(($hours ? $hours.'h ' : '').($remainder ? $remainder.'m' : ''));
     }
+
+    /**
+     * Whether this examination is a CBC formative assessment (Classroom Assessment or SBA).
+     */
+    public function isCbcFormative(): bool
+    {
+        return (bool) $this->sitting?->isFormative();
+    }
 }

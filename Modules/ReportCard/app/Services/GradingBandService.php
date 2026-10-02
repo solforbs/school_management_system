@@ -48,6 +48,23 @@ class GradingBandService
     }
 
     /**
+     * Look up a band directly by its grade or CBC band code (e.g. 'ME', 'EE', 'A').
+     */
+    public static function resolveBandByGrade(Institution $institution, string $grade, ?int $curriculumId = null): ?GradingBand
+    {
+        $query = fn (?int $cId) => GradingBand::where('institution_id', $institution->id)
+            ->when($cId, fn ($q) => $q->where('curriculum_id', $cId), fn ($q) => $q->whereNull('curriculum_id'))
+            ->where('grade', $grade)
+            ->first();
+
+        if ($curriculumId && ($band = $query($curriculumId))) {
+            return $band;
+        }
+
+        return $query(null);
+    }
+
+    /**
      * Which curriculum's scale a class is marked against: its own if one is
      * set, otherwise the school's only curriculum when it has exactly one,
      * otherwise the one whose system the class's own name points at

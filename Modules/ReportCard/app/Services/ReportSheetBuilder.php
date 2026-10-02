@@ -7,16 +7,18 @@ use Modules\Curriculum\Models\Curriculum;
 use Modules\Institution\Models\Institution;
 use Modules\ReportCard\Models\GradingBand;
 use Modules\ReportCard\Models\ReportCard;
+use Modules\ReportCard\Support\GradingScaleDefaults;
 use Modules\ReportCard\Support\SubjectRow;
 use Modules\Result\Models\Result;
+use Modules\Result\Services\ResultGrader;
 
 /**
  * Turns a term's raw results into the subject table a report card prints:
  * one row per subject, graded against the scale its class is marked on,
  * plus the totals underneath it.
  *
- * Split out from ReportCardPdfService because it is the part worth reading
- * on its own - the PDF service around it is fetch, render, store.
+ * For CBC classes, accommodates both direct formative expectation bands
+ * (EE, ME, AE, BE) and numerical summative examinations.
  */
 class ReportSheetBuilder
 {
@@ -25,6 +27,24 @@ class ReportSheetBuilder
      */
     public function rows(ReportCard $reportCard, Institution $institution): Collection
     {
+        $curriculumId = GradingBandService::curriculumIdFor($reportCard->schoolClass, $institution);
+        $curriculum = $reportCard->schoolClass?->curriculum
+            ?? ($curriculumId ? Curriculum::find($curriculumId) : null);
+
+        if ($curriculum?->isCbc()) {
+            return $this->cbcRows($reportCard, $institution, $curriculumId);
+        }
+
+        return $this->standardRows($reportCard, $institution, $curriculumId);
+    }
+
+    /**
+     * Standard 8-4-4 percentage-based row aggregation.
+     *
+     * @return Collection<int, SubjectRow>
+     */
+    private function standardRows(ReportCard $reportCard, Institution $institution, ?int $curriculumId): Collection
+    {
         $results = Result::where('student_id', $reportCard->student_id)
             ->whereHas('examination', fn ($q) => $q
                 ->where('term', $reportCard->term)
@@ -32,15 +52,8 @@ class ReportSheetBuilder
             ->with(['subject', 'examination.subject'])
             ->get();
 
-        $curriculumId = GradingBandService::curriculumIdFor($reportCard->schoolClass, $institution);
-
-        // Every subject the class takes, so one the learner missed still
-        // prints as a dashed row rather than vanishing from the report.
         $subjects = $this->classSubjects($reportCard);
 
-        // Results can outlive the subject-teacher assignment they were
-        // entered under, so anything with marks is folded in even when the
-        // class no longer lists that subject.
         foreach ($results as $result) {
             $subjectId = $result->subject_id ?: $result->examination?->subject_id;
             $name = $result->subject?->name
@@ -56,6 +69,8 @@ class ReportSheetBuilder
             $subjects[$key] ??= [
                 'name' => $name,
                 'code' => $result->subject?->code ?? $result->examination?->subject?->code,
+                'learning_area' => $result->subject?->learning_area,
+                'strand' => $result->subject?->strand,
                 'teacher' => null,
             ];
         }
@@ -78,6 +93,9 @@ class ReportSheetBuilder
                         percentage: null,
                         band: null,
                         teacherInitials: $this->initials($subject['teacher']),
+                        directBand: null,
+                        learningArea: $subject['learning_area'] ?? null,
+                        strand: $subject['strand'] ?? null,
                     );
                 }
 
@@ -93,6 +111,9 @@ class ReportSheetBuilder
                     percentage: $percentage,
                     band: GradingBandService::resolveBand($institution, $percentage, $curriculumId),
                     teacherInitials: $this->initials($subject['teacher']),
+                    directBand: null,
+                    learningArea: $subject['learning_area'] ?? null,
+                    strand: $subject['strand'] ?? null,
                 );
             })
             ->sortBy(fn (SubjectRow $row) => $row->name)
@@ -100,13 +121,140 @@ class ReportSheetBuilder
     }
 
     /**
+     * CBC expectation band aggregation.
+     * Groups both formative band entries and summative exams per subject.
+     *
+     * @return Collection<int, SubjectRow>
+     */
+    private function cbcRows(ReportCard $reportCard, Institution $institution, ?int $curriculumId): Collection
+    {
+        $results = Result::where('student_id', $reportCard->student_id)
+            ->whereHas('examination', fn ($q) => $q
+                ->where('term', $reportCard->term)
+                ->where('academic_year', $reportCard->academic_year))
+            ->with(['subject', 'examination.subject', 'examination.sitting'])
+            ->get();
+
+        $subjects = $this->classSubjects($reportCard);
+
+        foreach ($results as $result) {
+            $subjectId = $result->subject_id ?: $result->examination?->subject_id;
+            $name = $result->subject?->name
+                ?? $result->examination?->subject?->name
+                ?? $result->examination?->subject_name;
+
+            if (! $name) {
+                continue;
+            }
+
+            $key = $subjectId ?: 'name:'.$name;
+
+            $subjects[$key] ??= [
+                'name' => $name,
+                'code' => $result->subject?->code ?? $result->examination?->subject?->code,
+                'learning_area' => $result->subject?->learning_area,
+                'strand' => $result->subject?->strand,
+                'teacher' => null,
+            ];
+        }
+
+        $grouped = $results->groupBy(fn ($result) => ($result->subject_id ?: $result->examination?->subject_id) ?: 'name:'.(
+            $result->subject?->name ?? $result->examination?->subject?->name ?? $result->examination?->subject_name
+        ));
+
+        return collect($subjects)
+            ->map(function (array $subject, $key) use ($grouped, $institution, $curriculumId) {
+                $subjectResults = $grouped->get($key, collect());
+
+                if ($subjectResults->isEmpty()) {
+                    return new SubjectRow(
+                        name: $subject['name'],
+                        code: $subject['code'],
+                        marks: null,
+                        outOf: null,
+                        percentage: null,
+                        band: null,
+                        teacherInitials: $this->initials($subject['teacher']),
+                        directBand: null,
+                        learningArea: $subject['learning_area'] ?? null,
+                        strand: $subject['strand'] ?? null,
+                    );
+                }
+
+                // Collect all bands from formative entries or derived from summative marks
+                $bands = $subjectResults
+                    ->map(function ($r) use ($institution, $curriculumId) {
+                        if ($r->cbc_band) {
+                            return strtoupper($r->cbc_band);
+                        }
+                        if ($r->grade && in_array(strtoupper($r->grade), ResultGrader::CBC_ALL_EVALUATIONS, true)) {
+                            return strtoupper($r->grade);
+                        }
+                        if ($r->marks_obtained !== null && $r->examination?->total_marks > 0) {
+                            $pct = ($r->marks_obtained / $r->examination->total_marks) * 100;
+                            $band = GradingBandService::resolveBand($institution, $pct, $curriculumId);
+
+                            return $band?->grade;
+                        }
+
+                        return null;
+                    })
+                    ->filter();
+
+                // If numerical marks exist from summative exams
+                $numericalResults = $subjectResults->filter(fn ($r) => $r->examination && $r->examination->total_marks > 0 && $r->marks_obtained !== null);
+                $marks = $numericalResults->isNotEmpty() ? (float) $numericalResults->sum(fn ($r) => (float) $r->marks_obtained) : null;
+                $outOf = $numericalResults->isNotEmpty() ? (float) $numericalResults->sum(fn ($r) => (float) $r->examination->total_marks) : null;
+                $percentage = ($marks !== null && $outOf > 0) ? round($marks / $outOf * 100, 2) : null;
+
+                $predominantBand = $this->determinePredominantBand($bands);
+
+                if (! $predominantBand && $percentage !== null) {
+                    $resolvedBand = GradingBandService::resolveBand($institution, $percentage, $curriculumId);
+                    $predominantBand = $resolvedBand ? GradingScaleDefaults::bandFor($resolvedBand->grade) : null;
+                }
+
+                $gradingBand = $percentage !== null
+                    ? GradingBandService::resolveBand($institution, $percentage, $curriculumId)
+                    : null;
+
+                return new SubjectRow(
+                    name: $subject['name'],
+                    code: $subject['code'],
+                    marks: $marks,
+                    outOf: $outOf,
+                    percentage: $percentage,
+                    band: $gradingBand,
+                    teacherInitials: $this->initials($subject['teacher']),
+                    directBand: $predominantBand,
+                    learningArea: $subject['learning_area'] ?? null,
+                    strand: $subject['strand'] ?? null,
+                );
+            })
+            ->sortBy(fn (SubjectRow $row) => $row->name)
+            ->values();
+    }
+
+    /**
+     * Finds the most common expectation band or sub-level from a collection of evaluations.
+     * Ties break in favor of higher achievement points (Level 8 down to 1).
+     */
+    private function determinePredominantBand(Collection $bands): ?string
+    {
+        if ($bands->isEmpty()) {
+            return null;
+        }
+
+        $counts = $bands->countBy();
+
+        return $counts->sort(function ($countA, $countB) {
+            return $countB <=> $countA;
+        })->keys()->sortByDesc(fn ($b) => ResultGrader::pointsFor($b) ?? 0)->first();
+    }
+
+    /**
      * The totals strip under the table: what the learner scored out of what
      * was available, how many subjects that covered, and the mean.
-     *
-     * The mean percentage averages the subjects rather than dividing total
-     * marks by total available, so a subject marked out of 100 doesn't
-     * drown out one marked out of 10. Mean points averages the achievement
-     * levels themselves, which is the figure a CBC report leads with.
      *
      * @param  Collection<int, SubjectRow>  $rows
      * @return array<string, mixed>
@@ -115,11 +263,41 @@ class ReportSheetBuilder
     {
         $assessed = $rows->filter(fn (SubjectRow $row) => $row->isAssessed());
 
-        $meanPercentage = $assessed->isNotEmpty()
-            ? round($assessed->avg(fn (SubjectRow $row) => $row->percentage), 2)
+        $withPercentage = $assessed->filter(fn (SubjectRow $row) => $row->percentage !== null);
+
+        $meanPercentage = $withPercentage->isNotEmpty()
+            ? round($withPercentage->avg(fn (SubjectRow $row) => $row->percentage), 2)
             : null;
 
         $pointed = $assessed->filter(fn (SubjectRow $row) => $row->points() !== null);
+
+        $meanPoints = $pointed->isNotEmpty()
+            ? round($pointed->avg(fn (SubjectRow $row) => $row->points()), 2)
+            : null;
+
+        $band = null;
+        if ($meanPercentage !== null) {
+            $band = GradingBandService::resolveBand($institution, $meanPercentage, $curriculumId);
+        } elseif ($meanPoints !== null) {
+            $grade = match (true) {
+                $meanPoints >= 6.5 => 'EE',
+                $meanPoints >= 4.5 => 'ME',
+                $meanPoints >= 2.5 => 'AE',
+                default => 'BE',
+            };
+            $band = GradingBandService::resolveBandByGrade($institution, $grade, $curriculumId)
+                ?? new GradingBand([
+                    'institution_id' => $institution->id,
+                    'grade' => $grade,
+                    'points' => (int) round($meanPoints),
+                    'remark' => match ($grade) {
+                        'EE' => 'Exceeding Expectations',
+                        'ME' => 'Meeting Expectations',
+                        'AE' => 'Approaching Expectations',
+                        'BE' => 'Below Expectations',
+                    },
+                ]);
+        }
 
         return [
             'total_marks' => $assessed->sum(fn (SubjectRow $row) => $row->marks),
@@ -127,28 +305,13 @@ class ReportSheetBuilder
             'subjects_assessed' => $assessed->count(),
             'subjects_total' => $rows->count(),
             'mean_percentage' => $meanPercentage,
-            'mean_points' => $pointed->isNotEmpty()
-                ? round($pointed->avg(fn (SubjectRow $row) => $row->points()), 2)
-                : null,
-            'band' => $meanPercentage !== null
-                ? GradingBandService::resolveBand($institution, $meanPercentage, $curriculumId)
-                : null,
+            'mean_points' => $meanPoints,
+            'band' => $band,
         ];
     }
 
     /**
-     * The highest points value the scale in use can award. The report
-     * prints the mean against it, since "6.5" says nothing without knowing
-     * what it is out of.
-     *
-     * Read off the bands themselves rather than inferred from the
-     * curriculum, because the curriculum doesn't always know: a school
-     * marking CBC on its school-wide scale has no curriculum attached at
-     * all, and would otherwise be told its levels were out of 12. Bands a
-     * school has hand-tuned to some other ceiling come out right too.
-     *
-     * The curriculum is only the fallback for a scale whose bands carry no
-     * points at all.
+     * The highest points value the scale in use can award.
      *
      * @param  Collection<int, GradingBand>  $scaleBands
      */
@@ -167,7 +330,7 @@ class ReportSheetBuilder
      * The subjects a class takes, keyed by subject id, each with the
      * teacher who owns its marks.
      *
-     * @return array<int|string, array{name: string, code: ?string, teacher: ?string}>
+     * @return array<int|string, array{name: string, code: ?string, learning_area: ?string, strand: ?string, teacher: ?string}>
      */
     private function classSubjects(ReportCard $reportCard): array
     {
@@ -185,6 +348,8 @@ class ReportSheetBuilder
                 $assignment->subject_id => [
                     'name' => (string) $assignment->subject->name,
                     'code' => $assignment->subject->code,
+                    'learning_area' => $assignment->subject->learning_area,
+                    'strand' => $assignment->subject->strand,
                     'teacher' => $assignment->teacher?->name,
                 ],
             ])
@@ -192,8 +357,7 @@ class ReportSheetBuilder
     }
 
     /**
-     * "Brian Njoroge" initialled down to "B. N" for the signature column -
-     * a full name doesn't fit, and the teacher signs beside it anyway.
+     * Initials from teacher name for signature column.
      */
     private function initials(?string $name): ?string
     {

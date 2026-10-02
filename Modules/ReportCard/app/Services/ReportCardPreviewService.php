@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Curriculum\Models\Curriculum;
+use Modules\Curriculum\Services\CbcPathwayService;
 use Modules\Institution\Models\Institution;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Models\ReportTemplate;
@@ -103,6 +104,9 @@ class ReportCardPreviewService
             'signatoryTitle' => $template?->signatory_title,
             'logoDataUri' => InstitutionLogo::dataUri($institution),
             'termHistory' => $this->termHistory($institution, $reportCard, $meanPercentage, $curriculumId),
+            'pathwayRecommendations' => $curriculum?->isCbc()
+                ? (new CbcPathwayService)->evaluate($rows)
+                : null,
             // The template prints this banner rather than leaving anyone to
             // work out for themselves that Asha isn't a real learner.
             'previewNotice' => 'SAMPLE — this is a preview of your report card settings, not a real learner.',

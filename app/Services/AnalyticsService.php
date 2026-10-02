@@ -11,11 +11,13 @@ use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Classes\Models\SchoolClass;
 use Modules\FeeManagement\Models\Fee;
 use Modules\Institution\Models\Institution;
 use Modules\Staff\Models\StaffDetails;
 use Modules\Staff\Models\StaffPayment;
 use Modules\Student\Models\StudentDetails;
+use Modules\Subject\Models\SubjectTeacher;
 
 /**
  * Produces role-scoped analytics for the dashboard and the Report module,
@@ -471,22 +473,48 @@ class AnalyticsService
                 'institution' => null,
                 'students_count' => 0,
                 'attendance_today_count' => 0,
+                'homeroom_class' => null,
+                'teaching_allocations' => collect(),
             ];
         }
+
+        // 1. Homeroom Class (where this user is the designated Class Teacher)
+        $homeroomClass = SchoolClass::where('institution_id', $institution->id)
+            ->where('class_teacher_id', $user->id)
+            ->with(['curriculum'])
+            ->withCount('students')
+            ->first();
+
+        // 2. Teaching Allocations (Class + Subject pairs assigned to this teacher)
+        $teachingAllocations = SubjectTeacher::where('institution_id', $institution->id)
+            ->where('teacher_id', $user->id)
+            ->with(['schoolClass.curriculum', 'subject'])
+            ->get();
+
+        // Taught class IDs (homeroom + subject classes)
+        $taughtClassIds = $teachingAllocations->pluck('class_id')
+            ->when($homeroomClass, fn ($c) => $c->push($homeroomClass->id))
+            ->unique()
+            ->filter();
+
+        // Scope students count to the classes the teacher actually teaches
+        $teacherStudentsQuery = StudentDetails::where('institution_id', $institution->id)
+            ->when($taughtClassIds->isNotEmpty(), fn ($q) => $q->whereIn('class_id', $taughtClassIds));
+
+        $teacherGenderCounts = (clone $teacherStudentsQuery)
+            ->selectRaw("SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female")
+            ->first();
 
         $deviceIds = Devices::where('institution_id', $institution->id)
             ->whereNotNull('zkteco_device_id')
             ->pluck('zkteco_device_id');
 
-        $teacherStudents = StudentDetails::where('institution_id', $institution->id);
-        $teacherGenderCounts = (clone $teacherStudents)
-            ->selectRaw("SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female")
-            ->first();
-
         return [
             'scope' => 'teacher',
             'institution' => $institution,
-            'students_count' => (clone $teacherStudents)->count(),
+            'homeroom_class' => $homeroomClass,
+            'teaching_allocations' => $teachingAllocations,
+            'students_count' => (clone $teacherStudentsQuery)->count(),
             'male_students_count' => (int) ($teacherGenderCounts->male ?? 0),
             'female_students_count' => (int) ($teacherGenderCounts->female ?? 0),
             'attendance_today_count' => ZktecoAttendanceLog::whereIn('device_id', $deviceIds)

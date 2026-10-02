@@ -22,6 +22,7 @@ class Result extends Model
         'examination_id',
         'marks_obtained',
         'grade',
+        'cbc_band',
         'remarks',
         'recorded_by',
     ];
@@ -29,6 +30,18 @@ class Result extends Model
     protected $casts = [
         'marks_obtained' => 'decimal:2',
     ];
+
+    /**
+     * Whether this result was entered as a direct CBC band by a teacher
+     * rather than derived from a numerical mark.
+     *
+     * Null marks_obtained + a filled cbc_band = the teacher picked
+     * EE/ME/AE/BE directly on a formative task.
+     */
+    public function isDirectBand(): bool
+    {
+        return $this->cbc_band !== null && $this->marks_obtained === null;
+    }
 
     public function institution()
     {

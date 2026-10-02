@@ -13,5 +13,6 @@ use Modules\Attendance\Http\Controllers\AttendanceController;
  */
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () {
     Route::get('attendances/export', [AttendanceController::class, 'export'])->name('attendance.export');
+    Route::livewire('attendances/register/{classId?}', 'attendance::register')->name('attendance.register');
     Route::livewire('attendances', 'attendance::index')->name('attendance.index');
 });

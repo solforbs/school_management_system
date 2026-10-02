@@ -26,6 +26,9 @@ class Subject extends Model
         'institution_id',
         'name',
         'code',
+        'learning_area',
+        'strand',
+        'sub_strand',
         'is_compulsory',
         'is_active',
     ];
@@ -34,6 +37,15 @@ class Subject extends Model
         'is_compulsory' => 'boolean',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Whether this subject has been tagged with a CBC curriculum strand.
+     * Used to conditionally show strand columns on reports and forms.
+     */
+    public function hasCbcStructure(): bool
+    {
+        return filled($this->learning_area) || filled($this->strand);
+    }
 
     public function institution()
     {

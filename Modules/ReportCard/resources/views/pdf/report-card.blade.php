@@ -321,14 +321,24 @@
         </tr>
     </table>
 
+    @php
+        $isCbc = $curriculum?->isCbc() ?? false;
+        $hasMarks = ($summary['total_marks'] ?? 0) > 0;
+    @endphp
+
     <table class="subjects">
         <thead>
             <tr>
-                <th style="text-align: left;">Subject</th>
-                <th>Marks</th>
-                <th>Out Of</th>
-                <th>Avg %</th>
-                <th>Grade</th>
+                <th style="text-align: left;">{{ $isCbc ? 'Learning Area / Subject' : 'Subject' }}</th>
+                @if ($isCbc)
+                    <th>Strand</th>
+                @endif
+                @if (! $isCbc || $hasMarks)
+                    <th>Marks</th>
+                    <th>Out Of</th>
+                    <th>Avg %</th>
+                @endif
+                <th>{{ $isCbc ? 'Expectation Band' : 'Grade' }}</th>
                 <th>Points</th>
                 <th style="text-align: left;">Remarks</th>
                 <th>Sign</th>
@@ -338,9 +348,14 @@
             @forelse ($rows as $row)
                 <tr>
                     <td class="subject">{{ $row->name }}</td>
-                    <td>{{ $row->isAssessed() ? $trim($row->marks) : $dash }}</td>
-                    <td>{{ $row->isAssessed() ? $trim($row->outOf) : $dash }}</td>
-                    <td>{{ $row->isAssessed() ? number_format($row->percentage, 0) : $dash }}</td>
+                    @if ($isCbc)
+                        <td class="muted">{{ $row->strand ?? $row->learningArea ?? $dash }}</td>
+                    @endif
+                    @if (! $isCbc || $hasMarks)
+                        <td>{{ $row->marks !== null ? $trim($row->marks) : $dash }}</td>
+                        <td>{{ $row->outOf !== null ? $trim($row->outOf) : $dash }}</td>
+                        <td>{{ $row->percentage !== null ? number_format($row->percentage, 0) : $dash }}</td>
+                    @endif
                     {{-- Band and level together: the band is the language a parent
                          reads, the level is what KJSEA records. --}}
                     <td class="grade" style="color: {{ $colourFor($row->expectationBand()) }};">
@@ -355,15 +370,20 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8">No subjects recorded for this class.</td>
+                    <td colspan="{{ ($isCbc ? 1 : 0) + (! $isCbc || $hasMarks ? 3 : 0) + 5 }}">No subjects recorded for this class.</td>
                 </tr>
             @endforelse
 
             @if ($summary['subjects_assessed'] > 0)
                 <tr class="totals">
                     <td style="text-align: right;">Total</td>
-                    <td>{{ $trim($summary['total_marks']) }}</td>
-                    <td colspan="2">Out of: {{ $trim($summary['total_out_of']) }}</td>
+                    @if ($isCbc)
+                        <td>—</td>
+                    @endif
+                    @if (! $isCbc || $hasMarks)
+                        <td>{{ $hasMarks ? $trim($summary['total_marks']) : $dash }}</td>
+                        <td colspan="2">{{ $hasMarks ? 'Out of: '.$trim($summary['total_out_of']) : $dash }}</td>
+                    @endif
                     @php
                         $overallGrade = $summary['band']?->grade;
                         $overallBand = \Modules\ReportCard\Support\GradingScaleDefaults::bandFor($overallGrade);
@@ -382,17 +402,31 @@
     </table>
 
     <p class="summary-line">
-        Mean Score:
-        <strong>{{ $summary['mean_points'] !== null ? $trim($summary['mean_points']).' / '.$pointsCeiling : $dash }}</strong>
-        &nbsp;&nbsp; Mean Percentage:
-        <strong>{{ $meanPercentage !== null ? number_format($meanPercentage, 2).'%' : $dash }}</strong>
-        &nbsp;&nbsp; Overall Grade:
-        <strong>
-            @php $meanBand = \Modules\ReportCard\Support\GradingScaleDefaults::bandFor($meanGrade); @endphp
-            {{ $meanBand ?? $meanGrade ?? $dash }}{{ $meanBand && $meanGrade !== $meanBand ? ' ('.$meanGrade.')' : '' }}
-        </strong>
-        &nbsp;&nbsp; Subjects assessed:
-        <strong>{{ $summary['subjects_assessed'] }} of {{ $summary['subjects_total'] }}</strong>
+        @if ($isCbc)
+            Performance Profile:
+            <strong>{{ $summary['mean_points'] !== null ? $trim($summary['mean_points']).' / '.$pointsCeiling.' pts' : $dash }}</strong>
+            &nbsp;&nbsp; Predominant Band:
+            <strong>
+                @php $meanBand = \Modules\ReportCard\Support\GradingScaleDefaults::bandFor($meanGrade); @endphp
+                {{ $meanBand ?? $meanGrade ?? $dash }}{{ $meanBand && $meanGrade !== $meanBand ? ' ('.$meanGrade.')' : '' }}
+            </strong>
+            &nbsp;&nbsp; Learning Areas Assessed:
+            <strong>{{ $summary['subjects_assessed'] }} of {{ $summary['subjects_total'] }}</strong>
+        @else
+            Mean Score:
+            <strong>{{ $summary['mean_points'] !== null ? $trim($summary['mean_points']).' / '.$pointsCeiling : $dash }}</strong>
+            @if ($meanPercentage !== null)
+                &nbsp;&nbsp; Mean Percentage:
+                <strong>{{ number_format($meanPercentage, 2).'%' }}</strong>
+            @endif
+            &nbsp;&nbsp; Overall Grade:
+            <strong>
+                @php $meanBand = \Modules\ReportCard\Support\GradingScaleDefaults::bandFor($meanGrade); @endphp
+                {{ $meanBand ?? $meanGrade ?? $dash }}{{ $meanBand && $meanGrade !== $meanBand ? ' ('.$meanGrade.')' : '' }}
+            </strong>
+            &nbsp;&nbsp; Subjects assessed:
+            <strong>{{ $summary['subjects_assessed'] }} of {{ $summary['subjects_total'] }}</strong>
+        @endif
     </p>
 
     @if ($rows->isNotEmpty())
@@ -403,12 +437,21 @@
                 @foreach ($rows as $row)
                     <td>
                         @if ($row->isAssessed())
-                            {{-- 90px is the tallest a bar gets, so 100% fills the plot area
-                                 and everything else is read against it. --}}
-                            <div class="bar-value">{{ number_format($row->percentage, 0) }}%</div>
-                            <div class="bar"
-                                style="height: {{ max(2, (int) round($row->percentage * 0.9)) }}px; background-color: {{ $colourFor($row->expectationBand()) }};">
-                            </div>
+                            @if ($row->percentage !== null)
+                                {{-- 90px is the tallest a bar gets, so 100% fills the plot area
+                                     and everything else is read against it. --}}
+                                <div class="bar-value">{{ number_format($row->percentage, 0) }}%</div>
+                                <div class="bar"
+                                    style="height: {{ max(2, (int) round($row->percentage * 0.9)) }}px; background-color: {{ $colourFor($row->expectationBand()) }};">
+                                </div>
+                            @elseif ($row->points() !== null)
+                                <div class="bar-value">{{ $row->expectationBand() ?? $row->points() }}</div>
+                                <div class="bar"
+                                    style="height: {{ max(2, (int) round(($row->points() / max(1, $pointsCeiling)) * 90)) }}px; background-color: {{ $colourFor($row->expectationBand()) }};">
+                                </div>
+                            @else
+                                <div class="bar-value muted">n/a</div>
+                            @endif
                         @else
                             <div class="bar-value muted">n/a</div>
                         @endif
@@ -421,6 +464,67 @@
                 @endforeach
             </tr>
         </table>
+    @endif
+
+    @if ($isCbc && !empty($pathwayRecommendations['has_recommendations']))
+        <p class="section-title">Senior School Career Pathways Guidance (Grades 10–12)</p>
+
+        <table class="subjects" style="margin-bottom: 10px;">
+            <thead>
+                <tr>
+                    <th style="text-align: left; width: 34%;">Career Pathway Track</th>
+                    <th style="width: 16%;">Cluster Score</th>
+                    <th style="width: 26%;">Readiness Assessment</th>
+                    <th style="text-align: left;">Key Learning Area Strengths</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($pathwayRecommendations['pathways'] as $p)
+                    @php
+                        $isPrimary = ($pathwayRecommendations['primary']['id'] ?? '') === $p['id'];
+                    @endphp
+                    <tr @if($isPrimary) style="background-color: #f0fdf4;" @endif>
+                        <td class="subject" style="text-align: left;">
+                            {{ $p['name'] }}
+                            @if ($isPrimary)
+                                <span style="display: block; font-size: 8px; color: #059669; font-weight: bold;">
+                                    ★ Top Recommended Track
+                                </span>
+                            @endif
+                        </td>
+                        <td>
+                            <strong>{{ $p['average_points'] !== null ? number_format($p['average_points'], 1).' / 8.0' : '—' }}</strong>
+                        </td>
+                        <td>
+                            @php
+                                $readinessColor = match($p['readiness_level']) {
+                                    'high' => '#059669',
+                                    'medium' => '#2563eb',
+                                    'low' => '#d97706',
+                                    default => '#6b7280',
+                                };
+                            @endphp
+                            <span style="font-weight: bold; color: {{ $readinessColor }};">
+                                {{ $p['readiness'] }}
+                            </span>
+                        </td>
+                        <td class="remark">
+                            @if (!empty($p['strengths']))
+                                {{ collect($p['strengths'])->pluck('subject')->implode(', ') }}
+                            @else
+                                <span class="muted">Foundational stage</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        @if (!empty($pathwayRecommendations['statement']))
+            <p style="font-size: 9px; color: #374151; background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 6px 8px; margin-bottom: 12px; border-left: 3px solid #2563eb;">
+                <strong>Guidance & Placement Note:</strong> {{ $pathwayRecommendations['statement'] }}
+            </p>
+        @endif
     @endif
 
     @if ($scaleBands->isNotEmpty())

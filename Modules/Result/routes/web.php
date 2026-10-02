@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Result\Http\Controllers\BandEntryController;
 use Modules\Result\Http\Controllers\ResultController;
 use Modules\Result\Http\Controllers\ResultEntryController;
 
@@ -37,4 +38,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::resource('results', ResultController::class)
         ->names('result')
         ->only(['store', 'show', 'update', 'destroy']);
+
+    // CBC formative / SBA band entry.
+    // Redirected to from FormativeAssessmentController after creating a sitting.
+    Route::livewire('assessments/band-entry', 'result::band-entry')->name('assessment.band.entry');
+    Route::post('assessments/band-entry', [BandEntryController::class, 'store'])->name('assessment.band.entry.store');
 });

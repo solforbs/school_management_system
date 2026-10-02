@@ -31,11 +31,27 @@ class ExamSitting extends Model
     /** Shared with the create form's dropdown; see {@see Examination::EXAM_TYPES}. */
     public const EXAM_TYPES = Examination::EXAM_TYPES;
 
+    /**
+     * What kind of assessment event a sitting is.
+     *
+     * Null on existing rows means summative — isSummative() returns true
+     * for null so nothing that predates the column breaks.
+     *
+     * @var array<string, string>
+     */
+    public const ASSESSMENT_CATEGORIES = [
+        'summative' => 'Summative Exam',
+        'classroom_assessment' => 'Classroom Assessment (CA)',
+        'sba' => 'School-Based Assessment (SBA)',
+        'national' => 'National Assessment',
+    ];
+
     protected $fillable = [
         'institution_id',
         'title',
         'term',
         'exam_type',
+        'assessment_category',
         'academic_year',
         'class_id',
         'notes',
@@ -72,6 +88,46 @@ class ExamSitting extends Model
         return $this->exam_type
             ? (self::EXAM_TYPES[$this->exam_type] ?? ucwords(str_replace('_', ' ', $this->exam_type)))
             : null;
+    }
+
+    public function assessmentCategoryLabel(): string
+    {
+        return self::ASSESSMENT_CATEGORIES[$this->assessment_category ?? 'summative']
+            ?? ucwords(str_replace('_', ' ', (string) $this->assessment_category));
+    }
+
+    /**
+     * A sitting with no category set predates the column and is treated
+     * as summative — the only kind that existed before CBC support.
+     */
+    public function isSummative(): bool
+    {
+        return $this->assessment_category === null
+            || $this->assessment_category === 'summative';
+    }
+
+    public function isClassroomAssessment(): bool
+    {
+        return $this->assessment_category === 'classroom_assessment';
+    }
+
+    public function isSba(): bool
+    {
+        return $this->assessment_category === 'sba';
+    }
+
+    public function isNational(): bool
+    {
+        return $this->assessment_category === 'national';
+    }
+
+    /**
+     * Any formative sitting: either a teacher-designed classroom task
+     * or an SBA tool. Both use direct band entry instead of marks.
+     */
+    public function isFormative(): bool
+    {
+        return $this->isClassroomAssessment() || $this->isSba();
     }
 
     /**

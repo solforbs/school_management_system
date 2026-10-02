@@ -268,12 +268,13 @@ class PermissionSeeder extends Seeder
         $teacher = Role::firstOrCreate(['name' => 'Teacher', 'guard_name' => 'web']);
         $teacherPermissions = Permission::whereIn('name', [
             'view student',
-            'view attendance',
-            'view examination',
+            'view attendance', 'create attendance', 'edit attendance', 'update attendance',
+            'view examination', 'create examination',
             'view timetable',
             'view classes',
             'view result', 'create result', 'edit result', 'update result',
             'view subject',
+            'view reportcard', 'export reportcard',
             'view dashboard',
             'view report',
         ])->get();

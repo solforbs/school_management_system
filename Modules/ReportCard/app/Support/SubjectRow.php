@@ -3,6 +3,7 @@
 namespace Modules\ReportCard\Support;
 
 use Modules\ReportCard\Models\GradingBand;
+use Modules\Result\Services\ResultGrader;
 
 /**
  * One line of a report card's subject table.
@@ -14,9 +15,8 @@ use Modules\ReportCard\Models\GradingBand;
  * the individual papers - so a 40-mark paper counts for twice as much as a
  * 20-mark one, which is what a school means by a subject's score.
  *
- * A row with no papers at all is still built, so the report shows every
- * subject the class takes and says plainly which were not assessed instead
- * of quietly leaving them off.
+ * For CBC classes, assessments can also be recorded directly as expectation
+ * bands (EE, ME, AE, BE) or 8 sub-levels (EE1-BE2) without numerical marks.
  */
 class SubjectRow
 {
@@ -28,6 +28,9 @@ class SubjectRow
         public readonly ?float $percentage,
         public readonly ?GradingBand $band,
         public readonly ?string $teacherInitials,
+        public readonly ?string $directBand = null,
+        public readonly ?string $learningArea = null,
+        public readonly ?string $strand = null,
     ) {}
 
     /**
@@ -36,35 +39,64 @@ class SubjectRow
      */
     public function isAssessed(): bool
     {
-        return $this->percentage !== null;
+        return $this->percentage !== null || $this->directBand !== null || $this->band !== null;
     }
 
     public function grade(): ?string
     {
-        return $this->band?->grade;
+        return $this->band?->grade ?? $this->directBand;
     }
 
     public function points(): ?int
     {
-        return $this->band?->points;
+        if ($this->band) {
+            return $this->band->points;
+        }
+
+        if ($this->directBand) {
+            return ResultGrader::pointsFor($this->directBand);
+        }
+
+        return null;
     }
 
     public function remark(): ?string
     {
-        return $this->band?->remark;
+        if ($this->band) {
+            return $this->band->remark;
+        }
+
+        if ($this->directBand) {
+            $band = ResultGrader::parentBand($this->directBand) ?? strtoupper($this->directBand);
+
+            return match ($band) {
+                'EE' => 'Exceeding Expectations',
+                'ME' => 'Meeting Expectations',
+                'AE' => 'Approaching Expectations',
+                'BE' => 'Below Expectations',
+                default => null,
+            };
+        }
+
+        return null;
     }
 
     /**
      * The four-band letters behind a grade: KJSEA's EE1 and EE2 are both
      * EE. Null on 8-4-4, whose A-E letters aren't expectation bands and
      * shouldn't be painted as though they were.
-     *
-     * Derived rather than stored, so the band a report prints can never
-     * disagree with the level it was worked out from.
      */
     public function expectationBand(): ?string
     {
-        return GradingScaleDefaults::bandFor($this->grade());
+        if ($this->band) {
+            return GradingScaleDefaults::bandFor($this->band->grade);
+        }
+
+        if ($this->directBand) {
+            return ResultGrader::parentBand($this->directBand) ?? strtoupper($this->directBand);
+        }
+
+        return null;
     }
 
     /**

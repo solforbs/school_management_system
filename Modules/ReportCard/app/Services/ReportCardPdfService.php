@@ -6,6 +6,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Modules\Curriculum\Models\Curriculum;
+use Modules\Curriculum\Services\CbcPathwayService;
 use Modules\ReportCard\Models\ReportCard;
 use Modules\ReportCard\Models\ReportTemplate;
 use Modules\ReportCard\Support\InstitutionLogo;
@@ -60,6 +61,11 @@ class ReportCardPdfService
         $termHistory = $this->termHistory($reportCard);
         $scaleBands = GradingBandService::scaleFor($institution, $curriculumId);
 
+        $pathwayRecommendations = null;
+        if ($curriculum?->isCbc()) {
+            $pathwayRecommendations = (new CbcPathwayService)->evaluate($rows);
+        }
+
         $pdf = Pdf::loadView('reportcard::pdf.report-card', [
             'institution' => $institution,
             'student' => $student,
@@ -78,6 +84,7 @@ class ReportCardPdfService
             'signatoryTitle' => $template?->signatory_title,
             'logoDataUri' => InstitutionLogo::dataUri($institution),
             'termHistory' => $termHistory,
+            'pathwayRecommendations' => $pathwayRecommendations,
         ])->setPaper('a4');
 
         $path = "report-cards/{$reportCard->id}.pdf";

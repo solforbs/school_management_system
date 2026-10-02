@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Examinations\Http\Controllers\ExaminationsController;
 use Modules\Examinations\Http\Controllers\ExamTimetableController;
+use Modules\Examinations\Http\Controllers\FormativeAssessmentController;
 
 /**
  * The screens are Livewire components; the controller keeps the write
@@ -25,4 +26,10 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::resource('examinations', ExaminationsController::class)
         ->names('examinations')
         ->only(['store', 'show', 'update', 'destroy']);
+
+    // CBC formative / SBA assessment creation.
+    // The Volt screen collects the details; the controller creates the
+    // sitting + lightweight examination and redirects to band entry.
+    Route::livewire('assessments/formative', 'examinations::formative')->name('assessment.formative');
+    Route::post('assessments/formative', [FormativeAssessmentController::class, 'store'])->name('assessment.formative.store');
 });

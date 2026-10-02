@@ -1,7 +1,11 @@
 <?php
 
+use Illuminate\Support\Collection;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Modules\Curriculum\Models\Curriculum;
+use Modules\Institution\Models\Institution;
 use Modules\Subject\Actions\SaveSubject;
 use Modules\Subject\Models\Subject;
 
@@ -18,14 +22,36 @@ new #[Title('Subject')] class extends Component
         }
 
         abort_unless(auth()->user()->can('edit subject'), 403);
-
         $this->subject = $this->scoped()->findOrFail($subjectId);
+    }
+
+    #[Computed]
+    public function institutions(): Collection
+    {
+        return isAdmin() ? Institution::all() : collect([currentInstitution()])->filter();
+    }
+
+    #[Computed]
+    public function isCbc(): bool
+    {
+        if ($this->subject?->hasCbcStructure()) {
+            return true;
+        }
+
+        $institutionId = $this->subject?->institution_id ?? currentInstitution()?->id;
+
+        if (! $institutionId) {
+            return false;
+        }
+
+        return Curriculum::where('institution_id', $institutionId)
+            ->where('system', 'cbc')
+            ->exists();
     }
 
     private function scoped()
     {
         $query = Subject::query();
-
         if (! isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
         }
@@ -36,16 +62,12 @@ new #[Title('Subject')] class extends Component
 <div>
     @if($subject)
     <div class="flex flex-col gap-6 w-full max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
-        
-        {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <a href="{{ route('subject.show', $subject->id) }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
-                        <flux:icon icon="arrow-left" class="size-3.5" />
-                        <span>Back to Subject Dossier</span>
-                    </a>
-                </div>
+                <a href="{{ route('subject.show', $subject->id) }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition mb-1">
+                    <flux:icon icon="arrow-left" class="size-3.5" />
+                    <span>Back to Subject Dossier</span>
+                </a>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Edit Subject</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
                     Update subject details for <strong class="text-zinc-800 font-semibold">{{ $subject->name }}</strong>.
@@ -76,7 +98,7 @@ new #[Title('Subject')] class extends Component
                     @if(isAdmin())
                         <div>
                             <flux:select name="institution_id" label="Institution *" required>
-                                @foreach ($institutions as $inst)
+                                @foreach ($this->institutions as $inst)
                                     <flux:select.option value="{{ $inst->id }}" :selected="old('institution_id', $subject->institution_id) == $inst->id">
                                         {{ $inst->name }}
                                     </flux:select.option>
@@ -108,6 +130,32 @@ new #[Title('Subject')] class extends Component
                         </div>
                     </div>
 
+                    @if($this->isCbc)
+                        <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-3">
+                            <flux:heading size="sm" class="font-bold text-zinc-900">CBC Curriculum Structure</flux:heading>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs font-medium text-zinc-600 block mb-1">Learning Area</label>
+                                    <input type="text" name="learning_area" value="{{ old('learning_area', $subject->learning_area) }}"
+                                        class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                        placeholder="e.g. Mathematics">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-zinc-600 block mb-1">Strand</label>
+                                    <input type="text" name="strand" value="{{ old('strand', $subject->strand) }}"
+                                        class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                        placeholder="e.g. Numbers">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-zinc-600 block mb-1">Sub-strand</label>
+                                    <input type="text" name="sub_strand" value="{{ old('sub_strand', $subject->sub_strand) }}"
+                                        class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                        placeholder="e.g. Fractions">
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="space-y-3">
                         <div class="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
                             <input type="hidden" name="is_active" value="0">
@@ -135,16 +183,12 @@ new #[Title('Subject')] class extends Component
 
     @else
     <div class="flex flex-col gap-6 w-full max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
-        
-        {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <a href="{{ route('subject.index') }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition">
-                        <flux:icon icon="arrow-left" class="size-3.5" />
-                        <span>Back to Subjects Directory</span>
-                    </a>
-                </div>
+                <a href="{{ route('subject.index') }}" wire:navigate.hover class="inline-flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 transition mb-1">
+                    <flux:icon icon="arrow-left" class="size-3.5" />
+                    <span>Back to Subjects Directory</span>
+                </a>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Add Academic Subject</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
                     Configure a new subject discipline and course code for the school curriculum.
@@ -175,7 +219,7 @@ new #[Title('Subject')] class extends Component
                         <div>
                             <flux:select name="institution_id" label="Institution *" required>
                                 <flux:select.option value="">Select Institution...</flux:select.option>
-                                @foreach ($institutions as $inst)
+                                @foreach ($this->institutions as $inst)
                                     <flux:select.option value="{{ $inst->id }}" :selected="old('institution_id') == $inst->id">
                                         {{ $inst->name }}
                                     </flux:select.option>
@@ -195,6 +239,32 @@ new #[Title('Subject')] class extends Component
                         <input type="text" name="code" value="{{ old('code') }}" placeholder="e.g. MATH-401"
                             class="w-full px-3.5 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition">
                     </div>
+
+                    @if($this->isCbc)
+                        <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-3">
+                            <flux:heading size="sm" class="font-bold text-zinc-900">CBC Curriculum Structure</flux:heading>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-xs font-medium text-zinc-600 block mb-1">Learning Area</label>
+                                    <input type="text" name="learning_area" value="{{ old('learning_area') }}"
+                                        class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                        placeholder="e.g. Mathematics">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-zinc-600 block mb-1">Strand</label>
+                                    <input type="text" name="strand" value="{{ old('strand') }}"
+                                        class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                        placeholder="e.g. Numbers">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-zinc-600 block mb-1">Sub-strand</label>
+                                    <input type="text" name="sub_strand" value="{{ old('sub_strand') }}"
+                                        class="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900"
+                                        placeholder="e.g. Fractions">
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="pt-4 border-t border-zinc-100 space-y-4">
                         <div class="flex items-start gap-3 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">

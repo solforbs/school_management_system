@@ -315,7 +315,7 @@ new #[Title('Attendance Logs')] class extends Component
 
     $attendanceRate = $todayLogs > 0 ? round(($presentToday / $todayLogs) * 100) : 100;
 
-    $canTakeAttendance = Route::has('attendance.take') && auth()->user()->can('create attendance');
+    $canTakeAttendance = Route::has('attendance.register') && auth()->user()->can('view attendance');
     $canDelete = auth()->user()->can('delete attendance');
     $filteredCount = $canDelete ? $this->filteredCount : 0;
     $hasActiveFilters = $search !== '' || $status !== '' || $class_id !== '' || $from !== '' || $to !== '';
@@ -354,6 +354,16 @@ new #[Title('Attendance Logs')] class extends Component
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            {{-- Tab Switcher: Register vs Hardware Logs --}}
+            <div class="inline-flex rounded-xl bg-zinc-100 dark:bg-zinc-800 p-1 border border-zinc-200 dark:border-zinc-700">
+                <a href="{{ route('attendance.register') }}" wire:navigate.hover class="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">
+                    Roll-Call Register
+                </a>
+                <span class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs border border-zinc-200/80 dark:border-zinc-700/80">
+                    Biometric Logs
+                </span>
+            </div>
+
             <x-export-buttons base-route="attendance.export" module="attendance" label="Export Logs" :params="[
                 'search' => $search,
                 'status' => $status,
@@ -368,12 +378,6 @@ new #[Title('Attendance Logs')] class extends Component
                         {{ $hasActiveFilters ? 'Delete Filtered' : 'Delete All' }}
                     </flux:button>
                 </flux:modal.trigger>
-            @endif
-            @if ($canTakeAttendance)
-                <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover icon="clipboard-document-check"
-                    variant="primary" class="shadow-sm hover:shadow-md transition-all">
-                    Take Roll Call
-                </flux:button>
             @endif
         </div>
     </div>
@@ -603,7 +607,7 @@ new #[Title('Attendance Logs')] class extends Component
                         <x-empty-state icon="clock" color="violet" title="No Attendance Records"
                             description="Real-time check-in logs and biometric scans will appear here automatically.">
                             @if ($canTakeAttendance)
-                                <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover
+                                <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover
                                     icon="clipboard-document-check" variant="primary">
                                     Take Attendance
                                 </flux:button>
@@ -714,7 +718,7 @@ new #[Title('Attendance Logs')] class extends Component
                                     <x-empty-state icon="clock" color="violet" title="No Attendance Records"
                                         description="Real-time check-in logs and biometric scans will appear here automatically.">
                                         @if ($canTakeAttendance)
-                                            <flux:button href="{{ route('attendance.take') }}" wire:navigate.hover
+                                            <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover
                                                 icon="clipboard-document-check" variant="primary">
                                                 Take Attendance
                                             </flux:button>

@@ -44,15 +44,123 @@
         </div>
     </div>
 @else
-    {{-- Teacher Operational KPI Tiles --}}
+    {{-- 1. Homeroom / Class Teacher Workspace (if designated as class teacher) --}}
+    @if (!empty($stats['homeroom_class']))
+        @php
+            $homeroom = $stats['homeroom_class'];
+            $isCbcHomeroom = $homeroom->curriculum?->isCbc() ?? false;
+        @endphp
+        <div class="rounded-2xl bg-white dark:bg-zinc-900 p-5 sm:p-6 border border-zinc-200/90 dark:border-zinc-800 shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="space-y-1.5">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60">
+                            <flux:icon icon="star" class="size-3 text-amber-500" />
+                            Homeroom Class Teacher
+                        </span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold {{ $isCbcHomeroom ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700' }}">
+                            {{ $homeroom->curriculum?->name ?? 'Standard' }}
+                        </span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                        {{ $homeroom->name }}
+                        <span class="text-xs font-normal text-zinc-500 dark:text-zinc-400">({{ $homeroom->students_count ?? 0 }} Registered Learners)</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-xl">
+                        You are the designated homeroom teacher. You oversee daily roll-call, learner pastoral welfare, and consolidated end-of-term report card remarks.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap sm:flex-col gap-2 shrink-0">
+                    <flux:button href="{{ route('attendance.register', ['classId' => $homeroom->id]) }}" wire:navigate.hover icon="clock" variant="primary" class="font-semibold text-xs shadow-xs">
+                        Mark Class Roll-Call
+                    </flux:button>
+                    <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="users" variant="subtle" class="font-semibold text-xs">
+                        Class Roster ({{ $homeroom->students_count ?? 0 }})
+                    </flux:button>
+                    <flux:button href="{{ route('reportcard.index') }}" wire:navigate.hover icon="document-chart-bar" variant="subtle" class="font-semibold text-xs">
+                        Term Report Cards
+                    </flux:button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- 2. My Teaching Allocations (Class + Subject Pairs) --}}
+    <div class="space-y-3">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <flux:icon icon="book-open" class="size-4 text-zinc-700 dark:text-zinc-300" />
+                    My Teaching Allocations
+                </h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Classes and subjects assigned to you. One-click access to open marksheets and record assessments.
+                </p>
+            </div>
+        </div>
+
+        @if (!empty($stats['teaching_allocations']) && $stats['teaching_allocations']->isNotEmpty())
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                @foreach ($stats['teaching_allocations'] as $alloc)
+                    @php
+                        $isCbc = $alloc->schoolClass?->curriculum?->isCbc() ?? false;
+                        $latestExam = \Modules\Examinations\Models\Examination::where('class_id', $alloc->class_id)
+                            ->where('subject_id', $alloc->subject_id)
+                            ->latest('id')
+                            ->first();
+                    @endphp
+                    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-xs hover:border-zinc-400 dark:hover:border-zinc-600 transition flex flex-col justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                    {{ $alloc->schoolClass?->name ?? 'Class' }}
+                                </span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold {{ $isCbc ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800' }}">
+                                    {{ $isCbc ? 'CBC' : '8-4-4' }}
+                                </span>
+                            </div>
+                            <h4 class="text-base font-black text-zinc-900 dark:text-zinc-100">
+                                {{ $alloc->subject?->name ?? 'Subject' }}
+                            </h4>
+                            <p class="text-xs text-zinc-400">
+                                {{ $isCbc ? 'Competency-Based Assessment (EE-BE bands)' : 'Standard numerical scoring (out of 100)' }}
+                            </p>
+                        </div>
+
+                        <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                            @if ($isCbc)
+                                <flux:button href="{{ route('assessment.formative', ['classId' => $alloc->class_id]) }}" wire:navigate.hover icon="sparkles" variant="primary" class="font-semibold text-xs flex-1">
+                                    Record Assessment
+                                </flux:button>
+                                <flux:button href="{{ $latestExam ? route('assessment.band.entry', ['examination_id' => $latestExam->id]) : route('assessment.formative', ['classId' => $alloc->class_id]) }}" wire:navigate.hover icon="table-cells" variant="subtle" class="font-semibold text-xs">
+                                    Marksheet
+                                </flux:button>
+                            @else
+                                <flux:button href="{{ $latestExam ? route('result.entry.create', ['examination_id' => $latestExam->id]) : route('result.entry.exams') }}" wire:navigate.hover icon="table-cells" variant="primary" class="font-semibold text-xs flex-1">
+                                    Enter 8-4-4 Marks
+                                </flux:button>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 p-6 text-center text-xs text-zinc-500">
+                No teaching subjects assigned yet. Please contact the administrator or director to allocate your subjects.
+            </div>
+        @endif
+    </div>
+
+    {{-- 3. Teacher Operational KPI Tiles --}}
     <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
-        <x-kpi-card title="Assigned Campus" icon="building-office-2" color="indigo" :count="$stats['institution']->name" subtext="active academic institution" />
+        <x-kpi-card title="Assigned Campus" icon="building-office-2" color="zinc" :count="$stats['institution']->name" subtext="active academic institution" />
 
         @php
-            $teacherMaleCount = $stats['male_students_count'] ?? ($stats['institution'] ? \Modules\Student\Models\StudentDetails::where('institution_id', $stats['institution']->id)->where('gender', 'male')->count() : 0);
-            $teacherFemaleCount = $stats['female_students_count'] ?? ($stats['institution'] ? \Modules\Student\Models\StudentDetails::where('institution_id', $stats['institution']->id)->where('gender', 'female')->count() : 0);
+            $teacherMaleCount = $stats['male_students_count'] ?? 0;
+            $teacherFemaleCount = $stats['female_students_count'] ?? 0;
         @endphp
-        <x-kpi-card title="Enrolled Students" icon="academic-cap" color="sky" :count="$stats['students_count']" href="{{ route('student.index') }}">
+        <x-kpi-card title="My Students" icon="academic-cap" color="zinc" :count="$stats['students_count']" href="{{ route('student.index') }}" subtext="enrolled in your assigned classes">
             <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 mt-1.5">
                 <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50/90 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold border border-blue-200/70 dark:border-blue-800/50">
                     <svg class="size-3 text-blue-600 dark:text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
@@ -74,29 +182,47 @@
         <x-kpi-card title="Attendance Today" icon="clock" color="emerald" :count="$stats['attendance_today_count']" href="{{ route('attendance.index') }}" subtext="biometric & lesson check-ins" />
     </div>
 
-    {{-- Quick Action Links for Teachers --}}
+    {{-- 4. Quick Action Hub --}}
     <div class="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
         <div>
             <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Academic Delivery Hub</h3>
-            <p class="text-xs text-zinc-400 mt-0.5">Quick access to daily teaching registers, examination score entries, and class rosters.</p>
+            <p class="text-xs text-zinc-400 mt-0.5">Quick access to daily teaching registers, CBC assessment scoring, and class rosters.</p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            @can('create examination')
+                <flux:button href="{{ route('assessment.formative') }}" wire:navigate.hover icon="sparkles" variant="primary" class="font-semibold text-xs shadow-sm">
+                    Record CBC Assessment
+                </flux:button>
+            @endcan
+
+            @can('create result')
+                <flux:button href="{{ route('assessment.band.entry') }}" wire:navigate.hover icon="check-badge" variant="subtle" class="font-semibold text-xs">
+                    CBC Band Entry
+                </flux:button>
+            @endcan
+
             @can('view attendance')
-                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover icon="clock" variant="primary" class="font-semibold text-xs shadow-sm">
-                    Mark Daily Attendance
+                <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover icon="clock" variant="subtle" class="font-semibold text-xs">
+                    Mark Attendance
                 </flux:button>
             @endcan
 
             @can('view student')
                 <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="users" variant="subtle" class="font-semibold text-xs">
-                    View Student Roster
+                    Student Roster
                 </flux:button>
             @endcan
 
             @can('view examination')
                 <flux:button href="{{ route('examinations.index') }}" wire:navigate.hover icon="pencil-square" variant="subtle" class="font-semibold text-xs">
-                    Examinations & Scoring
+                    Examinations
+                </flux:button>
+            @endcan
+
+            @can('view reportcard')
+                <flux:button href="{{ route('reportcard.index') }}" wire:navigate.hover icon="document-chart-bar" variant="subtle" class="font-semibold text-xs">
+                    Report Cards
                 </flux:button>
             @endcan
 

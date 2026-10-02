@@ -19,6 +19,9 @@ class SaveSubject
         return [
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
+            'learning_area' => 'nullable|string|max:100',
+            'strand' => 'nullable|string|max:100',
+            'sub_strand' => 'nullable|string|max:100',
         ];
     }
 
@@ -31,6 +34,9 @@ class SaveSubject
             'institution_id' => $institutionId,
             'name' => $data['name'],
             'code' => $data['code'] ?? null,
+            'learning_area' => $data['learning_area'] ?? null,
+            'strand' => $data['strand'] ?? null,
+            'sub_strand' => $data['sub_strand'] ?? null,
             'is_compulsory' => (bool) ($data['is_compulsory'] ?? false),
             'is_active' => (bool) ($data['is_active'] ?? true),
         ];

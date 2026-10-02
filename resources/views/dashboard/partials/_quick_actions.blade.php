@@ -42,7 +42,7 @@
             @endcan
 
             @can('view attendance')
-                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover icon="clock" variant="subtle"
+                <flux:button href="{{ route(auth()->user()->hasRole('Teacher') ? 'attendance.register' : 'attendance.index') }}" wire:navigate.hover icon="clock" variant="subtle"
                     class="font-semibold text-xs whitespace-nowrap shrink-0">
                     Attendance
                 </flux:button>

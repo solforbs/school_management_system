@@ -202,7 +202,7 @@
                     @endif
 
                     @if (institutionHasModule('Attendance') && (auth()->user()->can('view attendance') || auth()->user()->can('edit attendance') || auth()->user()->can('create attendance')))
-                        <flux:sidebar.item icon="clock" :href="route('attendance.index')"
+                        <flux:sidebar.item icon="clock" :href="route(auth()->user()->hasRole('Teacher') ? 'attendance.register' : 'attendance.index')"
                             :current="request()->routeIs('attendance.*')" wire:navigate.hover>
                             {{ __('Daily Attendance') }}
                         </flux:sidebar.item>

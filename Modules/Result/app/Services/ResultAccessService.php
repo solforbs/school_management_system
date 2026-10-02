@@ -195,10 +195,10 @@ class ResultAccessService
     public static function selectableClasses(User $user): Collection
     {
         if ($user->hasRole('Teacher')) {
-            return SchoolClass::whereIn('id', self::classIds($user))->orderBy('name')->get();
+            return SchoolClass::with('curriculum')->whereIn('id', self::classIds($user))->orderBy('name')->get();
         }
 
-        $query = SchoolClass::query();
+        $query = SchoolClass::with('curriculum');
 
         if (! isAdmin()) {
             $query->where('institution_id', currentInstitution()?->id ?? 0);
