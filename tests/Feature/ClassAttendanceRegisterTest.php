@@ -391,6 +391,7 @@ test('teacher can dispatch parent absence sms with custom message confirmation',
     ]);
 
     $mockSms = Mockery::mock(SmsService::class);
+    $mockSms->shouldReceive('isConfigured')->byDefault()->andReturn(true);
     $mockSms->shouldReceive('send')->once()->andReturn(['success' => true]);
     $this->app->instance(SmsService::class, $mockSms);
 
@@ -403,6 +404,44 @@ test('teacher can dispatch parent absence sms with custom message confirmation',
     $record = Attendance::where('student_id', $this->student3->id)->where('date', today())->first();
     expect($record)->not->toBeNull();
     expect($record->parent_notified)->toBeTrue();
+});
+
+test('when sms credentials are not configured, sendParentSms fails and does not mark as notified', function () {
+    // Add guardian contact to student 3
+    StudentDetails::where('student_id', $this->student3->id)->update([
+        'guardian_name' => 'Kilonzo Mutiso',
+        'guardian_phone' => '0712345678',
+        'guardian_email' => 'kilonzo@example.com',
+    ]);
+
+    // Ensure SMS is unconfigured (default state where env credentials are empty)
+    $this->actingAs($this->teacher);
+
+    $component = Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->call('markStatus', $this->student3->id, 'absent')
+        ->call('sendParentSms', $this->student3->id, 'Dear Kilonzo Mutiso, Mutiso Peter was absent today.');
+
+    // Assert parentNotified for student 3 is NOT true
+    expect($component->get('parentNotified')[$this->student3->id] ?? false)->toBeFalse();
+
+    // Assert no attendance record has parent_notified = true
+    $record = Attendance::where('student_id', $this->student3->id)->where('date', today())->first();
+    expect($record?->parent_notified)->not()->toBeTrue();
+
+    // Now test that teacher can mark as notified manually after direct call/email
+    $component->call('markParentNotifiedManually', $this->student3->id);
+    expect($component->get('parentNotified')[$this->student3->id])->toBeTrue();
+
+    $record = Attendance::where('student_id', $this->student3->id)->where('date', today())->first();
+    expect($record)->not->toBeNull()
+        ->and($record->parent_notified)->toBeTrue();
+
+    // And test toggleParentNotified resets it back to false
+    $component->call('toggleParentNotified', $this->student3->id);
+    expect($component->get('parentNotified')[$this->student3->id])->toBeFalse();
+
+    $record->refresh();
+    expect($record->parent_notified)->toBeFalse();
 });
 
 test('teacher visiting attendance stream only sees accessible classes and their own learners', function () {

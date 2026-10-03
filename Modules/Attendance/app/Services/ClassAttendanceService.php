@@ -182,6 +182,7 @@ class ClassAttendanceService
                 'admission_number' => $detail->admission_number ?? $detail->student_number ?? '—',
                 'parent_name' => $detail->parent_name ?? $detail->guardian_name ?? 'Parent/Guardian',
                 'parent_phone' => $detail->parent_phone ?? $detail->guardian_phone ?? null,
+                'parent_email' => $detail->parent_email ?? $detail->guardian_email ?? null,
                 'status' => $status, // 'present' | 'absent' | null
                 'source' => $source, // 'biometric' | 'manual' | 'verified' | 'override' | null
                 'parent_notified' => $parentNotified,

@@ -195,6 +195,14 @@ new #[Title('Class Attendance Register')] class extends Component
     {
         $this->parentNotified[$studentId] = ! ($this->parentNotified[$studentId] ?? false);
         $this->showSuccessBanner = false;
+
+        $class = $this->currentClass;
+        if ($class) {
+            Attendance::where('school_class_id', $class->id)
+                ->where('student_id', $studentId)
+                ->whereDate('date', Carbon::parse($this->date)->toDateString())
+                ->update(['parent_notified' => (bool) $this->parentNotified[$studentId]]);
+        }
     }
 
     /**
@@ -254,7 +262,12 @@ new #[Title('Class Attendance Register')] class extends Component
         return app(ClassAttendanceService::class)->getRegisterMeta($class, $this->date, auth()->user());
     }
 
-    public function sendParentSms(int $studentId, string $message): void
+    /**
+     * Dispatch parent absence SMS and return detailed status.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function sendParentSms(int $studentId, string $message): array
     {
         $class = $this->currentClass;
         abort_unless($class, 404, 'No class selected');
@@ -273,6 +286,44 @@ new #[Title('Class Attendance Register')] class extends Component
         } else {
             \Flux\Flux::toast(text: $result['message'], variant: 'danger');
         }
+
+        return $result;
+    }
+
+    public function markParentNotifiedManually(int $studentId): void
+    {
+        $class = $this->currentClass;
+        abort_unless($class, 404, 'No class selected');
+
+        $this->parentNotified[$studentId] = true;
+
+        $institutionId = currentInstitution()?->id
+            ?? auth()->user()->teacherUserDetails?->institution_id
+            ?? auth()->user()->active_institution_id
+            ?? 0;
+
+        Attendance::updateOrCreate(
+            [
+                'institution_id' => $institutionId,
+                'school_class_id' => $class->id,
+                'student_id' => $studentId,
+                'date' => Carbon::parse($this->date)->toDateString(),
+            ],
+            [
+                'status' => 'absent',
+                'source' => 'manual',
+                'parent_notified' => true,
+                'recorded_by' => auth()->id(),
+            ]
+        );
+
+        \Flux\Flux::toast(text: 'Marked as notified via direct contact (call/email).', variant: 'success');
+    }
+
+    #[Computed]
+    public function isSmsConfigured(): bool
+    {
+        return app(\App\Services\SmsService::class)->isConfigured();
     }
 }; ?>
 
@@ -403,8 +454,10 @@ new #[Title('Class Attendance Register')] class extends Component
                     this.statuses[id] = null;
                 });
             },
-            toggleNotified(id) {
-                this.notified[id] = !Boolean(this.notified[id]);
+            async toggleNotified(id) {
+                const nextVal = !Boolean(this.notified[id]);
+                this.notified[id] = nextVal;
+                await $wire.toggleParentNotified(id);
             },
             get presentCount() {
                 return Object.values(this.statuses).filter(s => s === 'present').length;
@@ -416,12 +469,15 @@ new #[Title('Class Attendance Register')] class extends Component
                 return this.totalCount > 0 ? Math.round((this.presentCount / this.totalCount) * 100) : 0;
             },
             notifyModal: false,
-            notifyStudent: { student_id: null, name: '', admission_number: '', parent_name: '', parent_phone: '' },
+            notifyStudent: { student_id: null, name: '', admission_number: '', parent_name: '', parent_phone: '', parent_email: '' },
             notifyMessage: '',
             notifySending: false,
+            notifyError: null,
+            isSmsConfigured: @js($this->isSmsConfigured),
 
             openNotifyModal(student) {
                 this.notifyStudent = student;
+                this.notifyError = null;
                 const parent = student.parent_name || 'Parent/Guardian';
                 const school = '{{ addslashes(currentInstitution()?->name ?? 'Our School') }}';
                 const cls = '{{ addslashes($this->currentClass?->name ?? 'Class') }}';
@@ -432,16 +488,27 @@ new #[Title('Class Attendance Register')] class extends Component
             async confirmSendSms() {
                 if (!this.notifyStudent.student_id || !this.notifyStudent.parent_phone) return;
                 this.notifySending = true;
+                this.notifyError = null;
                 try {
-                    await $wire.sendParentSms(this.notifyStudent.student_id, this.notifyMessage);
-                    this.notified[this.notifyStudent.student_id] = true;
-                    this.notifyModal = false;
+                    const result = await $wire.sendParentSms(this.notifyStudent.student_id, this.notifyMessage);
+                    if (result && result.success) {
+                        this.notified[this.notifyStudent.student_id] = true;
+                        this.notifyModal = false;
+                    } else {
+                        this.notifyError = result?.message || 'SMS delivery failed. SMS gateway credentials are not configured.';
+                    }
                 } catch (e) {
                     console.error('SMS send error:', e);
-                    alert('Unable to dispatch SMS: ' + (e?.message || 'Server error.'));
+                    this.notifyError = e?.message || 'Unable to dispatch SMS due to server error.';
                 } finally {
                     this.notifySending = false;
                 }
+            },
+            markNotifiedDirectly() {
+                if (!this.notifyStudent.student_id) return;
+                this.notified[this.notifyStudent.student_id] = true;
+                $wire.markParentNotifiedManually(this.notifyStudent.student_id);
+                this.notifyModal = false;
             },
             async save() {
                 this.saving = true;
@@ -842,21 +909,43 @@ new #[Title('Class Attendance Register')] class extends Component
                                         </div>
                                     </div>
 
-                                    {{-- Notify Action Button with Confirmation Modal --}}
+                                    {{-- Notify Action Button with Direct Fallbacks and Confirmation Modal --}}
                                     <div class="flex items-center gap-1.5 shrink-0">
                                         <template x-if="notified[{{ $aId }}]">
-                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                                <flux:icon icon="check" class="size-3 stroke-[3]" />
-                                                Notified
-                                            </span>
+                                            <div class="flex items-center gap-1">
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                    <flux:icon icon="check" class="size-3 stroke-[3]" />
+                                                    <span>Notified</span>
+                                                </span>
+                                                <button type="button"
+                                                    @click="toggleNotified({{ $aId }})"
+                                                    title="Click to reset / mark unnotified"
+                                                    class="size-6 rounded-full text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition cursor-pointer">
+                                                    <flux:icon icon="x-mark" class="size-3" />
+                                                </button>
+                                            </div>
                                         </template>
                                         <template x-if="!notified[{{ $aId }}]">
-                                            <button type="button"
-                                                @click="openNotifyModal({{ json_encode($absentee) }})"
-                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800 transition cursor-pointer">
-                                                <flux:icon icon="chat-bubble-left-ellipsis" class="size-3.5" />
-                                                <span>Notify Parent</span>
-                                            </button>
+                                            <div class="flex items-center gap-1">
+                                                @if($hasPhone)
+                                                    <a href="tel:{{ $absentee['parent_phone'] }}" title="Call parent: {{ $absentee['parent_phone'] }}"
+                                                        class="size-7 rounded-lg text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition">
+                                                        <flux:icon icon="phone" class="size-3.5" />
+                                                    </a>
+                                                @endif
+                                                @if(!empty($absentee['parent_email']))
+                                                    <a href="mailto:{{ $absentee['parent_email'] }}?subject={{ rawurlencode('Absence Notice: '.$absentee['name']) }}" title="Email parent: {{ $absentee['parent_email'] }}"
+                                                        class="size-7 rounded-lg text-zinc-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition">
+                                                        <flux:icon icon="envelope" class="size-3.5" />
+                                                    </a>
+                                                @endif
+                                                <button type="button"
+                                                    @click="openNotifyModal({{ json_encode($absentee) }})"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800 transition cursor-pointer">
+                                                    <flux:icon icon="chat-bubble-left-ellipsis" class="size-3.5" />
+                                                    <span>Notify</span>
+                                                </button>
+                                            </div>
                                         </template>
                                     </div>
                                 </div>
@@ -972,7 +1061,15 @@ new #[Title('Class Attendance Register')] class extends Component
                             <div class="flex items-center justify-between text-xs">
                                 <span class="text-zinc-500 font-medium">Recipient Phone:</span>
                                 <template x-if="notifyStudent.parent_phone">
-                                    <span class="font-mono font-bold text-blue-600 dark:text-blue-400" x-text="notifyStudent.parent_phone"></span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono font-bold text-blue-600 dark:text-blue-400" x-text="notifyStudent.parent_phone"></span>
+                                        <a :href="'tel:' + notifyStudent.parent_phone"
+                                            title="Call parent directly"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition">
+                                            <flux:icon icon="phone" class="size-3" />
+                                            <span>Call</span>
+                                        </a>
+                                    </div>
                                 </template>
                                 <template x-if="!notifyStudent.parent_phone">
                                     <span class="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
@@ -981,11 +1078,71 @@ new #[Title('Class Attendance Register')] class extends Component
                                     </span>
                                 </template>
                             </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-zinc-500 font-medium">Recipient Email:</span>
+                                <template x-if="notifyStudent.parent_email">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-zinc-700 dark:text-zinc-300" x-text="notifyStudent.parent_email"></span>
+                                        <a :href="'mailto:' + notifyStudent.parent_email + '?subject=' + encodeURIComponent('Absence Notice: ' + notifyStudent.name) + '&body=' + encodeURIComponent(notifyMessage)"
+                                            title="Email parent directly"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 hover:bg-sky-100 border border-sky-200 dark:border-sky-800 transition">
+                                            <flux:icon icon="envelope" class="size-3" />
+                                            <span>Email</span>
+                                        </a>
+                                    </div>
+                                </template>
+                                <template x-if="!notifyStudent.parent_email">
+                                    <span class="text-zinc-400 text-[11px]">No email on file</span>
+                                </template>
+                            </div>
                         </div>
 
                         {{-- Warning if no phone --}}
                         <div x-show="!notifyStudent.parent_phone" class="rounded-xl p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300">
                             This student has no parent or guardian phone number registered in their profile. Please update the student record before sending SMS.
+                        </div>
+
+                        {{-- SMS Gateway Failure / Disconnection Alert with Direct Fallbacks --}}
+                        <div x-show="notifyError" x-cloak class="rounded-xl p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 space-y-2.5">
+                            <div class="flex items-start gap-2.5">
+                                <flux:icon icon="exclamation-circle" class="size-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                                <div class="text-xs space-y-1">
+                                    <p class="font-bold text-rose-800 dark:text-rose-200">SMS Dispatch Failed / Gateway Not Configured</p>
+                                    <p class="text-rose-700 dark:text-rose-300" x-text="notifyError"></p>
+                                    <p class="text-zinc-600 dark:text-zinc-300 font-medium pt-0.5">
+                                        First priority is SMS, but you can contact the parent directly right now:
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-rose-200/80 dark:border-rose-800/80">
+                                <template x-if="notifyStudent.parent_phone">
+                                    <a :href="'tel:' + notifyStudent.parent_phone"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition">
+                                        <flux:icon icon="phone" class="size-3.5" />
+                                        <span>Call Parent Now (<span x-text="notifyStudent.parent_phone"></span>)</span>
+                                    </a>
+                                </template>
+                                <template x-if="notifyStudent.parent_email">
+                                    <a :href="'mailto:' + notifyStudent.parent_email + '?subject=' + encodeURIComponent('Absence Notice: ' + notifyStudent.name) + '&body=' + encodeURIComponent(notifyMessage)"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-xs transition">
+                                        <flux:icon icon="envelope" class="size-3.5" />
+                                        <span>Email Parent (<span x-text="notifyStudent.parent_email"></span>)</span>
+                                    </a>
+                                </template>
+                                <button type="button" @click="markNotifiedDirectly()"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer">
+                                    <flux:icon icon="check" class="size-3.5" />
+                                    <span>Mark as Notified (Direct Contact)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {{-- Notice if SMS gateway is unconfigured before dispatch --}}
+                        <div x-show="!isSmsConfigured && !notifyError" class="rounded-xl p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                            <flux:icon icon="information-circle" class="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div>
+                                <span class="font-bold">SMS credentials pending:</span> SMS gateway credentials (HostPinnacle) are not yet configured in system settings. Priority 1 is SMS, but you can also call or email the parent directly using the shortcuts below.
+                            </div>
                         </div>
 
                         {{-- Message Preview & Edit --}}
@@ -1007,30 +1164,51 @@ new #[Title('Class Attendance Register')] class extends Component
                         </div>
 
                         {{-- Action Buttons --}}
-                        <div class="flex items-center justify-end gap-3 pt-2">
-                            <button type="button"
-                                @click="if(!notifySending) notifyModal = false"
-                                :disabled="notifySending"
-                                class="px-4 py-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer disabled:opacity-50">
-                                Cancel
-                            </button>
+                        <div class="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                            <div class="flex items-center gap-2">
+                                <template x-if="notifyStudent.parent_phone">
+                                    <a :href="'tel:' + notifyStudent.parent_phone"
+                                        title="Call parent directly"
+                                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 transition">
+                                        <flux:icon icon="phone" class="size-3.5" />
+                                        <span>Call</span>
+                                    </a>
+                                </template>
+                                <template x-if="notifyStudent.parent_email">
+                                    <a :href="'mailto:' + notifyStudent.parent_email + '?subject=' + encodeURIComponent('Absence Notice: ' + notifyStudent.name) + '&body=' + encodeURIComponent(notifyMessage)"
+                                        title="Email parent directly"
+                                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800 transition">
+                                        <flux:icon icon="envelope" class="size-3.5" />
+                                        <span>Email</span>
+                                    </a>
+                                </template>
+                            </div>
 
-                            <button type="button"
-                                @click="confirmSendSms()"
-                                :disabled="notifySending || !notifyStudent.parent_phone"
-                                class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                                <span x-show="!notifySending" class="flex items-center gap-1.5">
-                                    <flux:icon icon="paper-airplane" class="size-3.5" />
-                                    <span>Confirm & Send SMS</span>
-                                </span>
-                                <span x-show="notifySending" x-cloak class="flex items-center gap-1.5">
-                                    <svg class="animate-spin size-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span>Sending SMS...</span>
-                                </span>
-                            </button>
+                            <div class="flex items-center justify-end gap-2">
+                                <button type="button"
+                                    @click="if(!notifySending) notifyModal = false"
+                                    :disabled="notifySending"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer disabled:opacity-50">
+                                    Cancel
+                                </button>
+
+                                <button type="button"
+                                    @click="confirmSendSms()"
+                                    :disabled="notifySending || !notifyStudent.parent_phone"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span x-show="!notifySending" class="flex items-center gap-1.5">
+                                        <flux:icon icon="paper-airplane" class="size-3.5" />
+                                        <span>Confirm & Send SMS</span>
+                                    </span>
+                                    <span x-show="notifySending" x-cloak class="flex items-center gap-1.5">
+                                        <svg class="animate-spin size-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Sending SMS...</span>
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

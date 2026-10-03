@@ -18,6 +18,28 @@ class SmsService
     }
 
     /**
+     * Check whether the SMS provider is configured with valid credentials and enabled.
+     */
+    public function isConfigured(?string $provider = null): bool
+    {
+        if (! featureEnabled('sms')) {
+            return false;
+        }
+
+        $provider ??= $this->config['default'] ?? null;
+        if (! $provider) {
+            return false;
+        }
+
+        $providerConfig = $this->config['providers'][$provider] ?? null;
+        if (! $providerConfig) {
+            return false;
+        }
+
+        return ! empty($providerConfig['userid']) && (! empty($providerConfig['password']) || ! empty($providerConfig['apikey']));
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function send(int $mobile, string $message, ?string $provider = null): array
