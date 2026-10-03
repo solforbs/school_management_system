@@ -291,13 +291,11 @@ test('teacher who is not homeroom teacher but has subject allocations can access
     Livewire::test('attendance::register')
         ->assertSee('Grade 8 Red')
         ->assertSee('Wekesa Brian')
-        ->call('markStatus', $learner->id, 'present')
-        ->call('saveAttendance');
+        ->assertSee('View only')
+        ->call('saveAttendance')
+        ->assertForbidden();
 
-    $record = Attendance::where('student_id', $learner->id)->where('date', today())->first();
-    expect($record)->not->toBeNull();
-    expect($record->status)->toBe('present');
-    expect($record->source)->toBe('manual');
+    expect(Attendance::where('student_id', $learner->id)->exists())->toBeFalse();
 });
 
 test('biometric logs page shows 0 percent rate instead of misleading 100 percent when zero logs exist', function () {
@@ -537,4 +535,47 @@ test('teacher visiting attendance stream only sees accessible classes and their 
 
     $directorComponent->assertSee($this->student1->name)
         ->assertSee('Stranger Learner');
+});
+
+test('subject teacher who is not the class teacher gets a read-only register', function () {
+    $subjectTeacher = User::factory()->create();
+    $subjectTeacher->assignRole('Teacher');
+    TeacherDetails::create([
+        'teacher_id' => $subjectTeacher->id,
+        'institution_id' => $this->institution->id,
+        'is_active' => true,
+    ]);
+
+    $maths = Subject::create([
+        'institution_id' => $this->institution->id,
+        'name' => 'Mathematics',
+        'code' => 'MTH',
+    ]);
+    SubjectTeacher::create([
+        'institution_id' => $this->institution->id,
+        'class_id' => $this->schoolClass->id,
+        'subject_id' => $maths->id,
+        'teacher_id' => $subjectTeacher->id,
+    ]);
+
+    $this->actingAs($subjectTeacher);
+
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->assertSee('View only')
+        ->assertSee('Achieng Mary')
+        ->assertDontSee('Save attendance')
+        ->call('saveAttendance', [$this->student1->id => 'present'], [], '')
+        ->assertForbidden();
+
+    expect(Attendance::count())->toBe(0);
+
+    // The class teacher can still record.
+    $this->actingAs($this->teacher);
+
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->assertDontSee('View only')
+        ->assertSee('Save attendance')
+        ->call('saveAttendance', [$this->student1->id => 'present'], [], '');
+
+    expect(Attendance::count())->toBe(1);
 });

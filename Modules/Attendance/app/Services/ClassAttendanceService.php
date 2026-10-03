@@ -40,6 +40,20 @@ class ClassAttendanceService
     }
 
     /**
+     * Whether the user may record roll-call (save, notify parents) for the class.
+     * Teachers are limited to classes they are the designated class teacher of;
+     * subject teachers keep read-only access. Other staff roles are unrestricted.
+     */
+    public function canRecord(User $user, SchoolClass $class): bool
+    {
+        if (! $user->hasRole('Teacher')) {
+            return true;
+        }
+
+        return (int) $class->class_teacher_id === (int) $user->id;
+    }
+
+    /**
      * Get the classes selectable by this user.
      * Teachers see only their homeroom class and classes they teach.
      * Directors/Admins see all classes in the active institution.

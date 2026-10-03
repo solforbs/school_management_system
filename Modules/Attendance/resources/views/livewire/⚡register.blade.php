@@ -98,6 +98,20 @@ new #[Title('Class Attendance Register')] class extends Component
         return app(ClassAttendanceService::class)->getSelectableClasses(auth()->user());
     }
 
+    /**
+     * Teachers may only record roll-call for a class they are the designated
+     * class teacher of. Subject teachers get a read-only register. Directors,
+     * Admins and other staff keep full access.
+     */
+    #[Computed]
+    public function canRecord(): bool
+    {
+        $class = $this->currentClass;
+
+        return $class !== null
+            && app(ClassAttendanceService::class)->canRecord(auth()->user(), $class);
+    }
+
     #[Computed]
     public function currentClass(): ?SchoolClass
     {
@@ -193,6 +207,8 @@ new #[Title('Class Attendance Register')] class extends Component
 
     public function toggleParentNotified(int $studentId): void
     {
+        abort_unless($this->canRecord, 403, 'Only the class teacher can update attendance.');
+
         $this->parentNotified[$studentId] = ! ($this->parentNotified[$studentId] ?? false);
         $this->showSuccessBanner = false;
 
@@ -215,6 +231,7 @@ new #[Title('Class Attendance Register')] class extends Component
     {
         $class = $this->currentClass;
         abort_unless($class, 404, 'No class selected');
+        abort_unless($this->canRecord, 403, 'Only the class teacher can record attendance.');
 
         if ($clientStatuses !== null) {
             $this->statuses = $clientStatuses;
@@ -271,6 +288,7 @@ new #[Title('Class Attendance Register')] class extends Component
     {
         $class = $this->currentClass;
         abort_unless($class, 404, 'No class selected');
+        abort_unless($this->canRecord, 403, 'Only the class teacher can notify parents.');
 
         $result = app(ClassAttendanceService::class)->dispatchParentAbsenceSms(
             $studentId,
@@ -294,6 +312,7 @@ new #[Title('Class Attendance Register')] class extends Component
     {
         $class = $this->currentClass;
         abort_unless($class, 404, 'No class selected');
+        abort_unless($this->canRecord, 403, 'Only the class teacher can notify parents.');
 
         $this->parentNotified[$studentId] = true;
 
@@ -438,18 +457,22 @@ new #[Title('Class Attendance Register')] class extends Component
             allStudentIds: @js($allStudentIds),
             totalCount: {{ $totalCount }},
             saving: false,
+            readOnly: @js(! $this->canRecord),
             savedBanner: false,
             savedMessage: '',
 
             setStatus(id, val) {
+                if (this.readOnly) return;
                 this.statuses[id] = (this.statuses[id] === val ? null : val);
             },
             markAllPresent() {
+                if (this.readOnly) return;
                 this.allStudentIds.forEach(id => {
                     this.statuses[id] = 'present';
                 });
             },
             clearAll() {
+                if (this.readOnly) return;
                 this.allStudentIds.forEach(id => {
                     this.statuses[id] = null;
                 });
@@ -511,6 +534,7 @@ new #[Title('Class Attendance Register')] class extends Component
                 this.notifyModal = false;
             },
             async save() {
+                if (this.readOnly) return;
                 this.saving = true;
                 try {
                     const cleanStatuses = {};
@@ -535,6 +559,16 @@ new #[Title('Class Attendance Register')] class extends Component
                 }
             }
         }" class="space-y-6">
+
+            @unless ($this->canRecord)
+                <div class="rounded-xl p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 flex items-start gap-3 text-amber-900 dark:text-amber-200">
+                    <flux:icon icon="eye" class="size-5 text-amber-600 shrink-0 mt-0.5" />
+                    <p class="text-xs sm:text-sm">
+                        <strong>View only.</strong>
+                        Daily roll-call for {{ $this->currentClass?->name }} is recorded by the class teacher. You can review attendance for the classes you teach but cannot change it.
+                    </p>
+                </div>
+            @endunless
 
             {{-- Top Alert Banner (Alpine + Livewire Synchronized) --}}
             <div x-show="savedBanner || $wire.showSuccessBanner" x-cloak class="rounded-xl p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between text-emerald-800 dark:text-emerald-200 transition">
@@ -700,6 +734,7 @@ new #[Title('Class Attendance Register')] class extends Component
                             </span>
                         </div>
 
+                        @if ($this->canRecord)
                         <div class="flex items-center gap-2 sm:gap-3">
                             <button type="button"
                                 @click="markAllPresent()"
@@ -713,6 +748,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                 Clear all
                             </button>
                         </div>
+                        @endif
                     </div>
 
                     @if ($students->isEmpty())
@@ -939,12 +975,14 @@ new #[Title('Class Attendance Register')] class extends Component
                                                         <flux:icon icon="envelope" class="size-3.5" />
                                                     </a>
                                                 @endif
+                                                @if ($this->canRecord)
                                                 <button type="button"
                                                     @click="openNotifyModal({{ json_encode($absentee) }})"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800 transition cursor-pointer">
                                                     <flux:icon icon="chat-bubble-left-ellipsis" class="size-3.5" />
                                                     <span>Notify</span>
                                                 </button>
+                                                @endif
                                             </div>
                                         </template>
                                     </div>
@@ -953,6 +991,7 @@ new #[Title('Class Attendance Register')] class extends Component
                         </div>
                     </div>
 
+                    @if ($this->canRecord)
                     {{-- Notes Card --}}
                     <div class="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 p-5 shadow-xs space-y-3">
                         <div class="flex items-center justify-between">
@@ -996,9 +1035,11 @@ new #[Title('Class Attendance Register')] class extends Component
                             Attendance saved successfully!
                         </span>
                     </div>
+                    @endif
                 </div>
             </div>
 
+            @if ($this->canRecord)
             {{-- Mobile Sticky Bottom Save Bar (Visible only on screens < lg) --}}
             <div class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 p-3 px-4 shadow-lg flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2 text-xs font-semibold">
@@ -1014,6 +1055,7 @@ new #[Title('Class Attendance Register')] class extends Component
                     <span x-text="saving ? 'Saving...' : 'Save attendance'">Save attendance</span>
                 </button>
             </div>
+            @endif
 
             {{-- Parent Absence Notification Preview & Confirmation Modal --}}
             <div x-show="notifyModal" x-cloak
