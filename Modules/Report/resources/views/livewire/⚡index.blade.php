@@ -54,45 +54,65 @@ new #[Title('Financial & Operational Reports')] class extends Component
                 <span class="text-xs text-zinc-400">&bull;</span>
                 <span class="text-xs text-zinc-500 font-medium truncate" data-institution-name>{{ $stats['institution']?->name ?? currentInstitution()?->name ?? 'Campus Analytics' }}</span>
             </div>
-            <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white break-words">Financial Reports &amp; Analytics</flux:heading>
-            <flux:text class="text-zinc-500 text-sm mt-0.5">
-                Real-time revenue tracking, historical cash flow analysis, and audited accounting summaries.
-            </flux:text>
+            @if (auth()->user()->hasRole('Teacher'))
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white break-words">Classroom &amp; Academic Analytics</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-0.5">
+                    Daily roll-call records, student attendance trends, academic performance, and teaching allocations.
+                </flux:text>
+            @else
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white break-words">Financial Reports &amp; Analytics</flux:heading>
+                <flux:text class="text-zinc-500 text-sm mt-0.5">
+                    Real-time revenue tracking, historical cash flow analysis, and audited accounting summaries.
+                </flux:text>
+            @endif
         </div>
 
-        @can('export report')
-            <div class="flex flex-wrap items-end gap-2 w-full sm:w-auto" x-data="{ period: 'all_time' }">
-                {{-- Excel / CSV: raw data for accountants and auditors --}}
-                @if (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Director'))
-                    <form method="GET" action="{{ route('report.export') }}" target="_blank"
-                        class="flex flex-wrap items-end gap-2 w-full sm:w-auto">
-                        <div class="w-full sm:w-auto min-w-[9.5rem]">
-                            <flux:select name="period" size="sm" label="Period" x-model="period">
-                                <flux:select.option value="all_time">All time</flux:select.option>
-                                <flux:select.option value="this_month">This month</flux:select.option>
-                                <flux:select.option value="this_year">This year</flux:select.option>
-                                <flux:select.option value="custom">Custom range</flux:select.option>
-                            </flux:select>
-                        </div>
-                        <template x-if="period === 'custom'">
-                            <div class="flex flex-wrap sm:flex-nowrap items-end gap-2 w-full sm:w-auto">
-                                <flux:input type="date" name="from" size="sm" label="From" class="w-full sm:w-auto" />
-                                <flux:input type="date" name="to" size="sm" label="To" class="w-full sm:w-auto" />
-                            </div>
-                        </template>
-                        <flux:button type="submit" icon="table-cells" variant="filled" class="font-semibold shadow-sm w-full sm:w-auto justify-center">
-                            Export Excel
-                        </flux:button>
-                    </form>
-                @else
-                    <a href="{{ route('report.export') }}" target="_blank" class="w-full sm:w-auto">
-                        <flux:button icon="table-cells" variant="filled" class="font-semibold shadow-sm w-full sm:w-auto justify-center">
-                            Export Fee Ledger (CSV)
-                        </flux:button>
-                    </a>
+        @if (auth()->user()->hasRole('Teacher'))
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover icon="clipboard-document-check" variant="filled" class="font-semibold shadow-sm w-full sm:w-auto justify-center">
+                    Roll-Call Register
+                </flux:button>
+                @if (Route::has('assessment.band.entry'))
+                    <flux:button href="{{ route('assessment.band.entry') }}" wire:navigate.hover icon="academic-cap" variant="outline" class="font-semibold shadow-sm w-full sm:w-auto justify-center">
+                        CBC Band Entry
+                    </flux:button>
                 @endif
             </div>
-        @endcan
+        @else
+            @can('export report')
+                <div class="flex flex-wrap items-end gap-2 w-full sm:w-auto" x-data="{ period: 'all_time' }">
+                    {{-- Excel / CSV: raw data for accountants and auditors --}}
+                    @if (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Director'))
+                        <form method="GET" action="{{ route('report.export') }}" target="_blank"
+                            class="flex flex-wrap items-end gap-2 w-full sm:w-auto">
+                            <div class="w-full sm:w-auto min-w-[9.5rem]">
+                                <flux:select name="period" size="sm" label="Period" x-model="period">
+                                    <flux:select.option value="all_time">All time</flux:select.option>
+                                    <flux:select.option value="this_month">This month</flux:select.option>
+                                    <flux:select.option value="this_year">This year</flux:select.option>
+                                    <flux:select.option value="custom">Custom range</flux:select.option>
+                                </flux:select>
+                            </div>
+                            <template x-if="period === 'custom'">
+                                <div class="flex flex-wrap sm:flex-nowrap items-end gap-2 w-full sm:w-auto">
+                                    <flux:input type="date" name="from" size="sm" label="From" class="w-full sm:w-auto" />
+                                    <flux:input type="date" name="to" size="sm" label="To" class="w-full sm:w-auto" />
+                                </div>
+                            </template>
+                            <flux:button type="submit" icon="table-cells" variant="filled" class="font-semibold shadow-sm w-full sm:w-auto justify-center">
+                                Export Excel
+                            </flux:button>
+                        </form>
+                    @else
+                        <a href="{{ route('report.export') }}" target="_blank" class="w-full sm:w-auto">
+                            <flux:button icon="table-cells" variant="filled" class="font-semibold shadow-sm w-full sm:w-auto justify-center">
+                                Export Fee Ledger (CSV)
+                            </flux:button>
+                        </a>
+                    @endif
+                </div>
+            @endcan
+        @endif
     </div>
 
     {{-- Role Scoped Partials --}}

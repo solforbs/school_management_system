@@ -16,22 +16,35 @@
                     <span class="text-xs text-zinc-400">&bull;</span>
                     <span class="text-xs text-zinc-500 font-medium">{{ $stats['institution']?->name ?? currentInstitution()?->name ?? 'Campus Analytics' }}</span>
                 </div>
-                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Financial Reports &amp; Analytics</flux:heading>
-                <flux:text class="text-zinc-500 text-sm mt-0.5">
-                    Real-time revenue tracking, historical cash flow analysis, and audited accounting summaries.
-                </flux:text>
+                @if (auth()->user()->hasRole('Teacher'))
+                    <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Classroom &amp; Academic Analytics</flux:heading>
+                    <flux:text class="text-zinc-500 text-sm mt-0.5">
+                        Daily roll-call records, student attendance trends, academic performance, and teaching allocations.
+                    </flux:text>
+                @else
+                    <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Financial Reports &amp; Analytics</flux:heading>
+                    <flux:text class="text-zinc-500 text-sm mt-0.5">
+                        Real-time revenue tracking, historical cash flow analysis, and audited accounting summaries.
+                    </flux:text>
+                @endif
             </div>
 
             <div class="flex items-center gap-3">
-                @can('export report')
-                    <flux:button href="{{ route('report.export') }}" icon="arrow-down-tray" variant="primary" class="shadow-sm font-semibold">
-                        @if (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Director'))
-                            Export Full Workbook (Excel)
-                        @else
-                            Export Fee Ledger (CSV)
-                        @endif
+                @if (auth()->user()->hasRole('Teacher'))
+                    <flux:button href="{{ route('attendance.index') }}" icon="clipboard-document-check" variant="primary" class="shadow-sm font-semibold">
+                        Roll-Call Register
                     </flux:button>
-                @endcan
+                @else
+                    @can('export report')
+                        <flux:button href="{{ route('report.export') }}" icon="arrow-down-tray" variant="primary" class="shadow-sm font-semibold">
+                            @if (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Director'))
+                                Export Full Workbook (Excel)
+                            @else
+                                Export Fee Ledger (CSV)
+                            @endif
+                        </flux:button>
+                    @endcan
+                @endif
             </div>
         </div>
 

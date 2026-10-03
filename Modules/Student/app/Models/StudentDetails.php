@@ -20,8 +20,10 @@ use Modules\Institution\Models\Institution;
  * @property string|null $student_number
  * @property string|null $admission_number
  * @property bool $is_active
- * @property string $guardian_email
- * @property int $parent_id
+ * @property string|null $guardian_name
+ * @property string|null $guardian_phone
+ * @property string|null $guardian_email
+ * @property int|null $parent_id
  * @property-read User|null $student
  * @property-read Institution|null $institution
  * @property-read SchoolClass|null $schoolClass

@@ -2,6 +2,7 @@
 
 namespace Modules\Examinations\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,8 @@ use Modules\Institution\Models\Institution;
  * @property int|null $academic_year
  * @property int|null $class_id
  * @property string|null $notes
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class ExamSitting extends Model
 {
@@ -67,8 +70,7 @@ class ExamSitting extends Model
     }
 
     /**
-     * The class this sitting is targeted at, or null when it runs for every
-     * class in the institution.
+     * @return BelongsTo<SchoolClass, $this>
      */
     public function schoolClass(): BelongsTo
     {

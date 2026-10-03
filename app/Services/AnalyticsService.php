@@ -6,13 +6,16 @@ use App\Http\Controllers\Concerns\Sortable;
 use App\Models\ContactMessage;
 use App\Models\Devices;
 use App\Models\Payment;
+use App\Models\TeacherClasses;
 use App\Models\User;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\Attendance\Models\Attendance;
 use Modules\Classes\Models\SchoolClass;
+use Modules\Examinations\Models\ExamSitting;
 use Modules\FeeManagement\Models\Fee;
 use Modules\Institution\Models\Institution;
 use Modules\Staff\Models\StaffDetails;
@@ -502,9 +505,26 @@ class AnalyticsService
                 'scope' => 'teacher',
                 'institution' => null,
                 'students_count' => 0,
+                'male_students_count' => 0,
+                'female_students_count' => 0,
                 'attendance_today_count' => 0,
+                'biometric_scans_today_count' => 0,
+                'biometric_status_text' => 'Biometric check-in not done today',
+                'rollcall_completed' => false,
+                'rollcall_present_count' => 0,
+                'rollcall_absent_count' => 0,
+                'rollcall_late_count' => 0,
+                'rollcall_total_marked' => 0,
+                'rollcall_attendance_rate' => null,
+                'rollcall_saved_at' => null,
+                'classes_completed_count' => 0,
+                'classes_total_count' => 0,
                 'homeroom_class' => null,
+                'homeroom_stats' => null,
                 'teaching_allocations' => collect(),
+                'absent_students_today' => collect(),
+                'weekly_attendance_trend' => [],
+                'recent_assessments' => collect(),
             ];
         }
 
@@ -521,11 +541,16 @@ class AnalyticsService
             ->with(['schoolClass.curriculum', 'subject'])
             ->get();
 
-        // Taught class IDs (homeroom + subject classes)
+        // Direct class assignments via teacher_classes pivot
+        $pivotClassIds = TeacherClasses::where('teacher_id', $user->id)->pluck('class_id');
+
+        // Taught class IDs (homeroom + subject classes + pivot classes)
         $taughtClassIds = $teachingAllocations->pluck('class_id')
             ->when($homeroomClass, fn ($c) => $c->push($homeroomClass->id))
+            ->concat($pivotClassIds)
             ->unique()
-            ->filter();
+            ->filter()
+            ->values();
 
         // Scope students count to the classes the teacher actually teaches
         $teacherStudentsQuery = StudentDetails::where('institution_id', $institution->id)
@@ -535,21 +560,198 @@ class AnalyticsService
             ->selectRaw("SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female")
             ->first();
 
+        $teacherStudentUserIds = (clone $teacherStudentsQuery)
+            ->pluck('student_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $teacherStudentPins = $teacherStudentUserIds->map(fn ($id) => (string) $id)->all();
+
+        // 3. Hardware biometric device scans today (strictly scoped to teacher's learners)
         $deviceIds = Devices::where('institution_id', $institution->id)
             ->whereNotNull('zkteco_device_id')
             ->pluck('zkteco_device_id');
+
+        $biometricScansTodayCount = 0;
+        if (! empty($teacherStudentPins) && $deviceIds->isNotEmpty()) {
+            $biometricScansTodayCount = ZktecoAttendanceLog::whereIn('device_id', $deviceIds)
+                ->whereIn('pin', $teacherStudentPins)
+                ->whereDate('occurred_at', today())
+                ->distinct('pin')
+                ->count('pin');
+        }
+
+        // 4. Classroom Roll-Call Attendances Today
+        $todayDate = today()->toDateString();
+        $todayAttendances = Attendance::where('institution_id', $institution->id)
+            ->whereIn('school_class_id', $taughtClassIds)
+            ->whereDate('date', $todayDate)
+            ->with(['student', 'studentDetails', 'schoolClass'])
+            ->get();
+
+        $rollcallMarkedCount = $todayAttendances->count();
+        $rollcallPresentCount = $todayAttendances->whereIn('status', ['present', 'late'])->count();
+        $rollcallAbsentCount = $todayAttendances->where('status', 'absent')->count();
+        $rollcallLateCount = $todayAttendances->where('status', 'late')->count();
+
+        $rollcallAttendanceRate = $rollcallMarkedCount > 0
+            ? (int) round(($rollcallPresentCount / $rollcallMarkedCount) * 100)
+            : null;
+
+        $classesWithAttendance = $todayAttendances->pluck('school_class_id')->unique();
+        $classesCompletedCount = $classesWithAttendance->count();
+        $totalAccessibleClassesCount = $taughtClassIds->count();
+        $rollcallCompleted = $rollcallMarkedCount > 0;
+        $rollcallSavedAt = $todayAttendances->max('updated_at');
+
+        // 5. Homeroom Class Pastoral & Attendance Health (if designated Class Teacher)
+        $homeroomStats = null;
+        if ($homeroomClass) {
+            $homeroomRecords = $todayAttendances->where('school_class_id', $homeroomClass->id);
+            $hrMarked = $homeroomRecords->count();
+            $hrPresent = $homeroomRecords->whereIn('status', ['present', 'late'])->count();
+            $hrAbsent = $homeroomRecords->where('status', 'absent')->count();
+            $hrLate = $homeroomRecords->where('status', 'late')->count();
+            $hrRate = $hrMarked > 0 ? (int) round(($hrPresent / $hrMarked) * 100) : null;
+            $hrSavedAt = $homeroomRecords->max('updated_at');
+
+            $homeroomStats = [
+                'class' => $homeroomClass,
+                'total_students' => (int) ($homeroomClass->students_count ?? 0),
+                'marked_count' => $hrMarked,
+                'present_count' => $hrPresent,
+                'absent_count' => $hrAbsent,
+                'late_count' => $hrLate,
+                'attendance_rate' => $hrRate,
+                'is_completed' => $hrMarked > 0,
+                'saved_at' => $hrSavedAt ? Carbon::parse($hrSavedAt)->format('g:i A') : null,
+            ];
+        }
+
+        // 6. Today's Absentee Roster (with rapid parent contact shortcuts)
+        $absentStudentsToday = $todayAttendances
+            ->filter(fn (Attendance $a): bool => $a->status === 'absent')
+            ->values()
+            ->map(function (Attendance $attendance): array {
+                $details = $attendance->studentDetails;
+                $student = $attendance->student;
+                $schoolClass = $attendance->schoolClass;
+
+                $parentPhone = $details ? $details->guardian_phone : null;
+                $parentEmail = $details ? $details->guardian_email : null;
+                $parentName = ($details && $details->guardian_name) ? $details->guardian_name : 'Parent / Guardian';
+
+                return [
+                    'student_id' => $attendance->student_id,
+                    'student_name' => $student ? $student->name : 'Unknown Student',
+                    'admission_number' => ($details && $details->admission_number) ? $details->admission_number : '—',
+                    'class_id' => $attendance->school_class_id,
+                    'class_name' => $schoolClass ? $schoolClass->name : 'Class',
+                    'parent_name' => $parentName,
+                    'parent_phone' => $parentPhone,
+                    'parent_email' => $parentEmail,
+                    'parent_notified' => (bool) $attendance->parent_notified,
+                    'notes' => $attendance->notes,
+                    'scanned_at_gate' => (bool) ($attendance->source === 'biometric' || $attendance->scanned_at !== null),
+                ];
+            });
+
+        // 7. Weekly 5-Day Attendance Turnout Trend (Weekdays)
+        $cursor = today();
+        $days = [];
+        while (count($days) < 5) {
+            if (! $cursor->isWeekend()) {
+                $days[] = $cursor->copy();
+            }
+            $cursor = $cursor->copy()->subDay();
+        }
+        $days = array_reverse($days);
+
+        $trendAttendances = Attendance::where('institution_id', $institution->id)
+            ->whereIn('school_class_id', $taughtClassIds)
+            ->whereIn('date', array_map(fn ($d) => $d->toDateString(), $days))
+            ->get()
+            ->groupBy(fn (Attendance $att): string => Carbon::parse($att->date)->toDateString());
+
+        $weeklyAttendanceTrend = [];
+        foreach ($days as $day) {
+            $dateStr = $day->toDateString();
+            $records = $trendAttendances->get($dateStr, collect());
+            $marked = $records->count();
+            $present = $records->whereIn('status', ['present', 'late'])->count();
+            $absent = $records->where('status', 'absent')->count();
+
+            $weeklyAttendanceTrend[] = [
+                'date' => $dateStr,
+                'label' => $day->isToday() ? 'Today' : $day->format('D, M j'),
+                'day_name' => $day->format('D'),
+                'is_today' => $day->isToday(),
+                'total_marked' => $marked,
+                'present' => $present,
+                'absent' => $absent,
+                'rate' => $marked > 0 ? (int) round(($present / $marked) * 100) : null,
+            ];
+        }
+
+        // 8. Recent Classroom Assessments & Marksheet Progress
+        $recentAssessments = ExamSitting::where('institution_id', $institution->id)
+            ->when($taughtClassIds->isNotEmpty(), fn ($q) => $q->where(function ($sub) use ($taughtClassIds) {
+                $sub->whereIn('class_id', $taughtClassIds)
+                    ->orWhereNull('class_id');
+            }))
+            ->with(['schoolClass'])
+            ->latest('created_at')
+            ->take(5)
+            ->get()
+            ->map(function (ExamSitting $sitting): array {
+                $schoolClass = $sitting->schoolClass;
+
+                return [
+                    'id' => $sitting->id,
+                    'title' => $sitting->title,
+                    'term' => $sitting->term,
+                    'academic_year' => $sitting->academic_year,
+                    'category_label' => $sitting->assessmentCategoryLabel(),
+                    'class_name' => $schoolClass ? $schoolClass->name : 'All Classes',
+                    'class_id' => $sitting->class_id,
+                    'is_classroom_assessment' => $sitting->isClassroomAssessment(),
+                    'is_sba' => $sitting->isSba(),
+                    'created_at' => $sitting->created_at?->format('M j, Y'),
+                ];
+            });
 
         return [
             'scope' => 'teacher',
             'institution' => $institution,
             'homeroom_class' => $homeroomClass,
+            'homeroom_stats' => $homeroomStats,
             'teaching_allocations' => $teachingAllocations,
             'students_count' => (clone $teacherStudentsQuery)->count(),
             'male_students_count' => (int) ($teacherGenderCounts->male ?? 0),
             'female_students_count' => (int) ($teacherGenderCounts->female ?? 0),
-            'attendance_today_count' => ZktecoAttendanceLog::whereIn('device_id', $deviceIds)
-                ->whereDate('occurred_at', today())
-                ->count(),
+
+            // Attendance & Biometrics
+            'attendance_today_count' => $rollcallPresentCount > 0 ? $rollcallPresentCount : $biometricScansTodayCount,
+            'biometric_scans_today_count' => $biometricScansTodayCount,
+            'biometric_status_text' => $biometricScansTodayCount > 0
+                ? "{$biometricScansTodayCount} biometric check-ins"
+                : 'Biometric check-in not done today',
+
+            'rollcall_completed' => $rollcallCompleted,
+            'rollcall_present_count' => $rollcallPresentCount,
+            'rollcall_absent_count' => $rollcallAbsentCount,
+            'rollcall_late_count' => $rollcallLateCount,
+            'rollcall_total_marked' => $rollcallMarkedCount,
+            'rollcall_attendance_rate' => $rollcallAttendanceRate,
+            'rollcall_saved_at' => $rollcallSavedAt ? Carbon::parse($rollcallSavedAt)->format('g:i A') : null,
+            'classes_completed_count' => $classesCompletedCount,
+            'classes_total_count' => $totalAccessibleClassesCount,
+
+            // Lists & Trends
+            'absent_students_today' => $absentStudentsToday,
+            'weekly_attendance_trend' => $weeklyAttendanceTrend,
+            'recent_assessments' => $recentAssessments,
         ];
     }
 

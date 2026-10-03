@@ -4,6 +4,7 @@ namespace Modules\Attendance\Models;
 
 use App\Models\Devices;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,28 @@ use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 use Modules\Student\Models\StudentDetails;
 
+/**
+ * @property int $id
+ * @property int $institution_id
+ * @property int $school_class_id
+ * @property int $student_id
+ * @property Carbon $date
+ * @property string $status
+ * @property string $source
+ * @property int|null $device_id
+ * @property Carbon|null $scanned_at
+ * @property int|null $recorded_by
+ * @property bool $parent_notified
+ * @property string|null $notes
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User|null $student
+ * @property-read StudentDetails|null $studentDetails
+ * @property-read SchoolClass|null $schoolClass
+ * @property-read Institution|null $institution
+ * @property-read User|null $recorder
+ * @property-read Devices|null $device
+ */
 class Attendance extends Model
 {
     use HasFactory;
@@ -52,7 +75,7 @@ class Attendance extends Model
     }
 
     /**
-     * The student this attendance record belongs to.
+     * @return BelongsTo<User, $this>
      */
     public function student(): BelongsTo
     {
@@ -60,7 +83,7 @@ class Attendance extends Model
     }
 
     /**
-     * Additional student profile details (admission number, etc.).
+     * @return HasOne<StudentDetails, $this>
      */
     public function studentDetails(): HasOne
     {
@@ -68,7 +91,7 @@ class Attendance extends Model
     }
 
     /**
-     * The school class for which roll-call was taken.
+     * @return BelongsTo<SchoolClass, $this>
      */
     public function schoolClass(): BelongsTo
     {
