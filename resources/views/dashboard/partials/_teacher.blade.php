@@ -128,7 +128,7 @@
                             </p>
                         </div>
 
-                        <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                        <div class="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-wrap items-center gap-2">
                             @if ($isCbc)
                                 <flux:button href="{{ route('assessment.formative', ['classId' => $alloc->class_id]) }}" wire:navigate.hover icon="sparkles" variant="primary" class="font-semibold text-xs flex-1">
                                     Record Assessment
@@ -141,6 +141,11 @@
                                     Enter 8-4-4 Marks
                                 </flux:button>
                             @endif
+                            @can('view student')
+                                <flux:button href="{{ route('student.index', ['class_id' => $alloc->class_id]) }}" wire:navigate.hover icon="users" variant="subtle" class="font-semibold text-xs">
+                                    Learners
+                                </flux:button>
+                            @endcan
                         </div>
                     </div>
                 @endforeach

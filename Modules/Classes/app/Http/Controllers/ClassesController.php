@@ -147,7 +147,9 @@ class ClassesController extends Controller
         }
 
         if ($user->hasRole('Teacher')) {
-            $institutionId = $user->teacherUserDetails?->institution_id;
+            $institutionId = $user->teacherUserDetails?->institution_id
+                ?? currentInstitutionId()
+                ?? $user->active_institution_id;
             $query->where('institution_id', $institutionId ?? 0);
 
             return;

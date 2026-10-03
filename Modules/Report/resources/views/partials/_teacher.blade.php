@@ -473,8 +473,11 @@
                                         Enter Marks
                                     </flux:button>
                                 @endif
+                                <flux:button href="{{ route('student.index', ['class_id' => $allocation->class_id]) }}" wire:navigate.hover size="xs" variant="subtle" icon="users">
+                                    Learners
+                                </flux:button>
                                 <flux:button href="{{ route('attendance.register', ['classId' => $allocation->class_id]) }}" wire:navigate.hover size="xs" variant="subtle" icon="clipboard-document-check">
-                                    Register
+                                    Attendance
                                 </flux:button>
                             </div>
                         </div>

@@ -70,6 +70,79 @@
             </div>
         @endif
 
+        {{-- Teacher Role Contextual Action Banner --}}
+        @if (auth()->user()?->hasRole('Teacher'))
+            @php
+                $isHomeroomTeacher = (int) $schoolClass->class_teacher_id === (int) auth()->id();
+                $taughtSubjectsInClass = \Modules\Subject\Models\SubjectTeacher::where('teacher_id', auth()->id())
+                    ->where('class_id', $schoolClass->id)
+                    ->with('subject')
+                    ->get();
+                $isCbcClass = $schoolClass->curriculum?->isCbc() ?? false;
+            @endphp
+
+            @if ($isHomeroomTeacher)
+                <div class="rounded-2xl border border-emerald-300/80 bg-gradient-to-r from-emerald-50/90 via-white to-white dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                    <div class="flex items-center gap-3">
+                        <div class="size-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <flux:icon icon="star" class="size-5" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Your Homeroom Stream</span>
+                                <flux:badge size="sm" color="emerald" class="font-semibold">Supervising Teacher</flux:badge>
+                            </div>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">You have pastoral authority to conduct daily roll-call, review student rosters, and prepare reports for this stream.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <flux:button href="{{ route('attendance.register', ['classId' => $schoolClass->id]) }}" wire:navigate.hover variant="primary" icon="clipboard-document-check" size="sm" class="font-bold">
+                            Take Roll-Call
+                        </flux:button>
+                        <flux:button href="{{ route('student.index', ['class_id' => $schoolClass->id]) }}" wire:navigate.hover variant="subtle" icon="users" size="sm" class="font-semibold">
+                            Learners Roster
+                        </flux:button>
+                    </div>
+                </div>
+            @elseif ($taughtSubjectsInClass->isNotEmpty())
+                <div class="rounded-2xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/80 via-white to-white dark:from-indigo-950/20 dark:via-zinc-900 dark:to-zinc-900 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                    <div class="flex items-center gap-3">
+                        <div class="size-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <flux:icon icon="academic-cap" class="size-5" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-400">Subject Teaching Stream</span>
+                                <flux:badge size="sm" color="indigo" class="font-semibold">Subject Instructor</flux:badge>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                <span class="text-xs text-zinc-600 dark:text-zinc-400">You teach:</span>
+                                @foreach ($taughtSubjectsInClass as $alloc)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-950/40 text-violet-800 dark:text-violet-300">
+                                        {{ $alloc->subject?->name ?? 'Subject' }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        @if ($isCbcClass)
+                            <flux:button href="{{ route('assessment.formative', ['classId' => $schoolClass->id]) }}" wire:navigate.hover variant="primary" icon="sparkles" size="sm" class="font-bold">
+                                Record Assessment
+                            </flux:button>
+                        @else
+                            <flux:button href="{{ route('result.entry.classes') }}" wire:navigate.hover variant="primary" icon="table-cells" size="sm" class="font-bold">
+                                Enter Marks
+                            </flux:button>
+                        @endif
+                        <flux:button href="{{ route('student.index', ['class_id' => $schoolClass->id]) }}" wire:navigate.hover variant="subtle" icon="users" size="sm" class="font-semibold">
+                            Learners
+                        </flux:button>
+                    </div>
+                </div>
+            @endif
+        @endif
+
         {{-- Overview Metric Cards --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <x-kpi-card title="Class Teacher" icon="user" color="emerald" :count="$schoolClass->classTeacher?->name ?? 'Unassigned'"
