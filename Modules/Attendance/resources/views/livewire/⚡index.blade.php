@@ -11,6 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Modules\Attendance\Services\AttendanceLogQuery;
+use Modules\Attendance\Services\ClassAttendanceService;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 
@@ -46,6 +47,13 @@ new #[Title('Attendance Logs')] class extends Component
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view attendance'), 403);
+
+        if (auth()->user()->hasRole('Teacher') && empty($this->class_id)) {
+            $primaryClass = app(ClassAttendanceService::class)->resolveClassForUser(auth()->user());
+            if ($primaryClass) {
+                $this->class_id = (string) $primaryClass->id;
+            }
+        }
     }
 
     public function updated($property): void
@@ -160,7 +168,9 @@ new #[Title('Attendance Logs')] class extends Component
             return [];
         }
 
-        return SchoolClass::where('institution_id', $institutionId)->orderBy('name')->get()->all();
+        return app(ClassAttendanceService::class)
+            ->getSelectableClasses(auth()->user())
+            ->all();
     }
 
     #[Computed]
@@ -475,8 +485,12 @@ new #[Title('Attendance Logs')] class extends Component
 
                     <div class="w-full lg:w-44">
                         <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1 lg:hidden">Class</label>
-                        <flux:select wire:model.live="class_id" placeholder="All Classes" class="w-full">
-                            <flux:select.option value="">All Classes</flux:select.option>
+                        @php
+                            $isTeacher = auth()->user()->hasRole('Teacher');
+                            $defaultClassLabel = $isTeacher ? (count($classes) === 1 ? 'My Class' : 'All My Classes') : 'All Classes';
+                        @endphp
+                        <flux:select wire:model.live="class_id" :placeholder="$defaultClassLabel" class="w-full">
+                            <flux:select.option value="">{{ $defaultClassLabel }}</flux:select.option>
                             @foreach ($classes as $class)
                                 <flux:select.option value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
                             @endforeach

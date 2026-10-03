@@ -3,6 +3,7 @@
 namespace Modules\Attendance\Services;
 
 use App\Models\Devices;
+use App\Models\TeacherClasses;
 use App\Models\User;
 use App\Services\SmsService;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
@@ -71,7 +72,16 @@ class ClassAttendanceService
         $taughtClassIds = SubjectTeacher::where('teacher_id', $user->id)
             ->pluck('class_id');
 
-        $accessibleClassIds = $homeroomClassIds->concat($taughtClassIds)->filter()->unique()->values();
+        // Direct class assignments via teacher_classes pivot
+        $pivotClassIds = TeacherClasses::where('teacher_id', $user->id)
+            ->pluck('class_id');
+
+        $accessibleClassIds = $homeroomClassIds
+            ->concat($taughtClassIds)
+            ->concat($pivotClassIds)
+            ->filter()
+            ->unique()
+            ->values();
 
         return SchoolClass::whereIn('id', $accessibleClassIds)
             ->withCount('students')

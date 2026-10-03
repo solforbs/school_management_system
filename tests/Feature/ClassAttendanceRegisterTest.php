@@ -3,8 +3,11 @@
 use App\Models\Devices;
 use App\Models\User;
 use App\Services\SmsService;
+use Athwari\LaravelZktecoAdms\Enums\AttendanceStatus;
+use Athwari\LaravelZktecoAdms\Enums\VerifyMode;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Athwari\LaravelZktecoAdms\Models\ZktecoDevice;
+use Athwari\LaravelZktecoAdms\Models\ZktecoUser;
 use Carbon\Carbon;
 use Database\Seeders\PermissionSeeder;
 use Livewire\Livewire;
@@ -400,4 +403,99 @@ test('teacher can dispatch parent absence sms with custom message confirmation',
     $record = Attendance::where('student_id', $this->student3->id)->where('date', today())->first();
     expect($record)->not->toBeNull();
     expect($record->parent_notified)->toBeTrue();
+});
+
+test('teacher visiting attendance stream only sees accessible classes and their own learners', function () {
+    // Create another class not assigned to teacher
+    $otherClass = SchoolClass::create([
+        'institution_id' => $this->institution->id,
+        'curriculum_id' => $this->curriculum->id,
+        'name' => 'Grade 8 Beta',
+        'code' => 'G8B',
+        'capacity' => 45,
+    ]);
+
+    $otherStudent = User::factory()->create(['name' => 'Stranger Learner']);
+    $otherStudent->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $otherStudent->id,
+        'institution_id' => $this->institution->id,
+        'class_id' => $otherClass->id,
+        'admission_number' => 'ADM-OTHER-001',
+    ]);
+
+    // Setup biometric device and logs
+    $zkDevice = ZktecoDevice::create([
+        'serial_number' => 'DEV-STREAM-'.uniqid(),
+        'name' => 'Gate Scanner',
+        'status' => 'online',
+        'last_activity_at' => now(),
+        'timezone' => 'UTC',
+        'options' => [],
+    ]);
+    Devices::create([
+        'serial_number' => $zkDevice->serial_number,
+        'institution_id' => $this->institution->id,
+        'is_active' => true,
+        'zkteco_device_id' => $zkDevice->id,
+    ]);
+
+    ZktecoUser::create([
+        'pin' => (string) $this->student1->id,
+        'name' => $this->student1->name,
+        'app_user_id' => $this->student1->id,
+        'device_id' => $zkDevice->id,
+    ]);
+    ZktecoAttendanceLog::create([
+        'device_id' => $zkDevice->id,
+        'pin' => (string) $this->student1->id,
+        'status' => AttendanceStatus::CheckIn,
+        'verify_mode' => VerifyMode::Fingerprint,
+        'work_code' => '0',
+        'occurred_at' => now(),
+        'recorded_at' => now(),
+    ]);
+
+    ZktecoUser::create([
+        'pin' => (string) $otherStudent->id,
+        'name' => $otherStudent->name,
+        'app_user_id' => $otherStudent->id,
+        'device_id' => $zkDevice->id,
+    ]);
+    ZktecoAttendanceLog::create([
+        'device_id' => $zkDevice->id,
+        'pin' => (string) $otherStudent->id,
+        'status' => AttendanceStatus::CheckIn,
+        'verify_mode' => VerifyMode::Fingerprint,
+        'work_code' => '0',
+        'occurred_at' => now(),
+        'recorded_at' => now(),
+    ]);
+
+    $this->actingAs($this->teacher);
+
+    // Livewire test for Teacher
+    $component = Livewire::test('attendance::index');
+    $component->assertOk();
+
+    // Teacher sees their assigned class in dropdown, but not the unassigned class
+    $classesInComponent = collect($component->get('classes'))->pluck('name');
+    expect($classesInComponent)->toContain('Grade 6 Blue')
+        ->and($classesInComponent)->not->toContain('Grade 8 Beta');
+
+    // Teacher sees their student's log, but NOT other student's log
+    $component->assertSee($this->student1->name)
+        ->assertDontSee('Stranger Learner');
+
+    // Now test Director sees both classes and both students
+    $this->actingAs($this->director);
+    $directorComponent = Livewire::test('attendance::index');
+    $directorComponent->assertOk();
+
+    $directorClasses = collect($directorComponent->get('classes'))->pluck('name');
+    expect($directorClasses)->toContain('Grade 6 Blue')
+        ->and($directorClasses)->toContain('Grade 8 Beta');
+
+    $directorComponent->assertSee($this->student1->name)
+        ->assertSee('Stranger Learner');
 });

@@ -63,13 +63,13 @@ class AttendanceLogQuery
 
     /**
      * School staff - the roles that legitimately see every student's scan
-     * for their institution. Everyone else (a guardian, a student, or an
-     * account whose 'Parent' role was never set) is narrowed to specific
-     * students by visiblePins(), never handed the whole institution.
+     * for their institution (Director, Accountant, Admin). Teachers are scoped
+     * to their assigned classes (or children), while guardians and students
+     * are narrowed to specific children/themselves.
      */
     private static function isSchoolStaff(User $user): bool
     {
-        return $user->hasAnyRole(['Director', 'Accountant', 'Teacher']);
+        return $user->hasAnyRole(['Director', 'Accountant', 'SuperAdmin', 'Admin']);
     }
 
     /**
@@ -97,7 +97,11 @@ class AttendanceLogQuery
     public static function allowedInstitutionIds(User $user): Collection
     {
         if ($user->hasRole('Teacher')) {
-            return collect([$user->teacherUserDetails?->institution_id])->filter()->values();
+            $instId = $user->teacherUserDetails?->institution_id
+                ?? currentInstitution()?->id
+                ?? $user->active_institution_id;
+
+            return collect([$instId])->filter()->values();
         }
 
         if (self::isSchoolStaff($user)) {
@@ -127,10 +131,9 @@ class AttendanceLogQuery
 
     /**
      * Device PINs (== app User IDs) this user may see attendance for, or
-     * null when the user is school staff and so sees every student in the
-     * institution. A non-staff user is always scoped to the students they
-     * are attached to; if that set is empty they see nothing (an empty
-     * array), never everything.
+     * null when the user is school leadership and so sees every student in the
+     * institution. A teacher is scoped to students enrolled in their accessible
+     * classes (homeroom or taught), plus their own children if any.
      *
      * @return string[]|null
      */
@@ -138,6 +141,22 @@ class AttendanceLogQuery
     {
         if (self::isSchoolStaff($user)) {
             return null;
+        }
+
+        if ($user->hasRole('Teacher')) {
+            $accessibleClassIds = app(ClassAttendanceService::class)
+                ->getSelectableClasses($user)
+                ->pluck('id');
+
+            $classStudentPins = StudentDetails::whereIn('class_id', $accessibleClassIds)
+                ->pluck('student_id')
+                ->map(fn ($id) => (string) $id);
+
+            return $classStudentPins
+                ->concat(self::attachedStudentIds($user)->map(fn ($id) => (string) $id))
+                ->unique()
+                ->values()
+                ->all();
         }
 
         return self::attachedStudentIds($user)
