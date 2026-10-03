@@ -241,7 +241,7 @@ new #[Title('Class Attendance Register')] class extends Component
     }
 }; ?>
 
-<div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8">
 
     {{-- Breadcrumb & Navigation Tabs --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
@@ -262,29 +262,32 @@ new #[Title('Class Attendance Register')] class extends Component
         </div>
 
         {{-- Date Selector & Mode Switch --}}
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             {{-- Tab Switcher: Register vs Hardware Logs --}}
-            <div class="inline-flex rounded-xl bg-zinc-100 dark:bg-zinc-800 p-1 border border-zinc-200 dark:border-zinc-700">
-                <span class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs border border-zinc-200/80 dark:border-zinc-700/80">
+            <div class="inline-flex rounded-xl bg-zinc-100 dark:bg-zinc-800 p-1 border border-zinc-200 dark:border-zinc-700 w-full sm:w-auto justify-center sm:justify-start">
+                <span class="flex-1 sm:flex-none text-center px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs border border-zinc-200/80 dark:border-zinc-700/80">
                     Roll-Call Register
                 </span>
-                <a href="{{ route('attendance.index') }}" wire:navigate.hover class="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">
+                <a href="{{ route('attendance.index') }}" wire:navigate.hover class="flex-1 sm:flex-none text-center px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition">
                     Biometric Logs
                 </a>
             </div>
 
             {{-- Date display pill with date picker --}}
-            <div x-data="{ open: false }" class="relative">
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                    <flux:icon icon="calendar-days" class="size-4 text-zinc-400" />
-                    <span>{{ Carbon::parse($this->date)->format('l, j F Y') }}</span>
+            <div x-data="{ open: false }" class="relative w-full sm:w-auto">
+                <div class="flex items-center justify-between sm:justify-start gap-2 px-3 py-2 sm:py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                    <div class="flex items-center gap-2">
+                        <flux:icon icon="calendar-days" class="size-4 text-zinc-400 shrink-0" />
+                        <span class="sm:hidden">{{ Carbon::parse($this->date)->format('D, j M Y') }}</span>
+                        <span class="hidden sm:inline">{{ Carbon::parse($this->date)->format('l, j F Y') }}</span>
+                    </div>
                     <button type="button" @click="open = !open" class="text-blue-600 dark:text-blue-400 font-bold hover:underline ml-1 cursor-pointer">
                         Change date
                     </button>
                 </div>
-                <div x-show="open" @click.outside="open = false" x-cloak class="absolute right-0 mt-2 z-30 p-3 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div x-show="open" @click.outside="open = false" x-cloak class="absolute right-0 mt-2 z-30 p-3 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-800 space-y-2 w-full sm:w-auto">
                     <label class="block text-xs font-bold text-zinc-600 dark:text-zinc-300">Choose Date</label>
-                    <input type="date" wire:model.live="date" @change="open = false" max="{{ today()->toDateString() }}" class="px-2.5 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                    <input type="date" wire:model.live="date" @change="open = false" max="{{ today()->toDateString() }}" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
         </div>
@@ -292,14 +295,14 @@ new #[Title('Class Attendance Register')] class extends Component
 
     {{-- Class Selection Switcher --}}
     @if ($this->selectableClasses->count() > 1)
-        <div class="flex items-center gap-3 bg-zinc-50 dark:bg-zinc-900/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs">
-            <span class="font-bold text-zinc-600 dark:text-zinc-300 shrink-0">Switch Class:</span>
-            <div class="flex flex-wrap gap-2">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-zinc-50 dark:bg-zinc-900/60 p-3 sm:p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs">
+            <span class="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] sm:text-xs shrink-0">Switch Class:</span>
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
                 @foreach ($this->selectableClasses as $classOption)
                     <button type="button"
                         wire:click="$set('classId', {{ $classOption->id }})"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100' }}">
-                        {{ $classOption->name }} ({{ $classOption->students_count }} learners)
+                        class="flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100' }}">
+                        {{ $classOption->name }} <span class="opacity-80">({{ $classOption->students_count }})</span>
                     </button>
                 @endforeach
             </div>
@@ -393,8 +396,8 @@ new #[Title('Class Attendance Register')] class extends Component
             </div>
 
             {{-- Class Summary & Live KPI Bar --}}
-            <div class="rounded-2xl bg-white dark:bg-zinc-900 p-5 sm:p-6 border border-zinc-200/90 dark:border-zinc-800 shadow-xs">
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="rounded-2xl bg-white dark:bg-zinc-900 p-4 sm:p-6 border border-zinc-200/90 dark:border-zinc-800 shadow-xs">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
                     {{-- Class meta --}}
                     <div class="space-y-1">
                         <h2 class="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
@@ -407,50 +410,56 @@ new #[Title('Class Attendance Register')] class extends Component
                         </div>
                     </div>
 
-                    {{-- 3 Live Instant 0ms KPI Counters --}}
-                    <div class="grid grid-cols-3 gap-3 sm:gap-4 shrink-0">
+                    {{-- 3 Live Instant 0ms KPI Counters (2-col on mobile with Rate full-width, 3-col on tablet/desktop) --}}
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full lg:w-auto">
                         {{-- Present KPI --}}
-                        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40">
-                            <div class="size-10 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                                <flux:icon icon="users" class="size-5" />
+                        <div class="flex items-center gap-2.5 sm:gap-3 p-3 sm:px-4 sm:py-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 min-w-0">
+                            <div class="size-9 sm:size-10 rounded-lg bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <flux:icon icon="users" class="size-4 sm:size-5" />
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <span class="block text-xl sm:text-2xl font-black text-blue-900 dark:text-blue-100 leading-tight" x-text="presentCount">
                                     {{ $this->presentCount }}
                                 </span>
-                                <span class="text-xs font-semibold uppercase tracking-wider text-blue-700/80 dark:text-blue-300/80">
+                                <span class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-blue-700/80 dark:text-blue-300/80 truncate">
                                     Present
                                 </span>
                             </div>
                         </div>
 
                         {{-- Absent KPI --}}
-                        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40">
-                            <div class="size-10 rounded-lg bg-rose-600/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                                <flux:icon icon="user-minus" class="size-5" />
+                        <div class="flex items-center gap-2.5 sm:gap-3 p-3 sm:px-4 sm:py-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 min-w-0">
+                            <div class="size-9 sm:size-10 rounded-lg bg-rose-600/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                <flux:icon icon="user-minus" class="size-4 sm:size-5" />
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <span class="block text-xl sm:text-2xl font-black text-rose-900 dark:text-rose-100 leading-tight" x-text="absentCount">
                                     {{ $this->absentCount }}
                                 </span>
-                                <span class="text-xs font-semibold uppercase tracking-wider text-rose-700/80 dark:text-rose-300/80">
+                                <span class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-rose-700/80 dark:text-rose-300/80 truncate">
                                     Absent
                                 </span>
                             </div>
                         </div>
 
-                        {{-- Rate KPI --}}
-                        <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700">
-                            <div class="size-10 rounded-lg bg-zinc-200/60 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
-                                <span class="font-bold text-xs">%</span>
+                        {{-- Rate KPI (Full width on mobile with progress bar, 3rd column on tablet/desktop) --}}
+                        <div class="col-span-2 sm:col-span-1 flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 p-3 sm:px-4 sm:py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 min-w-0">
+                            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                                <div class="size-9 sm:size-10 rounded-lg bg-zinc-200/60 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 flex items-center justify-center shrink-0">
+                                    <span class="font-bold text-xs sm:text-sm">%</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="block text-xl sm:text-2xl font-black text-zinc-900 dark:text-white leading-tight" x-text="attendanceRate + '%'">
+                                        {{ $this->attendanceRate }}%
+                                    </span>
+                                    <span class="block text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
+                                        Attendance rate
+                                    </span>
+                                </div>
                             </div>
-                            <div>
-                                <span class="block text-xl sm:text-2xl font-black text-zinc-900 dark:text-white leading-tight" x-text="attendanceRate + '%'">
-                                    {{ $this->attendanceRate }}%
-                                </span>
-                                <span class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                                    Attendance rate
-                                </span>
+                            {{-- Mini rate progress bar on mobile --}}
+                            <div class="sm:hidden w-28 bg-zinc-200 dark:bg-zinc-700 rounded-full h-2 overflow-hidden shrink-0">
+                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" :style="'width: ' + attendanceRate + '%'"></div>
                             </div>
                         </div>
                     </div>
@@ -463,9 +472,9 @@ new #[Title('Class Attendance Register')] class extends Component
                 {{-- Left Section: Class Register Card (lg:col-span-8) --}}
                 <div class="lg:col-span-8 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 shadow-xs overflow-hidden">
                     {{-- Register Header & Instant Actions --}}
-                    <div class="px-5 py-4 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3 bg-zinc-50/50 dark:bg-zinc-800/30">
+                    <div class="px-4 sm:px-5 py-3.5 sm:py-4 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-2.5 bg-zinc-50/50 dark:bg-zinc-800/30">
                         <div class="flex items-center gap-2">
-                            <h3 class="text-base font-bold text-zinc-900 dark:text-white">
+                            <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
                                 Class register
                             </h3>
                             <span class="text-xs text-zinc-500 font-medium">
@@ -473,15 +482,16 @@ new #[Title('Class Attendance Register')] class extends Component
                             </span>
                         </div>
 
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 sm:gap-3">
                             <button type="button"
                                 @click="markAllPresent()"
                                 class="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 transition cursor-pointer">
                                 Mark all present
                             </button>
+                            <span class="text-zinc-300 dark:text-zinc-700">•</span>
                             <button type="button"
                                 @click="clearAll()"
-                                class="px-2.5 py-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer">
+                                class="px-2 py-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition cursor-pointer">
                                 Clear all
                             </button>
                         </div>
@@ -504,31 +514,37 @@ new #[Title('Class Attendance Register')] class extends Component
                             {{-- Left Column (Learners 1 to N/2) --}}
                             <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                                 {{-- Header --}}
-                                <div class="grid grid-cols-12 px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
-                                    <span class="col-span-1 text-center">#</span>
+                                <div class="grid grid-cols-12 px-3 sm:px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
+                                    <span class="col-span-1 text-center font-mono">#</span>
                                     <span class="col-span-7">Name</span>
-                                    <span class="col-span-2 text-center">Present</span>
-                                    <span class="col-span-2 text-center">Absent</span>
+                                    <span class="col-span-2 text-center flex items-center justify-center">
+                                        <span class="hidden sm:inline">Present</span>
+                                        <flux:icon icon="check" class="size-3.5 sm:hidden text-blue-600 stroke-[3]" />
+                                    </span>
+                                    <span class="col-span-2 text-center flex items-center justify-center">
+                                        <span class="hidden sm:inline">Absent</span>
+                                        <flux:icon icon="x-mark" class="size-3.5 sm:hidden text-rose-500 stroke-[3]" />
+                                    </span>
                                 </div>
 
                                 @foreach ($col1 as $student)
                                     @php $sId = (int) $student['student_id']; @endphp
-                                    <div class="grid grid-cols-12 items-center px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
+                                    <div class="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
                                         {{-- Number --}}
                                         <span class="col-span-1 text-xs text-zinc-400 font-mono text-center">
                                             {{ $student['index'] }}
                                         </span>
 
                                         {{-- Student Name & Indicators --}}
-                                        <div class="col-span-7 pr-2">
+                                        <div class="col-span-7 pr-1 sm:pr-2 min-w-0">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <span class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate">
                                                     {{ $student['name'] }}
                                                 </span>
                                                 @if ($student['has_gate_scan'])
-                                                    <span title="Gate check-in recorded at {{ $student['scanned_at'] }}" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60">
+                                                    <span title="Gate check-in recorded at {{ $student['scanned_at'] }}" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
                                                         <flux:icon icon="bolt" class="size-2.5 text-sky-500" />
-                                                        {{ $student['scanned_at'] }}
+                                                        <span>{{ $student['scanned_at'] }}</span>
                                                     </span>
                                                 @endif
                                             </div>
@@ -539,7 +555,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'present')"
                                                 :class="statuses[{{ $sId }}] === 'present' ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-blue-400 bg-white dark:bg-zinc-800'"
-                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none"
+                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} present">
                                                 <span x-show="statuses[{{ $sId }}] === 'present'" x-cloak>
                                                     <flux:icon icon="check" class="size-4 stroke-[3]" />
@@ -552,7 +568,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'absent')"
                                                 :class="statuses[{{ $sId }}] === 'absent' ? 'bg-rose-500 border-rose-500 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-rose-400 bg-white dark:bg-zinc-800'"
-                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none"
+                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} absent">
                                                 <span x-show="statuses[{{ $sId }}] === 'absent'" x-cloak>
                                                     <flux:icon icon="x-mark" class="size-4 stroke-[3]" />
@@ -566,31 +582,37 @@ new #[Title('Class Attendance Register')] class extends Component
                             {{-- Right Column (Learners N/2 + 1 to N) --}}
                             <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                                 {{-- Header --}}
-                                <div class="grid grid-cols-12 px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
-                                    <span class="col-span-1 text-center">#</span>
+                                <div class="grid grid-cols-12 px-3 sm:px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
+                                    <span class="col-span-1 text-center font-mono">#</span>
                                     <span class="col-span-7">Name</span>
-                                    <span class="col-span-2 text-center">Present</span>
-                                    <span class="col-span-2 text-center">Absent</span>
+                                    <span class="col-span-2 text-center flex items-center justify-center">
+                                        <span class="hidden sm:inline">Present</span>
+                                        <flux:icon icon="check" class="size-3.5 sm:hidden text-blue-600 stroke-[3]" />
+                                    </span>
+                                    <span class="col-span-2 text-center flex items-center justify-center">
+                                        <span class="hidden sm:inline">Absent</span>
+                                        <flux:icon icon="x-mark" class="size-3.5 sm:hidden text-rose-500 stroke-[3]" />
+                                    </span>
                                 </div>
 
                                 @foreach ($col2 as $student)
                                     @php $sId = (int) $student['student_id']; @endphp
-                                    <div class="grid grid-cols-12 items-center px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
+                                    <div class="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
                                         {{-- Number --}}
                                         <span class="col-span-1 text-xs text-zinc-400 font-mono text-center">
                                             {{ $student['index'] }}
                                         </span>
 
                                         {{-- Student Name & Indicators --}}
-                                        <div class="col-span-7 pr-2">
+                                        <div class="col-span-7 pr-1 sm:pr-2 min-w-0">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <span class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate">
                                                     {{ $student['name'] }}
                                                 </span>
                                                 @if ($student['has_gate_scan'])
-                                                    <span title="Gate check-in recorded at {{ $student['scanned_at'] }}" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60">
+                                                    <span title="Gate check-in recorded at {{ $student['scanned_at'] }}" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
                                                         <flux:icon icon="bolt" class="size-2.5 text-sky-500" />
-                                                        {{ $student['scanned_at'] }}
+                                                        <span>{{ $student['scanned_at'] }}</span>
                                                     </span>
                                                 @endif
                                             </div>
@@ -601,7 +623,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'present')"
                                                 :class="statuses[{{ $sId }}] === 'present' ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-blue-400 bg-white dark:bg-zinc-800'"
-                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none"
+                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} present">
                                                 <span x-show="statuses[{{ $sId }}] === 'present'" x-cloak>
                                                     <flux:icon icon="check" class="size-4 stroke-[3]" />
@@ -614,7 +636,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'absent')"
                                                 :class="statuses[{{ $sId }}] === 'absent' ? 'bg-rose-500 border-rose-500 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-rose-400 bg-white dark:bg-zinc-800'"
-                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none"
+                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} absent">
                                                 <span x-show="statuses[{{ $sId }}] === 'absent'" x-cloak>
                                                     <flux:icon icon="x-mark" class="size-4 stroke-[3]" />
@@ -727,6 +749,22 @@ new #[Title('Class Attendance Register')] class extends Component
                         </span>
                     </div>
                 </div>
+            </div>
+
+            {{-- Mobile Sticky Bottom Save Bar (Visible only on screens < lg) --}}
+            <div class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-zinc-200 dark:border-zinc-800 p-3 px-4 shadow-lg flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-xs font-semibold">
+                    <span class="text-blue-600 dark:text-blue-400 font-bold" x-text="presentCount + ' Present'">{{ $this->presentCount }} Present</span>
+                    <span class="text-zinc-300 dark:text-zinc-600">•</span>
+                    <span class="text-rose-600 dark:text-rose-400 font-bold" x-text="absentCount + ' Absent'">{{ $this->absentCount }} Absent</span>
+                </div>
+                <button type="button"
+                    @click="save()"
+                    :disabled="saving"
+                    class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                    <flux:icon icon="check" class="size-3.5 stroke-[3]" />
+                    <span x-text="saving ? 'Saving...' : 'Save attendance'">Save attendance</span>
+                </button>
             </div>
         </div>
     @endif
