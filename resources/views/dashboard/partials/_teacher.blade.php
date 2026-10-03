@@ -179,58 +179,40 @@
             </div>
         </x-kpi-card>
 
-        <x-kpi-card title="Attendance Today" icon="clock" color="emerald" :count="$stats['attendance_today_count']" href="{{ route('attendance.index') }}" subtext="biometric & lesson check-ins" />
-    </div>
-
-    {{-- 4. Quick Action Hub --}}
-    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4">
-        <div>
-            <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Academic Delivery Hub</h3>
-            <p class="text-xs text-zinc-400 mt-0.5">Quick access to daily teaching registers, CBC assessment scoring, and class rosters.</p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            @can('create examination')
-                <flux:button href="{{ route('assessment.formative') }}" wire:navigate.hover icon="sparkles" variant="primary" class="font-semibold text-xs shadow-sm">
-                    Record CBC Assessment
-                </flux:button>
-            @endcan
-
-            @can('create result')
-                <flux:button href="{{ route('assessment.band.entry') }}" wire:navigate.hover icon="check-badge" variant="subtle" class="font-semibold text-xs">
-                    CBC Band Entry
-                </flux:button>
-            @endcan
-
-            @can('view attendance')
-                <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover icon="clock" variant="subtle" class="font-semibold text-xs">
-                    Mark Attendance
-                </flux:button>
-            @endcan
-
-            @can('view student')
-                <flux:button href="{{ route('student.index') }}" wire:navigate.hover icon="users" variant="subtle" class="font-semibold text-xs">
-                    Student Roster
-                </flux:button>
-            @endcan
-
-            @can('view examination')
-                <flux:button href="{{ route('examinations.index') }}" wire:navigate.hover icon="pencil-square" variant="subtle" class="font-semibold text-xs">
-                    Examinations
-                </flux:button>
-            @endcan
-
-            @can('view reportcard')
-                <flux:button href="{{ route('reportcard.index') }}" wire:navigate.hover icon="document-chart-bar" variant="subtle" class="font-semibold text-xs">
-                    Report Cards
-                </flux:button>
-            @endcan
-
-            @can('view classes')
-                <flux:button href="{{ route('classes.index') }}" wire:navigate.hover icon="rectangle-group" variant="ghost" class="font-semibold text-xs">
-                    Classes & Streams
-                </flux:button>
-            @endcan
-        </div>
+        <x-kpi-card
+            title="Attendance Today"
+            icon="clock"
+            :color="($stats['rollcall_attendance_rate'] ?? null) !== null ? 'emerald' : (($stats['biometric_scans_today_count'] ?? 0) > 0 ? 'sky' : 'amber')"
+            :count="($stats['rollcall_attendance_rate'] ?? null) !== null ? ($stats['rollcall_attendance_rate'] . '%') : (($stats['biometric_scans_today_count'] ?? 0) > 0 ? $stats['biometric_scans_today_count'] : '0%')"
+            href="{{ route('attendance.index') }}"
+        >
+            <div class="flex flex-col gap-1 mt-1.5">
+                @if (($stats['rollcall_attendance_rate'] ?? null) !== null)
+                    <div class="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                        <span class="size-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        <span>Manual: <strong class="text-emerald-700 dark:text-emerald-400 font-bold">{{ $stats['rollcall_attendance_rate'] }}%</strong> ({{ $stats['rollcall_present_count'] ?? 0 }}/{{ $stats['rollcall_total_marked'] ?? 0 }} Present)</span>
+                    </div>
+                    <div class="text-[10.5px] font-medium {{ ($stats['biometric_scans_today_count'] ?? 0) > 0 ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-500 dark:text-zinc-400' }}">
+                        @if (($stats['biometric_scans_today_count'] ?? 0) > 0)
+                            ⚡ {{ $stats['biometric_scans_today_count'] }} biometric gate scans
+                        @else
+                            Biometric check-in not done today
+                        @endif
+                    </div>
+                @else
+                    <div class="text-[11px] font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                        <span class="size-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                        <span>Roll-call pending today</span>
+                    </div>
+                    <div class="text-[10.5px] font-medium text-zinc-500 dark:text-zinc-400">
+                        @if (($stats['biometric_scans_today_count'] ?? 0) > 0)
+                            ⚡ {{ $stats['biometric_scans_today_count'] }} biometric gate check-ins recorded
+                        @else
+                            Biometric check-in not done (0 check-ins)
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </x-kpi-card>
     </div>
 @endif

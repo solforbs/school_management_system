@@ -1,5 +1,6 @@
 @php
     $isAccountant = auth()->user()->hasRole('Accountant');
+    $isTeacher = auth()->user()->hasRole('Teacher');
 @endphp
 
 <div
@@ -26,6 +27,55 @@
                     Export Ledger
                 </flux:button>
             @endcan
+        @elseif ($isTeacher)
+            @can('create examination')
+                <flux:button href="{{ route('assessment.formative') }}" wire:navigate.hover icon="sparkles" variant="primary"
+                    class="font-semibold shadow-sm text-xs whitespace-nowrap shrink-0">
+                    Record Assessment
+                </flux:button>
+            @endcan
+
+            @can('create result')
+                <flux:button href="{{ route('assessment.band.entry') }}" wire:navigate.hover icon="check-badge"
+                    variant="subtle" class="font-semibold text-xs whitespace-nowrap shrink-0">
+                    CBC Bands
+                </flux:button>
+            @endcan
+
+            @can('view attendance')
+                <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover icon="clock" variant="subtle"
+                    class="font-semibold text-xs whitespace-nowrap shrink-0">
+                    Attendance
+                </flux:button>
+            @endcan
+
+            @can('view examination')
+                <flux:button href="{{ route('examinations.index') }}" wire:navigate.hover icon="pencil-square" variant="subtle"
+                    class="font-semibold text-xs whitespace-nowrap shrink-0">
+                    Examinations
+                </flux:button>
+            @endcan
+
+            @can('view reportcard')
+                <flux:button href="{{ route('reportcard.index') }}" wire:navigate.hover icon="document-chart-bar"
+                    variant="ghost" class="font-medium text-xs whitespace-nowrap shrink-0">
+                    Report Cards
+                </flux:button>
+            @endcan
+
+            @can('view classes')
+                <flux:button href="{{ route('classes.index') }}" wire:navigate.hover icon="rectangle-group"
+                    variant="ghost" class="font-medium text-xs whitespace-nowrap shrink-0">
+                    Classes
+                </flux:button>
+            @endcan
+
+            @can('create student')
+                <flux:button href="{{ route('student.create') }}" wire:navigate.hover icon="user-plus" variant="ghost"
+                    class="font-medium text-xs whitespace-nowrap shrink-0">
+                    Enroll Student
+                </flux:button>
+            @endcan
         @else
             @can('create student')
                 <flux:button href="{{ route('student.create') }}" wire:navigate.hover icon="user-plus" variant="primary"
@@ -42,7 +92,7 @@
             @endcan
 
             @can('view attendance')
-                <flux:button href="{{ route(auth()->user()->hasRole('Teacher') ? 'attendance.register' : 'attendance.index') }}" wire:navigate.hover icon="clock" variant="subtle"
+                <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover icon="clock" variant="subtle"
                     class="font-semibold text-xs whitespace-nowrap shrink-0">
                     Attendance
                 </flux:button>
