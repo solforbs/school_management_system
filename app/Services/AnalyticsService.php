@@ -11,6 +11,7 @@ use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Attendance\Models\Attendance;
 use Modules\Classes\Models\SchoolClass;
 use Modules\FeeManagement\Models\Fee;
 use Modules\Institution\Models\Institution;
@@ -357,17 +358,46 @@ class AnalyticsService
             ->selectRaw("SUM(CASE WHEN gender = 'male' THEN 1 ELSE 0 END) as male, SUM(CASE WHEN gender = 'female' THEN 1 ELSE 0 END) as female")
             ->first();
 
+        $todayDate = today()->toDateString();
+        $attendanceRecords = Attendance::whereIn('institution_id', $institutionIds)
+            ->whereDate('date', $todayDate)
+            ->get();
+
+        $attendancePresentCount = $attendanceRecords->whereIn('status', ['present', 'late'])->count();
+        $attendanceAbsentCount = $attendanceRecords->where('status', 'absent')->count();
+
+        $biometricScansTodayCount = ZktecoAttendanceLog::whereIn('device_id', $deviceIds)
+            ->whereDate('occurred_at', today())
+            ->pluck('pin')
+            ->unique()
+            ->count();
+
+        $presentToday = $attendanceRecords->isNotEmpty() ? $attendancePresentCount : $biometricScansTodayCount;
+        $totalClasses = SchoolClass::whereIn('institution_id', $institutionIds)->count();
+        $classesCompleted = $totalClasses > 0
+            ? Attendance::whereIn('institution_id', $institutionIds)
+                ->whereDate('date', $todayDate)
+                ->distinct('school_class_id')
+                ->count('school_class_id')
+            : 0;
+
+        $activeStudentsCount = (clone $studentQuery)->where('enrollment_status', 'active')->count();
+        $attendanceRate = $activeStudentsCount > 0 ? (int) round(($presentToday / $activeStudentsCount) * 100) : 0;
+
         return $stats + [
             'students_count' => (clone $studentQuery)->count(),
             'male_students_count' => (int) ($genderCounts->male ?? 0),
             'female_students_count' => (int) ($genderCounts->female ?? 0),
-            'active_students_count' => (clone $studentQuery)->where('enrollment_status', 'active')->count(),
+            'active_students_count' => $activeStudentsCount,
             'parents_count' => $institution?->parents()->count() ?? 0,
             'devices_count' => $devices->count(),
             'devices_online_count' => $devices->filter(fn (Devices $device) => $device->zktecoDevice?->isOnline())->count(),
-            'attendance_today_count' => ZktecoAttendanceLog::whereIn('device_id', $deviceIds)
-                ->whereDate('occurred_at', today())
-                ->count(),
+            'attendance_today_count' => $presentToday,
+            'attendance_absent_count' => $attendanceAbsentCount,
+            'attendance_rate_today' => $attendanceRate,
+            'classes_rollcall_total' => $totalClasses,
+            'classes_rollcall_completed' => $classesCompleted,
+            'biometric_scans_today_count' => $biometricScansTodayCount,
             'student_growth' => $this->monthlyCounts(clone $studentQuery),
             'enrollment_by_status' => (clone $studentQuery)
                 ->selectRaw('enrollment_status, COUNT(*) as total')

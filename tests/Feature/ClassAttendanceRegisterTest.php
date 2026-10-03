@@ -2,6 +2,7 @@
 
 use App\Models\Devices;
 use App\Models\User;
+use App\Services\SmsService;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Athwari\LaravelZktecoAdms\Models\ZktecoDevice;
 use Carbon\Carbon;
@@ -20,6 +21,7 @@ beforeEach(function () {
     $this->seed(PermissionSeeder::class);
 
     $this->director = User::factory()->create();
+    $this->director->assignRole('Director');
     $this->institution = Institution::create([
         'user_id' => $this->director->id,
         'name' => 'St. Kizito Primary',
@@ -29,6 +31,8 @@ beforeEach(function () {
         'status' => 'active',
         'is_approved' => true,
     ]);
+
+    $this->director->update(['active_institution_id' => $this->institution->id]);
 
     $this->curriculum = Curriculum::create([
         'institution_id' => $this->institution->id,
@@ -291,4 +295,109 @@ test('teacher who is not homeroom teacher but has subject allocations can access
     expect($record)->not->toBeNull();
     expect($record->status)->toBe('present');
     expect($record->source)->toBe('manual');
+});
+
+test('biometric logs page shows 0 percent rate instead of misleading 100 percent when zero logs exist', function () {
+    $this->actingAs($this->director);
+    session(['current_institution_id' => $this->institution->id]);
+
+    Livewire::test('attendance::index')
+        ->assertSee('Attendance Stream')
+        ->assertSee('0%')
+        ->assertDontSee('100%');
+});
+
+test('register displays biometric time window context banner when students scan at gate', function () {
+    $zkDevice = ZktecoDevice::create([
+        'serial_number' => 'SN-'.uniqid(),
+        'name' => 'Main Gate Scanner',
+        'ip_address' => '192.168.1.103',
+    ]);
+
+    Devices::create([
+        'institution_id' => $this->institution->id,
+        'serial_number' => $zkDevice->serial_number,
+        'zkteco_device_id' => $zkDevice->id,
+        'is_active' => true,
+    ]);
+
+    $today = Carbon::today();
+    // Student 1 scanned at 08:05 AM
+    ZktecoAttendanceLog::create([
+        'device_id' => $zkDevice->id,
+        'pin' => (string) $this->student1->id,
+        'recorded_at' => $today->copy()->setTime(8, 5),
+        'occurred_at' => $today->copy()->setTime(8, 5),
+        'status' => 0,
+        'verify_mode' => 1,
+    ]);
+
+    // Student 2 scanned at 08:45 AM
+    ZktecoAttendanceLog::create([
+        'device_id' => $zkDevice->id,
+        'pin' => (string) $this->student2->id,
+        'recorded_at' => $today->copy()->setTime(8, 45),
+        'occurred_at' => $today->copy()->setTime(8, 45),
+        'status' => 0,
+        'verify_mode' => 1,
+    ]);
+
+    $this->actingAs($this->teacher);
+
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->assertSee('Biometric Gate Check-Ins Detected')
+        ->assertSee('Main Gate Scanner')
+        ->assertSee('8:05 AM')
+        ->assertSee('8:45 AM')
+        ->assertSee('Homeroom Class Teacher (You)');
+});
+
+test('register displays manual roll-call notice when no biometric scans recorded today', function () {
+    $this->actingAs($this->teacher);
+
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->assertSee('No Biometric Scans Recorded Today')
+        ->assertSee('manual roll-call day')
+        ->assertSee('Mark All Present');
+});
+
+test('register displays recorded time and teacher name once roll-call is saved', function () {
+    $this->actingAs($this->teacher);
+
+    // Save attendance
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->call('markStatus', $this->student1->id, 'present')
+        ->call('markStatus', $this->student2->id, 'present')
+        ->call('markStatus', $this->student3->id, 'absent')
+        ->call('saveAttendance');
+
+    expect(Attendance::where('school_class_id', $this->schoolClass->id)->where('date', today())->count())->toBe(3);
+
+    // Reload component
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->assertSee('Class Roll-Call Already Recorded')
+        ->assertSee($this->teacher->name)
+        ->assertSee('Class Teacher');
+});
+
+test('teacher can dispatch parent absence sms with custom message confirmation', function () {
+    // Add guardian contact to student 3
+    StudentDetails::where('student_id', $this->student3->id)->update([
+        'guardian_name' => 'Kilonzo Mutiso',
+        'guardian_phone' => '0712345678',
+    ]);
+
+    $mockSms = Mockery::mock(SmsService::class);
+    $mockSms->shouldReceive('send')->once()->andReturn(['success' => true]);
+    $this->app->instance(SmsService::class, $mockSms);
+
+    $this->actingAs($this->teacher);
+
+    Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->call('markStatus', $this->student3->id, 'absent')
+        ->call('sendParentSms', $this->student3->id, 'Dear Kilonzo Mutiso, Mutiso Peter was absent today.');
+
+    $record = Attendance::where('student_id', $this->student3->id)->where('date', today())->first();
+    expect($record)->not->toBeNull();
+    expect($record->parent_notified)->toBeTrue();
 });

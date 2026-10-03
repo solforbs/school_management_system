@@ -313,7 +313,7 @@ new #[Title('Attendance Logs')] class extends Component
     $todayLogs = $this->todayLogs;
     $presentToday = $this->presentToday;
 
-    $attendanceRate = $todayLogs > 0 ? round(($presentToday / $todayLogs) * 100) : 100;
+    $attendanceRate = $todayLogs > 0 ? (int) round(($presentToday / $todayLogs) * 100) : 0;
 
     $canTakeAttendance = Route::has('attendance.register') && auth()->user()->can('view attendance');
     $canDelete = auth()->user()->can('delete attendance');
@@ -341,8 +341,7 @@ new #[Title('Attendance Logs')] class extends Component
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2">
-                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Attendance
-                    Stream</flux:heading>
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Attendance Stream</flux:heading>
                 <flux:badge size="sm" color="emerald" class="font-semibold">
                     <span class="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
                     Live Feed

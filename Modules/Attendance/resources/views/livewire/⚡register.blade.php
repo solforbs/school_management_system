@@ -85,7 +85,7 @@ new #[Title('Class Attendance Register')] class extends Component
 
         // Load existing notes for this class and date if available
         $existingNote = Attendance::where('school_class_id', $class->id)
-            ->where('date', Carbon::parse($this->date)->toDateString())
+            ->whereDate('date', Carbon::parse($this->date)->toDateString())
             ->whereNotNull('notes')
             ->value('notes');
 
@@ -239,6 +239,41 @@ new #[Title('Class Attendance Register')] class extends Component
         $this->showSuccessBanner = true;
         $this->successMessage = $msg;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    #[Computed]
+    public function registerMeta(): array
+    {
+        $class = $this->currentClass;
+        if (! $class) {
+            return [];
+        }
+
+        return app(ClassAttendanceService::class)->getRegisterMeta($class, $this->date, auth()->user());
+    }
+
+    public function sendParentSms(int $studentId, string $message): void
+    {
+        $class = $this->currentClass;
+        abort_unless($class, 404, 'No class selected');
+
+        $result = app(ClassAttendanceService::class)->dispatchParentAbsenceSms(
+            $studentId,
+            $class->id,
+            $this->date,
+            $message,
+            auth()->user()
+        );
+
+        if ($result['success']) {
+            $this->parentNotified[$studentId] = true;
+            \Flux\Flux::toast(text: $result['message'], variant: 'success');
+        } else {
+            \Flux\Flux::toast(text: $result['message'], variant: 'danger');
+        }
+    }
 }; ?>
 
 <div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 lg:pb-8">
@@ -293,21 +328,41 @@ new #[Title('Class Attendance Register')] class extends Component
         </div>
     </div>
 
-    {{-- Class Selection Switcher --}}
-    @if ($this->selectableClasses->count() > 1)
-        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-zinc-50 dark:bg-zinc-900/60 p-3 sm:p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs">
-            <span class="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] sm:text-xs shrink-0">Switch Class:</span>
-            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-                @foreach ($this->selectableClasses as $classOption)
-                    <button type="button"
-                        wire:click="$set('classId', {{ $classOption->id }})"
-                        class="flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100' }}">
-                        {{ $classOption->name }} <span class="opacity-80">({{ $classOption->students_count }})</span>
-                    </button>
-                @endforeach
+    {{-- Class Selection Switcher & Class Teacher Identification --}}
+    @php $meta = $this->registerMeta; @endphp
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-50 dark:bg-zinc-900/60 p-3 sm:p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs">
+        @if ($this->selectableClasses->count() > 1)
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <span class="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] sm:text-xs shrink-0">Switch Class:</span>
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                    @foreach ($this->selectableClasses as $classOption)
+                        <button type="button"
+                            wire:click="$set('classId', {{ $classOption->id }})"
+                            class="flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100' }}">
+                            {{ $classOption->name }} <span class="opacity-80">({{ $classOption->students_count }})</span>
+                        </button>
+                    @endforeach
+                </div>
             </div>
+        @else
+            <div></div>
+        @endif
+
+        {{-- Class Teacher Identification Badge --}}
+        <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-200/80 dark:border-zinc-800">
+            @if ($meta['is_current_user_class_teacher'] ?? false)
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs">
+                    <flux:icon icon="star" class="size-3.5 text-blue-600 dark:text-blue-400" />
+                    <span>Homeroom Class Teacher (You)</span>
+                </span>
+            @elseif (!empty($meta['class_teacher_name']))
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-zinc-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                    <flux:icon icon="user" class="size-3.5 text-zinc-400" />
+                    <span>Class Teacher: <strong class="text-zinc-900 dark:text-white font-semibold">{{ $meta['class_teacher_name'] }}</strong></span>
+                </span>
+            @endif
         </div>
-    @endif
+    </div>
 
     @if (! $this->currentClass)
         <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-12 text-center space-y-3">
@@ -360,6 +415,34 @@ new #[Title('Class Attendance Register')] class extends Component
             get attendanceRate() {
                 return this.totalCount > 0 ? Math.round((this.presentCount / this.totalCount) * 100) : 0;
             },
+            notifyModal: false,
+            notifyStudent: { student_id: null, name: '', admission_number: '', parent_name: '', parent_phone: '' },
+            notifyMessage: '',
+            notifySending: false,
+
+            openNotifyModal(student) {
+                this.notifyStudent = student;
+                const parent = student.parent_name || 'Parent/Guardian';
+                const school = '{{ addslashes(currentInstitution()?->name ?? 'Our School') }}';
+                const cls = '{{ addslashes($this->currentClass?->name ?? 'Class') }}';
+                const dt = '{{ Carbon::parse($this->date)->format('D, j M Y') }}';
+                this.notifyMessage = `Dear ${parent}, please be informed that ${student.name} (#${student.admission_number}) was marked absent from ${cls} today (${dt}). Please contact ${school} if you are unaware of this absence.`;
+                this.notifyModal = true;
+            },
+            async confirmSendSms() {
+                if (!this.notifyStudent.student_id || !this.notifyStudent.parent_phone) return;
+                this.notifySending = true;
+                try {
+                    await $wire.sendParentSms(this.notifyStudent.student_id, this.notifyMessage);
+                    this.notified[this.notifyStudent.student_id] = true;
+                    this.notifyModal = false;
+                } catch (e) {
+                    console.error('SMS send error:', e);
+                    alert('Unable to dispatch SMS: ' + (e?.message || 'Server error.'));
+                } finally {
+                    this.notifySending = false;
+                }
+            },
             async save() {
                 this.saving = true;
                 try {
@@ -394,6 +477,74 @@ new #[Title('Class Attendance Register')] class extends Component
                 </div>
                 <button type="button" @click="savedBanner = false; $wire.set('showSuccessBanner', false)" class="text-emerald-700 hover:text-emerald-900 text-sm font-bold cursor-pointer">×</button>
             </div>
+
+            {{-- Biometric vs Manual Intelligent Mode & Session Context Banner --}}
+            @if ($meta['is_saved'] ?? false)
+                <div class="rounded-2xl p-4 sm:p-5 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                    <div class="flex items-start gap-3">
+                        <div class="size-10 rounded-xl bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <flux:icon icon="check-circle" class="size-5" />
+                        </div>
+                        <div class="space-y-0.5">
+                            <h4 class="text-sm font-bold text-emerald-950 dark:text-white">
+                                Class Roll-Call Already Recorded
+                            </h4>
+                            <p class="text-xs text-emerald-700 dark:text-emerald-300">
+                                Roll-call completed at <strong>{{ $meta['saved_at'] }}</strong> by <strong>{{ $meta['saved_by_name'] }}</strong> ({{ $meta['saved_by_is_class_teacher'] ? 'Class Teacher' : 'Teacher' }}). {{ $meta['saved_present_count'] }} Present, {{ $meta['saved_absent_count'] }} Absent.
+                                @if ($meta['has_gate_scans'] ?? false)
+                                    Synced with {{ $meta['gate_scanned_count'] }} biometric gate check-in{{ $meta['gate_scanned_count'] === 1 ? '' : 's' }} ({{ $meta['gate_earliest_time'] }} – {{ $meta['gate_latest_time'] }}).
+                                @endif
+                                You can adjust any entries and re-save if needed.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @elseif ($meta['has_gate_scans'] ?? false)
+                <div class="rounded-2xl p-4 sm:p-5 bg-sky-50/80 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/60 text-sky-900 dark:text-sky-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                    <div class="flex items-start gap-3">
+                        <div class="size-10 rounded-xl bg-sky-600/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <flux:icon icon="bolt" class="size-5" />
+                        </div>
+                        <div class="space-y-0.5">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h4 class="text-sm font-bold text-sky-950 dark:text-white">
+                                    Biometric Gate Check-Ins Detected
+                                </h4>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">
+                                    {{ $meta['gate_scanned_count'] }} of {{ $totalCount }} Checked In
+                                </span>
+                            </div>
+                            <p class="text-xs text-sky-700 dark:text-sky-300">
+                                Student attendance recorded using biometrics between <strong>{{ $meta['gate_earliest_time'] }}</strong> and <strong>{{ $meta['gate_latest_time'] }}</strong> through <strong>{{ $meta['gate_device_name'] }}</strong>. Verified learners are pre-ticked below. Confirm this attendance and adjust any absentees.
+                            </p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-700 text-xs font-bold shadow-2xs whitespace-nowrap shrink-0">
+                        <flux:icon icon="check" class="size-3.5 text-sky-600 stroke-[3]" />
+                        Pre-ticked · Confirm & Save
+                    </span>
+                </div>
+            @else
+                <div class="rounded-2xl p-4 sm:p-5 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                    <div class="flex items-start gap-3">
+                        <div class="size-10 rounded-xl bg-amber-600/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <flux:icon icon="exclamation-triangle" class="size-5" />
+                        </div>
+                        <div class="space-y-0.5">
+                            <h4 class="text-sm font-bold text-amber-950 dark:text-white">
+                                No Biometric Scans Recorded Today
+                            </h4>
+                            <p class="text-xs text-amber-700 dark:text-amber-300">
+                                No gate check-ins recorded for this class on {{ Carbon::parse($this->date)->format('D, j M Y') }} (device offline, disconnected, or manual roll-call day). Please call out names and tick learners present manually below.
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="markAllPresent()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700 text-xs font-bold shadow-2xs hover:bg-amber-50 dark:hover:bg-zinc-700 transition cursor-pointer shrink-0">
+                        <flux:icon icon="check" class="size-3.5 text-amber-600 stroke-[3]" />
+                        Mark All Present
+                    </button>
+                </div>
+            @endif
 
             {{-- Class Summary & Live KPI Bar --}}
             <div class="rounded-2xl bg-white dark:bg-zinc-900 p-4 sm:p-6 border border-zinc-200/90 dark:border-zinc-800 shadow-xs">
@@ -673,32 +824,40 @@ new #[Title('Class Attendance Register')] class extends Component
                         {{-- Dynamic Absentee Rows --}}
                         <div x-show="absentCount > 0" class="divide-y divide-zinc-100 dark:divide-zinc-800 space-y-2">
                             @foreach ($students as $absentee)
-                                @php $aId = (int) $absentee['student_id']; @endphp
-                                <div x-show="statuses[{{ $aId }}] === 'absent'" x-cloak class="pt-2 flex items-center justify-between gap-2">
+                                @php
+                                    $aId = (int) $absentee['student_id'];
+                                    $hasPhone = !empty($absentee['parent_phone']);
+                                @endphp
+                                <div x-show="statuses[{{ $aId }}] === 'absent'" x-cloak class="pt-2.5 pb-1 flex items-center justify-between gap-3">
                                     <div class="min-w-0">
                                         <p class="text-xs font-bold text-zinc-900 dark:text-white truncate">
                                             {{ $absentee['name'] }}
                                         </p>
-                                        <p class="text-[11px] text-zinc-400 font-mono">
-                                            #{{ $absentee['admission_number'] }}
-                                        </p>
+                                        <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                                            <span class="font-mono">#{{ $absentee['admission_number'] }}</span>
+                                            @if($hasPhone)
+                                                <span>•</span>
+                                                <span class="text-zinc-500 font-mono text-[10px]">{{ $absentee['parent_phone'] }}</span>
+                                            @endif
+                                        </div>
                                     </div>
 
-                                    {{-- Instant Parent Notified Switch --}}
-                                    <div class="flex items-center gap-2 shrink-0">
-                                        <span class="text-[11px] text-zinc-500 font-medium">Parent notified</span>
-                                        <button type="button"
-                                            @click="toggleNotified({{ $aId }})"
-                                            :class="notified[{{ $aId }}] ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700'"
-                                            class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden"
-                                            role="switch"
-                                            :aria-checked="notified[{{ $aId }}] ? 'true' : 'false'">
-                                            <span class="sr-only">Toggle notification for parent</span>
-                                            <span aria-hidden="true"
-                                                :class="notified[{{ $aId }}] ? 'translate-x-4' : 'translate-x-0'"
-                                                class="pointer-events-none inline-block size-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out">
+                                    {{-- Notify Action Button with Confirmation Modal --}}
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        <template x-if="notified[{{ $aId }}]">
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                <flux:icon icon="check" class="size-3 stroke-[3]" />
+                                                Notified
                                             </span>
-                                        </button>
+                                        </template>
+                                        <template x-if="!notified[{{ $aId }}]">
+                                            <button type="button"
+                                                @click="openNotifyModal({{ json_encode($absentee) }})"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800 transition cursor-pointer">
+                                                <flux:icon icon="chat-bubble-left-ellipsis" class="size-3.5" />
+                                                <span>Notify Parent</span>
+                                            </button>
+                                        </template>
                                     </div>
                                 </div>
                             @endforeach
@@ -765,6 +924,116 @@ new #[Title('Class Attendance Register')] class extends Component
                     <flux:icon icon="check" class="size-3.5 stroke-[3]" />
                     <span x-text="saving ? 'Saving...' : 'Save attendance'">Save attendance</span>
                 </button>
+            </div>
+
+            {{-- Parent Absence Notification Preview & Confirmation Modal --}}
+            <div x-show="notifyModal" x-cloak
+                class="fixed inset-0 z-50 overflow-y-auto"
+                aria-labelledby="notify-modal-title" role="dialog" aria-modal="true">
+                {{-- Backdrop --}}
+                <div class="fixed inset-0 bg-zinc-900/60 backdrop-blur-xs transition-opacity"
+                    @click="if(!notifySending) notifyModal = false"></div>
+
+                <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                    <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-zinc-900 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-zinc-200 dark:border-zinc-800 p-6 space-y-5"
+                        @click.outside="if(!notifySending) notifyModal = false">
+
+                        {{-- Header --}}
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="size-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                    <flux:icon icon="chat-bubble-left-ellipsis" class="size-5" />
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-zinc-900 dark:text-white" id="notify-modal-title">
+                                        Parent Absence Notification
+                                    </h3>
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                        Review and confirm SMS before dispatching
+                                    </p>
+                                </div>
+                            </div>
+                            <button type="button" @click="if(!notifySending) notifyModal = false"
+                                class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-lg">
+                                <flux:icon icon="x-mark" class="size-5" />
+                            </button>
+                        </div>
+
+                        {{-- Recipient Card --}}
+                        <div class="rounded-xl p-3.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-zinc-500 font-medium">Student:</span>
+                                <span class="font-bold text-zinc-900 dark:text-white" x-text="notifyStudent.name + ' (#' + notifyStudent.admission_number + ')'"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-zinc-500 font-medium">Parent / Guardian:</span>
+                                <span class="font-bold text-zinc-900 dark:text-white" x-text="notifyStudent.parent_name || 'Primary Guardian'"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-zinc-500 font-medium">Recipient Phone:</span>
+                                <template x-if="notifyStudent.parent_phone">
+                                    <span class="font-mono font-bold text-blue-600 dark:text-blue-400" x-text="notifyStudent.parent_phone"></span>
+                                </template>
+                                <template x-if="!notifyStudent.parent_phone">
+                                    <span class="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                        <flux:icon icon="exclamation-triangle" class="size-3.5" />
+                                        No phone number on file
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+
+                        {{-- Warning if no phone --}}
+                        <div x-show="!notifyStudent.parent_phone" class="rounded-xl p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300">
+                            This student has no parent or guardian phone number registered in their profile. Please update the student record before sending SMS.
+                        </div>
+
+                        {{-- Message Preview & Edit --}}
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label for="sms-preview-message" class="text-xs font-bold text-zinc-900 dark:text-white">
+                                    SMS Message Content
+                                </label>
+                                <span class="text-[11px] text-zinc-400 font-mono" x-text="(notifyMessage?.length || 0) + ' chars · ' + Math.max(1, Math.ceil((notifyMessage?.length || 0) / 160)) + ' SMS'"></span>
+                            </div>
+                            <textarea id="sms-preview-message"
+                                x-model="notifyMessage"
+                                rows="4"
+                                :disabled="notifySending || !notifyStudent.parent_phone"
+                                class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-3 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"></textarea>
+                            <p class="text-[11px] text-zinc-500 dark:text-zinc-400">
+                                You can customize the wording above. Standard SMS rates apply.
+                            </p>
+                        </div>
+
+                        {{-- Action Buttons --}}
+                        <div class="flex items-center justify-end gap-3 pt-2">
+                            <button type="button"
+                                @click="if(!notifySending) notifyModal = false"
+                                :disabled="notifySending"
+                                class="px-4 py-2 rounded-xl text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition cursor-pointer disabled:opacity-50">
+                                Cancel
+                            </button>
+
+                            <button type="button"
+                                @click="confirmSendSms()"
+                                :disabled="notifySending || !notifyStudent.parent_phone"
+                                class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!notifySending" class="flex items-center gap-1.5">
+                                    <flux:icon icon="paper-airplane" class="size-3.5" />
+                                    <span>Confirm & Send SMS</span>
+                                </span>
+                                <span x-show="notifySending" x-cloak class="flex items-center gap-1.5">
+                                    <svg class="animate-spin size-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Sending SMS...</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     @endif

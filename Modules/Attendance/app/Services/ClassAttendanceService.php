@@ -4,6 +4,7 @@ namespace Modules\Attendance\Services;
 
 use App\Models\Devices;
 use App\Models\User;
+use App\Services\SmsService;
 use Athwari\LaravelZktecoAdms\Models\ZktecoAttendanceLog;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -105,7 +106,7 @@ class ClassAttendanceService
         // 2. Fetch existing saved Attendance records for this class and date
         $existingRecords = Attendance::query()
             ->where('school_class_id', $class->id)
-            ->where('date', $parsedDate)
+            ->whereDate('date', $parsedDate)
             ->whereIn('student_id', $studentUserIds)
             ->with('device')
             ->get()
@@ -169,6 +170,8 @@ class ClassAttendanceService
                 'student_id' => $userId,
                 'name' => $user?->name ?? 'Learner #'.$detail->id,
                 'admission_number' => $detail->admission_number ?? $detail->student_number ?? '—',
+                'parent_name' => $detail->parent_name ?? $detail->guardian_name ?? 'Parent/Guardian',
+                'parent_phone' => $detail->parent_phone ?? $detail->guardian_phone ?? null,
                 'status' => $status, // 'present' | 'absent' | null
                 'source' => $source, // 'biometric' | 'manual' | 'verified' | 'override' | null
                 'parent_notified' => $parentNotified,
@@ -262,5 +265,135 @@ class ClassAttendanceService
                 );
             }
         });
+    }
+
+    /**
+     * Get real-time biometric and roll-call session metadata for the register view.
+     *
+     * @return array<string, mixed>
+     */
+    public function getRegisterMeta(SchoolClass $class, string $date, ?User $viewer = null): array
+    {
+        $parsedDate = Carbon::parse($date)->toDateString();
+        $viewer ??= auth()->user();
+
+        // Class teacher check
+        $classTeacher = $class->classTeacher;
+        $isClassTeacher = $viewer && ((int) $class->class_teacher_id === (int) $viewer->id);
+
+        // Biometric device check for this institution
+        $deviceIds = Devices::where('institution_id', $class->institution_id)
+            ->whereNotNull('zkteco_device_id')
+            ->pluck('zkteco_device_id');
+
+        // Check active enrolled students in this class
+        $studentUserIds = StudentDetails::where('class_id', $class->id)
+            ->where('is_active', true)
+            ->pluck('student_id')
+            ->filter();
+
+        $gateLogs = collect();
+        if ($deviceIds->isNotEmpty() && $studentUserIds->isNotEmpty()) {
+            $gateLogs = ZktecoAttendanceLog::query()
+                ->whereIn('device_id', $deviceIds)
+                ->whereIn('pin', $studentUserIds->map(fn ($id) => (string) $id))
+                ->whereDate('occurred_at', $parsedDate)
+                ->with('device')
+                ->orderBy('occurred_at')
+                ->get();
+        }
+
+        $earliestTime = null;
+        $latestTime = null;
+        $deviceName = null;
+
+        if ($gateLogs->isNotEmpty()) {
+            $firstLog = $gateLogs->first();
+            $lastLog = $gateLogs->last();
+            $earliestTime = $firstLog?->occurred_at?->format('g:i A');
+            $latestTime = $lastLog?->occurred_at?->format('g:i A');
+            $deviceName = $firstLog?->device?->name ?? $firstLog?->device?->serial_number ?? 'Main Gate Terminal';
+        }
+
+        // Saved roll-call status check
+        $savedRecords = Attendance::where('school_class_id', $class->id)
+            ->whereDate('date', $parsedDate)
+            ->with('recorder')
+            ->get();
+
+        $isSaved = $savedRecords->isNotEmpty();
+        $savedAt = null;
+        $savedByName = null;
+        $savedByIsClassTeacher = false;
+        $savedPresentCount = 0;
+        $savedAbsentCount = 0;
+
+        if ($isSaved) {
+            $firstSaved = $savedRecords->first();
+            $savedAt = $firstSaved?->updated_at?->format('g:i A') ?? $firstSaved?->created_at?->format('g:i A');
+            $savedByName = $firstSaved?->recorder?->name ?? 'Staff';
+            $savedByIsClassTeacher = ((int) $firstSaved?->recorded_by === (int) $class->class_teacher_id);
+            $savedPresentCount = $savedRecords->whereIn('status', ['present', 'late'])->count();
+            $savedAbsentCount = $savedRecords->where('status', 'absent')->count();
+        }
+
+        return [
+            'class_name' => $class->name,
+            'class_teacher_name' => $classTeacher?->name,
+            'is_current_user_class_teacher' => $isClassTeacher,
+            'has_gate_scans' => $gateLogs->isNotEmpty(),
+            'gate_scanned_count' => $gateLogs->pluck('pin')->unique()->count(),
+            'gate_earliest_time' => $earliestTime,
+            'gate_latest_time' => $latestTime,
+            'gate_device_name' => $deviceName,
+            'is_saved' => $isSaved,
+            'saved_at' => $savedAt,
+            'saved_by_name' => $savedByName,
+            'saved_by_is_class_teacher' => $savedByIsClassTeacher,
+            'saved_present_count' => $savedPresentCount,
+            'saved_absent_count' => $savedAbsentCount,
+        ];
+    }
+
+    /**
+     * Dispatch an SMS absence notice to a parent after explicit confirmation.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function dispatchParentAbsenceSms(int $studentId, int $classId, string $date, string $customMessage, User $sender): array
+    {
+        $studentDetail = StudentDetails::where('student_id', $studentId)->first();
+        if (! $studentDetail) {
+            return ['success' => false, 'message' => 'Student record not found.'];
+        }
+
+        $phone = $studentDetail->parent_phone ?? $studentDetail->guardian_phone;
+        if (! $phone) {
+            return ['success' => false, 'message' => 'No parent or guardian phone number on file for this learner.'];
+        }
+
+        $smsService = app(SmsService::class);
+        $result = $smsService->send((int) preg_replace('/\D/', '', $phone), $customMessage);
+
+        if (! empty($result['success'])) {
+            Attendance::updateOrCreate(
+                [
+                    'institution_id' => $sender->institution_id ?? $studentDetail->institution_id,
+                    'school_class_id' => $classId,
+                    'student_id' => $studentId,
+                    'date' => Carbon::parse($date)->toDateString(),
+                ],
+                [
+                    'status' => 'absent',
+                    'source' => 'manual',
+                    'parent_notified' => true,
+                    'recorded_by' => $sender->id,
+                ]
+            );
+
+            return ['success' => true, 'message' => 'Absence notice sent to '.$phone];
+        }
+
+        return ['success' => false, 'message' => $result['error'] ?? 'SMS dispatch failed.'];
     }
 }

@@ -82,7 +82,13 @@
             <x-kpi-card title="Registered Parents" icon="users" color="indigo" :count="$stats['parents_count']"
                 href="{{ route('parent.index') }}" subtext="guardian contact accounts" />
             <x-kpi-card title="Attendance Today" icon="clock" color="emerald" :count="$stats['attendance_today_count']"
-                href="{{ route('attendance.index') }}" subtext="biometric check-ins" />
+                href="{{ route('attendance.register') }}">
+                <div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
+                    <span>{{ $stats['attendance_rate_today'] ?? 0 }}% rate</span>
+                    <span>•</span>
+                    <span>{{ $stats['classes_rollcall_completed'] ?? 0 }}/{{ $stats['classes_rollcall_total'] ?? 0 }} classes marked</span>
+                </div>
+            </x-kpi-card>
             <x-kpi-card title="Outstanding Fees" icon="banknotes" color="rose"
                 count="KES {{ $currency($stats['fees_outstanding']) }}"
                 href="{{ route('feemanagement.index', ['status' => 'overdue']) }}">
