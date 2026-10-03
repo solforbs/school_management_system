@@ -238,16 +238,16 @@
                     @endif
 
                     {{-- Action Footer --}}
-                    <div class="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3">
+                    <div class="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div class="text-xs text-zinc-500 dark:text-zinc-400">
                             Classes completed: <strong class="text-zinc-800 dark:text-zinc-200">{{ $stats['classes_completed_count'] }} of {{ $stats['classes_total_count'] }}</strong>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover size="sm" variant="subtle" icon="clock">
-                                Biometric Stream
+                        <div class="grid grid-cols-2 sm:flex items-center gap-2">
+                            <flux:button href="{{ route('attendance.index') }}" wire:navigate.hover size="sm" variant="subtle" icon="clock" class="justify-center text-xs">
+                                Gate Logs
                             </flux:button>
-                            <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover size="sm" variant="filled" icon="clipboard-document-check">
-                                Open Roll-Call Register
+                            <flux:button href="{{ route('attendance.register') }}" wire:navigate.hover size="sm" variant="filled" icon="clipboard-document-check" class="justify-center text-xs">
+                                Roll-Call
                             </flux:button>
                         </div>
                     </div>
@@ -490,8 +490,8 @@
         {{-- 5. Recent Classroom Assessments & Sittings --}}
         @if (!empty($stats['recent_assessments']) && count($stats['recent_assessments']) > 0)
             <div class="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                    <div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <div class="min-w-0">
                         <flux:heading size="lg" class="font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                             <flux:icon icon="clipboard-document-list" class="size-5 text-emerald-600 dark:text-emerald-400" />
                             <span>Recent Assessments &amp; Sittings</span>
@@ -501,33 +501,29 @@
                         </flux:text>
                     </div>
                     @if (Route::has('assessment.formative'))
-                        <flux:button href="{{ route('assessment.formative') }}" wire:navigate.hover size="sm" variant="filled" icon="plus">
-                            New Formative Task
+                        <flux:button href="{{ route('assessment.formative') }}" wire:navigate.hover size="sm" variant="filled" icon="plus" class="w-full sm:w-auto justify-center shrink-0">
+                            New Task
                         </flux:button>
                     @endif
                 </div>
 
                 <div class="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
                     @foreach ($stats['recent_assessments'] as $assessment)
-                        <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-sm text-zinc-900 dark:text-white">{{ $assessment['title'] }}</span>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                        <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                            <div class="min-w-0">
+                                <div class="font-bold text-sm text-zinc-900 dark:text-white break-words">{{ $assessment['title'] }}</div>
+                                <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 whitespace-nowrap">
                                         {{ $assessment['category_label'] }}
                                     </span>
-                                </div>
-                                <div class="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2 mt-0.5">
-                                    <span>{{ $assessment['class_name'] }}</span>
+                                    <span class="whitespace-nowrap font-medium text-zinc-700 dark:text-zinc-300">{{ $assessment['class_name'] }}</span>
                                     @if ($assessment['term'])
-                                        <span>&bull;</span>
-                                        <span>{{ $assessment['term'] }}</span>
+                                        <span class="whitespace-nowrap">{{ $assessment['term'] }}</span>
                                     @endif
-                                    <span>&bull;</span>
-                                    <span>Created {{ $assessment['created_at'] }}</span>
+                                    <span class="whitespace-nowrap">{{ $assessment['created_at'] }}</span>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="grid grid-cols-2 sm:flex items-center gap-2 shrink-0">
                                 @if (Route::has('assessment.band.entry'))
                                     <flux:button href="{{ route('assessment.band.entry') }}" wire:navigate.hover size="xs" variant="outline">
                                         Grade Bands
