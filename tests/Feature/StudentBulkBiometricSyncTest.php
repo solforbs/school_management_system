@@ -343,3 +343,47 @@ test('Enrolled roster Excel Bulk Edit mode validates duplicate admission numbers
     expect($errors[$details->id])->toHaveKey('admission_number');
     expect($details->fresh()->admission_number)->toBe('ADM-ORIGINAL');
 });
+
+test('Enrolled roster allows direct in-place field editing without action buttons', function () {
+    [$director, $institution, $device, $class, $zkDevice] = createBulkSyncEnvironment();
+
+    $student = User::factory()->create(['name' => 'Initial Student Name', 'zkteco_synced' => false]);
+    $student->assignRole('Student');
+    $details = StudentDetails::create([
+        'student_id' => $student->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'ADM-INPLACE-1',
+        'student_number' => 'UPI-INPLACE-1',
+        'gender' => 'male',
+        'guardian_name' => 'Initial Guardian',
+        'guardian_phone' => '0700000000',
+    ]);
+
+    $this->actingAs($director);
+
+    $component = Livewire::test('student::upload')
+        ->set('selectedClassId', $class->id)
+        ->set('syncToBiometrics', true);
+
+    // Update guardian name directly
+    $component->call('updateEnrolledField', $details->id, 'guardian_name', 'Fatima Zahra');
+    expect($details->fresh()->guardian_name)->toBe('Fatima Zahra');
+
+    // Update guardian phone directly
+    $component->call('updateEnrolledField', $details->id, 'guardian_phone', '0712999888');
+    expect($details->fresh()->guardian_phone)->toBe('0712999888');
+
+    // Update admission number directly
+    $component->call('updateEnrolledField', $details->id, 'admission_number', 'ADM-NEW-777');
+    expect($details->fresh()->admission_number)->toBe('ADM-NEW-777');
+
+    // Update gender directly
+    $component->call('updateEnrolledField', $details->id, 'gender', 'female');
+    expect($details->fresh()->gender)->toBe('female');
+
+    // Update student name directly (triggers biometric sync if enabled)
+    $component->call('updateEnrolledField', $details->id, 'name', 'Fatima Mohamed');
+    expect($student->fresh()->name)->toBe('Fatima Mohamed');
+    expect($student->fresh()->zkteco_synced)->toBeTrue();
+});

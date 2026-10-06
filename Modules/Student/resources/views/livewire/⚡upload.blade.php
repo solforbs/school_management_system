@@ -394,6 +394,77 @@ new #[Title('Upload Student Records')] class extends Component
         }));
     }
 
+    public function updateEnrolledField(int $studentDetailsId, string $field, ?string $value): void
+    {
+        abort_unless(auth()->user()->can('edit student') || auth()->user()->can('create student'), 403);
+
+        $institutionId = currentInstitutionId();
+        $student = StudentDetails::where('id', $studentDetailsId)
+            ->where('institution_id', $institutionId)
+            ->with('student')
+            ->first();
+
+        if (! $student) {
+            return;
+        }
+
+        $value = trim($value ?? '');
+
+        if ($field === 'name') {
+            if ($value === '') {
+                Flux::toast(text: 'Student name cannot be empty.', variant: 'danger');
+
+                return;
+            }
+            $student->student?->update(['name' => $value]);
+        } elseif ($field === 'admission_number') {
+            if ($value !== '') {
+                $exists = StudentDetails::where('institution_id', $institutionId)
+                    ->where('admission_number', $value)
+                    ->where('id', '!=', $student->id)
+                    ->exists();
+
+                if ($exists) {
+                    Flux::toast(text: "Admission number '{$value}' is already used by another student.", variant: 'danger');
+
+                    return;
+                }
+            }
+            $student->update(['admission_number' => $value ?: null]);
+        } elseif ($field === 'student_number') {
+            if ($value !== '') {
+                $exists = StudentDetails::where('institution_id', $institutionId)
+                    ->where('student_number', $value)
+                    ->where('id', '!=', $student->id)
+                    ->exists();
+
+                if ($exists) {
+                    Flux::toast(text: "Student ID '{$value}' is already used by another student.", variant: 'danger');
+
+                    return;
+                }
+            }
+            $student->update(['student_number' => $value ?: null]);
+        } elseif ($field === 'gender') {
+            $genderVal = in_array(strtolower($value), ['male', 'female', 'other'], true) ? strtolower($value) : null;
+            $student->update(['gender' => $genderVal]);
+        } elseif ($field === 'guardian_name') {
+            $student->update(['guardian_name' => $value ?: null]);
+        } elseif ($field === 'guardian_phone') {
+            $student->update(['guardian_phone' => $value ?: null]);
+        }
+
+        if ($this->syncToBiometrics && $student->student_id && in_array($field, ['name', 'admission_number', 'student_number'], true)) {
+            app(ZKTecoUserSyncService::class)->bulkSyncStudents(
+                [$student->student_id],
+                $institutionId,
+                force: true
+            );
+        }
+
+        Flux::toast(text: 'Updated '.$student->student?->name.'.', variant: 'success');
+    }
+
     public function startRosterEditMode(?string $focusRowId = null): void
     {
         abort_unless(auth()->user()->can('edit student') || auth()->user()->can('create student'), 403);
@@ -989,17 +1060,18 @@ new #[Title('Upload Student Records')] class extends Component
     @if ($activeTab === 'grid')
 
         {{-- Enrolled Roster Accordion (Open by default, hides only on user click) --}}
-        @if ($this->selectedClass && ($this->classRoster->isNotEmpty() || $isEditingRoster))
+        {{-- Enrolled Roster Accordion (Open by default, hides only on user click) --}}
+        @if ($this->selectedClass && $this->classRoster->isNotEmpty())
             @php $stats = $this->classStats; @endphp
-            <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden transition-all {{ $isEditingRoster ? 'ring-2 ring-emerald-500/30' : '' }}">
-                <div class="w-full px-5 py-3.5 flex items-center justify-between text-left {{ $isEditingRoster ? 'bg-emerald-50/70 dark:bg-emerald-950/30' : 'bg-zinc-50/70 dark:bg-zinc-950/40' }} border-b border-zinc-200/80 dark:border-zinc-800 flex-wrap gap-3">
+            <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden transition-all">
+                <div class="w-full px-5 py-3.5 flex items-center justify-between text-left bg-zinc-50/70 dark:bg-zinc-950/40 border-b border-zinc-200/80 dark:border-zinc-800 flex-wrap gap-3">
                     <div class="flex items-center gap-3">
-                        <div class="size-8 rounded-lg {{ $isEditingRoster ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' }} flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800">
-                            <flux:icon icon="{{ $isEditingRoster ? 'pencil-square' : 'users' }}" class="size-4" />
+                        <div class="size-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/60 dark:border-emerald-800">
+                            <flux:icon icon="users" class="size-4" />
                         </div>
                         <div>
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white">{{ $this->selectedClass->name }} {{ $isEditingRoster ? 'Spreadsheet Roster' : 'Enrolled Roster' }}</h4>
+                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white">{{ $this->selectedClass->name }} Enrolled Roster</h4>
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
                                     {{ $stats['total'] }} Students Enrolled
                                 </span>
@@ -1008,297 +1080,112 @@ new #[Title('Upload Student Records')] class extends Component
                                         Last Adm: {{ $stats['latest_admission'] }}
                                     </span>
                                 @endif
-                                @if ($isEditingRoster)
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                                        <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        Excel Bulk Edit Active
-                                    </span>
-                                @endif
                             </div>
                             <p class="text-xs text-zinc-500 mt-0.5">
-                                @if ($isEditingRoster)
-                                    Excel Mode Active: Click any field to edit admission numbers, names, or parents in bulk. Press Tab to move between cells.
-                                @else
-                                    Review enrolled students, click Excel Bulk Edit to update admission numbers and parent info in-place.
-                                @endif
+                                Click any field below to edit or add parent, phone, admission number, or student ID.
                             </p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0 flex-wrap">
-                        @if (! $isEditingRoster)
-                            @can('edit student')
-                                <button type="button" wire:click="startRosterEditMode"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition-colors cursor-pointer"
-                                    title="Open interactive spreadsheet editor for all enrolled students in this class">
-                                    <flux:icon icon="table-cells" class="size-3.5" />
-                                    <span>Excel Bulk Edit</span>
-                                </button>
-                            @endcan
-                            <button type="button" wire:click="$toggle('showEnrolledRoster')"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-2xs transition-colors cursor-pointer">
-                                <span>{{ $showEnrolledRoster ? 'Hide Roster' : 'Show Roster' }}</span>
-                                <flux:icon icon="{{ $showEnrolledRoster ? 'chevron-up' : 'chevron-down' }}" class="size-3.5 text-zinc-400" />
-                            </button>
-                        @else
-                            <button type="button" wire:click="addRosterEditRow"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-2xs transition-colors cursor-pointer">
-                                <flux:icon icon="plus" class="size-3.5 text-zinc-500" />
-                                <span>+ Add Row</span>
-                            </button>
-                            <button type="button" wire:click="cancelRosterEditMode"
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-600 dark:text-zinc-300 shadow-2xs transition-colors cursor-pointer">
-                                <span>Cancel</span>
-                            </button>
-                            <button type="button" wire:click="saveRosterEdits" wire:loading.attr="disabled"
-                                class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer">
-                                <flux:icon icon="check" class="size-3.5" wire:loading.remove wire:target="saveRosterEdits" />
-                                <flux:icon icon="arrow-path" class="size-3.5 animate-spin" wire:loading wire:target="saveRosterEdits" />
-                                <span wire:loading.remove wire:target="saveRosterEdits">Save Roster Changes</span>
-                                <span wire:loading wire:target="saveRosterEdits">Saving...</span>
-                            </button>
-                        @endif
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" wire:click="$toggle('showEnrolledRoster')"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-2xs transition-colors cursor-pointer">
+                            <span>{{ $showEnrolledRoster ? 'Hide Roster' : 'Show Roster' }}</span>
+                            <flux:icon icon="{{ $showEnrolledRoster ? 'chevron-up' : 'chevron-down' }}" class="size-3.5 text-zinc-400" />
+                        </button>
                     </div>
                 </div>
 
                 @if ($showEnrolledRoster)
                     <div class="p-4 bg-zinc-50/30 dark:bg-zinc-950/20">
-                        @if (! $isEditingRoster)
-                            {{-- Read-Only View with Quick Edit on each row --}}
-                            <div class="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <input type="text" wire:model.live.debounce.300ms="rosterSearch"
-                                    placeholder="Search enrolled students by name, admission no, or student ID..."
-                                    class="w-full max-w-sm text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 py-2 px-3 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:ring-2 focus:ring-sky-500" />
-                                <div class="flex items-center gap-3">
-                                    <span class="text-xs text-zinc-500">Showing {{ $this->classRoster->count() }} enrolled student(s)</span>
-                                    @can('edit student')
-                                        <button type="button" wire:click="startRosterEditMode"
-                                            class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
-                                            <flux:icon icon="pencil-square" class="size-3" />
-                                            <span>Bulk Edit in Excel</span>
-                                        </button>
-                                    @endcan
-                                </div>
-                            </div>
+                        <div class="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <input type="text" wire:model.live.debounce.300ms="rosterSearch"
+                                placeholder="Search enrolled students by name, admission no, or student ID..."
+                                class="w-full max-w-sm text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 py-2 px-3 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:ring-2 focus:ring-sky-500" />
+                            <span class="text-xs text-zinc-500">Showing {{ $this->classRoster->count() }} enrolled student(s)</span>
+                        </div>
 
-                            <div class="overflow-auto max-h-72 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
-                                <table class="w-full text-left text-xs border-collapse">
-                                    <thead class="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold uppercase sticky top-0 shadow-2xs z-10">
-                                        <tr class="divide-x divide-zinc-200 dark:divide-zinc-700">
-                                            <th class="py-2.5 px-3 w-12 text-center text-zinc-400">#</th>
-                                            <th class="py-2.5 px-3">Student Name</th>
-                                            <th class="py-2.5 px-3">Admission No</th>
-                                            <th class="py-2.5 px-3">Student ID</th>
-                                            <th class="py-2.5 px-3">Gender</th>
-                                            <th class="py-2.5 px-3">Guardian</th>
-                                            <th class="py-2.5 px-3">Guardian Phone</th>
-                                            <th class="py-2.5 px-3 text-right">Actions</th>
+                        <div class="overflow-auto max-h-72 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold uppercase sticky top-0 shadow-2xs z-10">
+                                    <tr class="divide-x divide-zinc-200 dark:divide-zinc-700">
+                                        <th class="py-2.5 px-3 w-12 text-center text-zinc-400">#</th>
+                                        <th class="py-2.5 px-3 min-w-[180px]">Student Name</th>
+                                        <th class="py-2.5 px-3 min-w-[140px]">Admission No</th>
+                                        <th class="py-2.5 px-3 min-w-[120px]">Student ID</th>
+                                        <th class="py-2.5 px-3 min-w-[100px]">Gender</th>
+                                        <th class="py-2.5 px-3 min-w-[170px]">Parent / Guardian</th>
+                                        <th class="py-2.5 px-3 min-w-[140px]">Guardian Phone</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800 text-zinc-600 dark:text-zinc-400">
+                                    @forelse ($this->classRoster as $idx => $student)
+                                        <tr wire:key="enrolled-student-{{ $student->id }}" class="divide-x divide-zinc-100 dark:divide-zinc-800 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 {{ $student->admission_number === $stats['latest_admission'] ? 'bg-amber-50/50 dark:bg-amber-950/20' : '' }}">
+                                            <td class="py-2 px-2 text-center font-mono text-zinc-400">{{ $idx + 1 }}</td>
+
+                                            {{-- Student Name --}}
+                                            <td class="p-0">
+                                                <input type="text"
+                                                    value="{{ $student->student?->name }}"
+                                                    wire:change="updateEnrolledField({{ $student->id }}, 'name', $event.target.value)"
+                                                    placeholder="Student Name"
+                                                    class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs font-semibold text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 transition-colors" />
+                                            </td>
+
+                                            {{-- Admission No --}}
+                                            <td class="p-0">
+                                                <input type="text"
+                                                    value="{{ $student->admission_number }}"
+                                                    wire:change="updateEnrolledField({{ $student->id }}, 'admission_number', $event.target.value)"
+                                                    placeholder="Admission No"
+                                                    class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-300 transition-colors" />
+                                            </td>
+
+                                            {{-- Student ID --}}
+                                            <td class="p-0">
+                                                <input type="text"
+                                                    value="{{ $student->student_number }}"
+                                                    wire:change="updateEnrolledField({{ $student->id }}, 'student_number', $event.target.value)"
+                                                    placeholder="UPI / ID"
+                                                    class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs font-mono text-zinc-600 dark:text-zinc-400 placeholder:text-zinc-300 transition-colors" />
+                                            </td>
+
+                                            {{-- Gender --}}
+                                            <td class="p-0">
+                                                <select wire:change="updateEnrolledField({{ $student->id }}, 'gender', $event.target.value)"
+                                                    class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer capitalize">
+                                                    <option value="">-</option>
+                                                    <option value="male" @selected(strtolower($student->gender ?? '') === 'male')>Male</option>
+                                                    <option value="female" @selected(strtolower($student->gender ?? '') === 'female')>Female</option>
+                                                    <option value="other" @selected(strtolower($student->gender ?? '') === 'other')>Other</option>
+                                                </select>
+                                            </td>
+
+                                            {{-- Guardian --}}
+                                            <td class="p-0">
+                                                <input type="text"
+                                                    value="{{ $student->guardian_name }}"
+                                                    wire:change="updateEnrolledField({{ $student->id }}, 'guardian_name', $event.target.value)"
+                                                    placeholder="Parent or Guardian"
+                                                    class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-300 transition-colors" />
+                                            </td>
+
+                                            {{-- Guardian Phone --}}
+                                            <td class="p-0">
+                                                <input type="text"
+                                                    value="{{ $student->guardian_phone }}"
+                                                    wire:change="updateEnrolledField({{ $student->id }}, 'guardian_phone', $event.target.value)"
+                                                    placeholder="Phone (07...)"
+                                                    class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-300 transition-colors" />
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800 text-zinc-600 dark:text-zinc-400">
-                                        @forelse ($this->classRoster as $idx => $student)
-                                            <tr class="divide-x divide-zinc-100 dark:divide-zinc-800 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 {{ $student->admission_number === $stats['latest_admission'] ? 'bg-amber-50/50 dark:bg-amber-950/20' : '' }}">
-                                                <td class="py-2 px-2 text-center font-mono text-zinc-400">{{ $idx + 1 }}</td>
-                                                <td class="py-2 px-3 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between gap-2">
-                                                    <span>{{ $student->student?->name ?? 'Student' }}</span>
-                                                    @if ($student->admission_number === $stats['latest_admission'])
-                                                        <span class="inline-flex px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-800">
-                                                            Last Enrolled
-                                                        </span>
-                                                    @endif
-                                                </td>
-                                                <td class="py-2 px-3 font-mono font-bold text-zinc-800 dark:text-zinc-200">{{ $student->admission_number ?? '-' }}</td>
-                                                <td class="py-2 px-3 font-mono text-zinc-500">{{ $student->student_number ?? '-' }}</td>
-                                                <td class="py-2 px-3 capitalize">{{ $student->gender ?? '-' }}</td>
-                                                <td class="py-2 px-3">{{ $student->guardian_name ?? '-' }}</td>
-                                                <td class="py-2 px-3 font-mono">{{ $student->guardian_phone ?? '-' }}</td>
-                                                <td class="py-2 px-3 text-right whitespace-nowrap">
-                                                    <div class="inline-flex items-center justify-end gap-1.5">
-                                                        @can('edit student')
-                                                            <button type="button" wire:click="startRosterEditMode('{{ $student->id }}')"
-                                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 transition-colors shadow-2xs cursor-pointer"
-                                                                title="Edit admission number, name, parent & phone right here in this table">
-                                                                <flux:icon icon="table-cells" class="size-3 text-emerald-600 dark:text-emerald-400" />
-                                                                <span>Quick Edit</span>
-                                                            </button>
-                                                            <a href="{{ route('student.edit', $student->student_id) }}" wire:navigate.hover
-                                                                class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                                                title="Edit full profile (medical, photo, documents)">
-                                                                <span>Profile</span>
-                                                                <flux:icon icon="arrow-up-right" class="size-2.5" />
-                                                            </a>
-                                                        @endcan
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="8" class="py-4 px-4 text-center text-zinc-500">No matching enrolled students found.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            {{-- Interactive Excel Bulk Edit Spreadsheet View --}}
-                            <div class="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div class="flex items-center gap-2">
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold">
-                                        <flux:icon icon="table-cells" class="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                                        Excel Grid Active
-                                    </span>
-                                    <span class="text-xs text-zinc-600 dark:text-zinc-400">
-                                        Editing {{ count($rosterEdits) }} student record(s) &bull; Press <kbd class="px-1.5 py-0.5 bg-zinc-200 dark:bg-zinc-800 rounded text-[10px] font-mono font-semibold">Tab</kbd> to jump between fields
-                                    </span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="text" wire:model.live.debounce.300ms="rosterSearch"
-                                        placeholder="Filter by name, admission no..."
-                                        class="text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 py-1.5 px-3 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:ring-2 focus:ring-emerald-500 w-56" />
-                                </div>
-                            </div>
-
-                            <div class="overflow-auto max-h-96 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs">
-                                <table class="w-full text-left text-xs border-collapse">
-                                    <thead class="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold uppercase sticky top-0 shadow-2xs z-10">
-                                        <tr class="divide-x divide-zinc-200 dark:divide-zinc-700">
-                                            <th class="py-2.5 px-2.5 w-10 text-center text-zinc-400">#</th>
-                                            <th class="py-2.5 px-3 min-w-[190px]">Student Name *</th>
-                                            <th class="py-2.5 px-3 min-w-[150px]">Admission No</th>
-                                            <th class="py-2.5 px-3 min-w-[110px]">Student ID</th>
-                                            <th class="py-2.5 px-3 min-w-[100px]">Gender</th>
-                                            <th class="py-2.5 px-3 min-w-[170px]">Parent / Guardian</th>
-                                            <th class="py-2.5 px-3 min-w-[140px]">Guardian Phone</th>
-                                            <th class="py-2.5 px-2.5 w-12 text-center">Row</th>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="py-4 px-4 text-center text-zinc-500">No matching enrolled students found.</td>
                                         </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800 text-zinc-700 dark:text-zinc-300">
-                                        @php $rowNum = 1; @endphp
-                                        @forelse ($rosterEdits as $key => $row)
-                                            @php
-                                                $matchSearch = $rosterSearch === ''
-                                                    || str_contains(strtolower($row['name'] ?? ''), strtolower($rosterSearch))
-                                                    || str_contains(strtolower($row['admission_number'] ?? ''), strtolower($rosterSearch))
-                                                    || str_contains(strtolower($row['student_number'] ?? ''), strtolower($rosterSearch))
-                                                    || str_contains(strtolower($row['guardian_name'] ?? ''), strtolower($rosterSearch));
-                                            @endphp
-                                            @if ($matchSearch)
-                                                <tr wire:key="roster-row-{{ $key }}" class="divide-x divide-zinc-100 dark:divide-zinc-800 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/10 {{ !empty($row['is_new']) ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : '' }}">
-                                                    {{-- Row index --}}
-                                                    <td class="py-1.5 px-2 text-center font-mono text-zinc-400 text-[11px]">
-                                                        @if (!empty($row['is_new']))
-                                                            <span class="inline-block px-1 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">NEW</span>
-                                                        @else
-                                                            {{ $rowNum++ }}
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Student Name --}}
-                                                    <td class="py-1.5 px-2">
-                                                        <input type="text" wire:model="rosterEdits.{{ $key }}.name"
-                                                            placeholder="Student full name"
-                                                            class="w-full text-xs font-semibold py-1 px-2 rounded-lg border {{ isset($rosterErrors[$key]['name']) ? 'border-rose-400 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white' }} focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors" />
-                                                        @if (isset($rosterErrors[$key]['name']))
-                                                            <span class="text-[10px] text-rose-600 dark:text-rose-400 font-semibold block mt-0.5">{{ $rosterErrors[$key]['name'] }}</span>
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Admission Number --}}
-                                                    <td class="py-1.5 px-2">
-                                                        <input type="text" wire:model="rosterEdits.{{ $key }}.admission_number"
-                                                            placeholder="e.g. 1042 or ADM-..."
-                                                            class="w-full text-xs font-mono font-bold py-1 px-2 rounded-lg border {{ isset($rosterErrors[$key]['admission_number']) ? 'border-rose-400 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white' }} focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors" />
-                                                        @if (isset($rosterErrors[$key]['admission_number']))
-                                                            <span class="text-[10px] text-rose-600 dark:text-rose-400 font-semibold block mt-0.5">{{ $rosterErrors[$key]['admission_number'] }}</span>
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Student ID / UPI --}}
-                                                    <td class="py-1.5 px-2">
-                                                        <input type="text" wire:model="rosterEdits.{{ $key }}.student_number"
-                                                            placeholder="UPI / ID"
-                                                            class="w-full text-xs font-mono py-1 px-2 rounded-lg border {{ isset($rosterErrors[$key]['student_number']) ? 'border-rose-400 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white' }} focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors" />
-                                                        @if (isset($rosterErrors[$key]['student_number']))
-                                                            <span class="text-[10px] text-rose-600 dark:text-rose-400 font-semibold block mt-0.5">{{ $rosterErrors[$key]['student_number'] }}</span>
-                                                        @endif
-                                                    </td>
-
-                                                    {{-- Gender --}}
-                                                    <td class="py-1.5 px-2">
-                                                        <select wire:model="rosterEdits.{{ $key }}.gender"
-                                                            class="w-full text-xs py-1 px-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
-                                                            <option value="">--</option>
-                                                            <option value="male">Male</option>
-                                                            <option value="female">Female</option>
-                                                            <option value="other">Other</option>
-                                                        </select>
-                                                    </td>
-
-                                                    {{-- Parent / Guardian --}}
-                                                    <td class="py-1.5 px-2">
-                                                        <input type="text" wire:model="rosterEdits.{{ $key }}.guardian_name"
-                                                            placeholder="Parent or Guardian"
-                                                            class="w-full text-xs py-1 px-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors" />
-                                                    </td>
-
-                                                    {{-- Guardian Phone --}}
-                                                    <td class="py-1.5 px-2">
-                                                        <input type="text" wire:model="rosterEdits.{{ $key }}.guardian_phone"
-                                                            placeholder="Phone (07...)"
-                                                            class="w-full text-xs font-mono py-1 px-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors" />
-                                                    </td>
-
-                                                    {{-- Action --}}
-                                                    <td class="py-1.5 px-2 text-center">
-                                                        @if (!empty($row['is_new']))
-                                                            <button type="button" wire:click="removeRosterEditRow('{{ $key }}')"
-                                                                class="p-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                                                                title="Remove new row">
-                                                                <flux:icon icon="trash" class="size-3.5" />
-                                                            </button>
-                                                        @else
-                                                            <button type="button" wire:click="resetRosterRow({{ $row['id'] }})"
-                                                                class="p-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                                                                title="Revert row to database values">
-                                                                <flux:icon icon="arrow-path" class="size-3.5" />
-                                                            </button>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @endif
-                                        @empty
-                                            <tr>
-                                                <td colspan="8" class="py-6 px-4 text-center text-zinc-500">No students available to edit. Click "+ Add Row" above to enter a student.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {{-- Bottom Action Toolbar for Excel Mode --}}
-                            <div class="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-                                <div class="text-xs text-zinc-500">
-                                    Bulk editing <strong class="text-zinc-900 dark:text-white">{{ count($rosterEdits) }}</strong> student records. Changes are saved together in one batch.
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button type="button" wire:click="addRosterEditRow"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-2xs transition-colors cursor-pointer">
-                                        <flux:icon icon="plus" class="size-3.5 text-zinc-500" />
-                                        <span>+ Add Row</span>
-                                    </button>
-                                    <button type="button" wire:click="cancelRosterEditMode"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-600 dark:text-zinc-300 shadow-2xs transition-colors cursor-pointer">
-                                        <span>Cancel</span>
-                                    </button>
-                                    <button type="button" wire:click="saveRosterEdits" wire:loading.attr="disabled"
-                                        class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer">
-                                        <flux:icon icon="check" class="size-3.5" wire:loading.remove wire:target="saveRosterEdits" />
-                                        <flux:icon icon="arrow-path" class="size-3.5 animate-spin" wire:loading wire:target="saveRosterEdits" />
-                                        <span wire:loading.remove wire:target="saveRosterEdits">Save Roster Changes</span>
-                                        <span wire:loading wire:target="saveRosterEdits">Saving...</span>
-                                    </button>
-                                </div>
-                            </div>
-                        @endif
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 @endif
             </div>
