@@ -249,3 +249,97 @@ test('Student upload Livewire component restores and discards session draft rows
     expect($clearedRows[0]['name'])->toBe('');
     expect($clearedRows[1]['name'])->toBe('');
 });
+
+test('Enrolled roster Excel Bulk Edit mode allows in-place editing of admission numbers and parent details', function () {
+    [$director, $institution, $device, $class] = createBulkSyncEnvironment();
+
+    $student = User::factory()->create(['name' => 'Original Name']);
+    $student->assignRole('Student');
+    $details = StudentDetails::create([
+        'student_id' => $student->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'ADM-OLD-001',
+        'student_number' => 'UPI-OLD-001',
+        'gender' => 'male',
+        'guardian_name' => 'Old Guardian',
+        'guardian_phone' => '0711111111',
+    ]);
+
+    $this->actingAs($director);
+
+    $component = Livewire::test('student::upload')
+        ->set('selectedClassId', $class->id);
+
+    // Enter Excel Bulk Edit mode
+    $component->call('startRosterEditMode');
+    expect($component->get('isEditingRoster'))->toBeTrue();
+
+    $rosterEdits = $component->get('rosterEdits');
+    expect($rosterEdits)->toHaveKey($details->id);
+    expect($rosterEdits[$details->id]['name'])->toBe('Original Name');
+    expect($rosterEdits[$details->id]['admission_number'])->toBe('ADM-OLD-001');
+
+    // Edit fields in Excel mode: change admission number, parent name, and phone
+    $rosterEdits[$details->id]['name'] = 'Updated Student Name';
+    $rosterEdits[$details->id]['admission_number'] = '1042';
+    $rosterEdits[$details->id]['guardian_name'] = 'Jane Doe (Mother)';
+    $rosterEdits[$details->id]['guardian_phone'] = '0799887766';
+
+    $component->set('rosterEdits', $rosterEdits)
+        ->call('saveRosterEdits');
+
+    expect($component->get('isEditingRoster'))->toBeFalse();
+    expect($component->get('rosterErrors'))->toBeEmpty();
+
+    // Verify database updates
+    expect($student->fresh()->name)->toBe('Updated Student Name');
+    $freshDetails = $details->fresh();
+    expect($freshDetails->admission_number)->toBe('1042');
+    expect($freshDetails->guardian_name)->toBe('Jane Doe (Mother)');
+    expect($freshDetails->guardian_phone)->toBe('0799887766');
+});
+
+test('Enrolled roster Excel Bulk Edit mode validates duplicate admission numbers', function () {
+    [$director, $institution, $device, $class] = createBulkSyncEnvironment();
+
+    // Create another existing student with ADM-TAKEN
+    $existing = User::factory()->create(['name' => 'Existing Student']);
+    $existing->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $existing->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'ADM-TAKEN',
+    ]);
+
+    // Student to edit
+    $student = User::factory()->create(['name' => 'Student To Edit']);
+    $student->assignRole('Student');
+    $details = StudentDetails::create([
+        'student_id' => $student->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'ADM-ORIGINAL',
+    ]);
+
+    $this->actingAs($director);
+
+    $component = Livewire::test('student::upload')
+        ->set('selectedClassId', $class->id)
+        ->call('startRosterEditMode');
+
+    $rosterEdits = $component->get('rosterEdits');
+    // Try to set admission number to one that is already taken
+    $rosterEdits[$details->id]['admission_number'] = 'ADM-TAKEN';
+
+    $component->set('rosterEdits', $rosterEdits)
+        ->call('saveRosterEdits');
+
+    // Should remain in edit mode with validation error
+    expect($component->get('isEditingRoster'))->toBeTrue();
+    $errors = $component->get('rosterErrors');
+    expect($errors)->toHaveKey($details->id);
+    expect($errors[$details->id])->toHaveKey('admission_number');
+    expect($details->fresh()->admission_number)->toBe('ADM-ORIGINAL');
+});
