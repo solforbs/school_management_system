@@ -201,8 +201,9 @@ new #[Title('Parent Management')] class extends Component
                 <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
                     @foreach($parents as $parent)
                         @php
-                            $studentNames = $parent->children->map(fn($c) => $c->student?->name)->filter()->join(', ');
-                            $hasStudents = $parent->children->isNotEmpty();
+                            $uniqueChildren = $parent->children->unique(fn($c) => $c->student_id ?? $c->admission_number ?? $c->id);
+                            $studentNames = $uniqueChildren->map(fn($c) => $c->student?->name)->filter()->join(', ');
+                            $hasStudents = $uniqueChildren->isNotEmpty();
                             $initials = strtoupper(substr($parent->name, 0, 2));
                             $phone = $parent->parent?->parent_phone ?? '';
                             $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
@@ -215,7 +216,7 @@ new #[Title('Parent Management')] class extends Component
                                 occupation: '{{ addslashes($occupation) }}',
                                 students: '{{ addslashes($studentNames) }}',
                                 has_students: {{ $hasStudents ? 'true' : 'false' }},
-                                children_count: {{ $parent->children->count() }}
+                                children_count: {{ $uniqueChildren->count() }}
                             })">
                             {{-- Row 1: Avatar, Name, Role & Verification Badge --}}
                             <div class="flex items-start justify-between gap-2.5">
@@ -230,9 +231,9 @@ new #[Title('Parent Management')] class extends Component
                                         </a>
                                         <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
                                             <span>{{ $occupation }}</span>
-                                            @if($parent->children->isNotEmpty())
+                                            @if($uniqueChildren->isNotEmpty())
                                                 <span class="text-zinc-300 dark:text-zinc-600">&bull;</span>
-                                                <span class="text-zinc-700 dark:text-zinc-300 font-semibold">{{ $parent->children->count() }} {{ Str::plural('learner', $parent->children->count()) }}</span>
+                                                <span class="text-zinc-700 dark:text-zinc-300 font-semibold">{{ $uniqueChildren->count() }} {{ Str::plural('learner', $uniqueChildren->count()) }}</span>
                                             @endif
                                         </div>
                                     </div>
@@ -306,8 +307,9 @@ new #[Title('Parent Management')] class extends Component
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                             @foreach($parents as $parent)
                                 @php
-                                    $studentNames = $parent->children->map(fn($c) => $c->student?->name)->filter()->join(', ');
-                                    $hasStudents = $parent->children->isNotEmpty();
+                                    $uniqueChildren = $parent->children->unique(fn($c) => $c->student_id ?? $c->admission_number ?? $c->id);
+                                    $studentNames = $uniqueChildren->map(fn($c) => $c->student?->name)->filter()->join(', ');
+                                    $hasStudents = $uniqueChildren->isNotEmpty();
                                     $initials = strtoupper(substr($parent->name, 0, 2));
                                     $phone = $parent->parent?->parent_phone ?? '';
                                     $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
@@ -320,7 +322,7 @@ new #[Title('Parent Management')] class extends Component
                                         occupation: '{{ addslashes($occupation) }}',
                                         students: '{{ addslashes($studentNames) }}',
                                         has_students: {{ $hasStudents ? 'true' : 'false' }},
-                                        children_count: {{ $parent->children->count() }}
+                                        children_count: {{ $uniqueChildren->count() }}
                                     })">
                                     
                                     {{-- Parent Column --}}
@@ -359,9 +361,9 @@ new #[Title('Parent Management')] class extends Component
 
                                     {{-- Linked Students Column --}}
                                     <td class="py-4 px-5">
-                                        @if($parent->children->isNotEmpty())
+                                        @if($uniqueChildren->isNotEmpty())
                                             <div class="flex flex-wrap gap-1.5">
-                                                @foreach($parent->children as $child)
+                                                @foreach($uniqueChildren as $child)
                                                     @if($child->student)
                                                         <a href="{{ route('student.show', $child->student->id) }}" wire:navigate.hover
                                                             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition border border-zinc-200/60"

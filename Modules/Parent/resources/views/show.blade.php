@@ -2,7 +2,8 @@
     $initials = method_exists($parent, 'initials') ? $parent->initials() : strtoupper(substr($parent->name, 0, 2));
     $phone = $parent->parent?->parent_phone ?? '';
     $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
-    $linkedCount = $parent->children->count();
+    $uniqueChildren = $parent->children->unique(fn($c) => $c->student_id ?? $c->admission_number ?? $c->id);
+    $linkedCount = $uniqueChildren->count();
 @endphp
 
 <x-layouts::app :title="__('Guardian Profile')">
@@ -135,7 +136,7 @@
                 </span>
             </div>
 
-            @if ($parent->children->isEmpty())
+            @if ($uniqueChildren->isEmpty())
                 <div class="bg-white rounded-3xl border border-zinc-200 p-12 text-center shadow-sm">
                     <flux:icon icon="academic-cap" class="size-12 mx-auto text-zinc-300 mb-3" />
                     <h4 class="text-base font-bold text-zinc-900">No Linked Students</h4>
@@ -150,7 +151,7 @@
                 </div>
             @else
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach ($parent->children as $child)
+                    @foreach ($uniqueChildren as $child)
                         @php
                             $studentUser = $child->student;
                             $studentInitials = $studentUser ? strtoupper(substr($studentUser->name, 0, 2)) : 'ST';

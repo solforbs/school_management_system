@@ -379,14 +379,25 @@ new #[Title('Upload Student Records')] class extends Component
 
         $cacheKey = "inst_{$institutionId}_class_{$this->selectedClassId}_roster";
 
-        return Cache::remember($cacheKey, 1800, function () use ($institutionId) {
-            return StudentDetails::query()
-                ->where('institution_id', $institutionId)
-                ->where('class_id', $this->selectedClassId)
-                ->with('student')
-                ->orderBy('admission_number')
-                ->get();
-        });
+        $cached = Cache::get($cacheKey);
+        if ($cached instanceof \Illuminate\Support\Collection) {
+            return $cached;
+        }
+
+        if ($cached !== null) {
+            Cache::forget($cacheKey);
+        }
+
+        $roster = StudentDetails::query()
+            ->where('institution_id', $institutionId)
+            ->where('class_id', $this->selectedClassId)
+            ->with('student')
+            ->orderBy('admission_number')
+            ->get();
+
+        Cache::put($cacheKey, $roster, 1800);
+
+        return $roster;
     }
 
     private function filledRows(): array

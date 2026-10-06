@@ -93,14 +93,27 @@ class StudentCacheService
      */
     public function getInstitutionRoster(int $institutionId, int $limit = 1000): Collection
     {
-        return Cache::remember("inst_{$institutionId}_all_roster", self::STATS_TTL, function () use ($institutionId, $limit) {
-            return StudentDetails::query()
-                ->where('institution_id', $institutionId)
-                ->with('student')
-                ->orderBy('admission_number')
-                ->limit($limit)
-                ->get();
-        });
+        $cacheKey = "inst_{$institutionId}_all_roster";
+
+        $cached = Cache::get($cacheKey);
+        if ($cached instanceof Collection) {
+            return $cached;
+        }
+
+        if ($cached !== null) {
+            Cache::forget($cacheKey);
+        }
+
+        $roster = StudentDetails::query()
+            ->where('institution_id', $institutionId)
+            ->with('student')
+            ->orderBy('admission_number')
+            ->limit($limit)
+            ->get();
+
+        Cache::put($cacheKey, $roster, self::STATS_TTL);
+
+        return $roster;
     }
 
     /**
@@ -128,11 +141,22 @@ class StudentCacheService
     {
         $cacheKey = "inst_{$institutionId}_classes_".($isAdmin ? 'admin' : 'tenant');
 
-        return Cache::remember($cacheKey, self::CLASSES_TTL, function () use ($institutionId, $isAdmin) {
-            return SchoolClass::when(! $isAdmin, fn ($q) => $q->where('institution_id', $institutionId))
-                ->orderBy('name')
-                ->get();
-        });
+        $cached = Cache::get($cacheKey);
+        if ($cached instanceof Collection) {
+            return $cached;
+        }
+
+        if ($cached !== null) {
+            Cache::forget($cacheKey);
+        }
+
+        $classes = SchoolClass::when(! $isAdmin, fn ($q) => $q->where('institution_id', $institutionId))
+            ->orderBy('name')
+            ->get();
+
+        Cache::put($cacheKey, $classes, self::CLASSES_TTL);
+
+        return $classes;
     }
 
     /**
