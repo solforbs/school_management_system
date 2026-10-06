@@ -5,6 +5,7 @@ namespace Modules\Teacher\Actions;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Modules\Teacher\Models\TeacherDetails;
 
 /**
@@ -62,12 +63,11 @@ class SaveTeacher
      */
     public static function create(array $data, int $institutionId): User
     {
-        return DB::transaction(function () use ($data, $institutionId) {
+        $teacher = DB::transaction(function () use ($data, $institutionId) {
             $teacher = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
-                'email_verified_at' => now(),
             ]);
             $teacher->syncRoles('Teacher');
 
@@ -80,6 +80,14 @@ class SaveTeacher
 
             return $teacher;
         });
+
+        try {
+            $teacher->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            Log::warning("Could not send email verification notification to {$teacher->email}: {$e->getMessage()}");
+        }
+
+        return $teacher;
     }
 
     /**

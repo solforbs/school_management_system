@@ -16,6 +16,7 @@ class PurgeSeededTeachersAndTimetables extends Command
                             {--institution= : Institution ID, code, or name to clean}
                             {--all : Clean seeded test teachers across all institutions}
                             {--timetables : Also purge all timetable entries for the targeted institution(s)}
+                            {--verify-teachers : Explicitly verify email for legitimate teachers}
                             {--dry-run : Preview changes without deleting}';
 
     protected $description = 'Purge unwanted seeded test teachers (@school.test) and timetable entries, and auto-verify real teachers.';
@@ -110,30 +111,32 @@ class PurgeSeededTeachersAndTimetables extends Command
                 }
             }
 
-            // 3. Auto-verify legitimate teachers
-            $realTeacherDetails = TeacherDetails::where('institution_id', $institution->id)
-                ->whereHas('teacher', function ($q) {
-                    $q->where('email', 'not like', '%@school.test');
-                })
-                ->with('teacher')
-                ->get();
+            // 3. Auto-verify legitimate teachers (only if explicitly requested)
+            if ($this->option('verify-teachers')) {
+                $realTeacherDetails = TeacherDetails::where('institution_id', $institution->id)
+                    ->whereHas('teacher', function ($q) {
+                        $q->where('email', 'not like', '%@school.test');
+                    })
+                    ->with('teacher')
+                    ->get();
 
-            $verifiedCount = 0;
-            foreach ($realTeacherDetails as $details) {
-                $user = $details->teacher;
-                if ($user && ! $user->email_verified_at) {
-                    if ($dryRun) {
-                        $this->line("[DRY RUN] Would verify email for: {$user->name} ({$user->email})");
-                    } else {
-                        $user->forceFill(['email_verified_at' => now()])->save();
-                        $this->info("✓ Verified email for teacher: {$user->name} ({$user->email})");
-                        $verifiedCount++;
+                $verifiedCount = 0;
+                foreach ($realTeacherDetails as $details) {
+                    $user = $details->teacher;
+                    if ($user && ! $user->email_verified_at) {
+                        if ($dryRun) {
+                            $this->line("[DRY RUN] Would verify email for: {$user->name} ({$user->email})");
+                        } else {
+                            $user->forceFill(['email_verified_at' => now()])->save();
+                            $this->info("✓ Verified email for teacher: {$user->name} ({$user->email})");
+                            $verifiedCount++;
+                        }
                     }
                 }
-            }
 
-            if ($verifiedCount === 0 && ! $dryRun) {
-                $this->line('All legitimate teachers already have verified emails.');
+                if ($verifiedCount === 0 && ! $dryRun) {
+                    $this->line('All legitimate teachers already have verified emails.');
+                }
             }
         }
 

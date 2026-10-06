@@ -80,6 +80,19 @@ new #[Title('Teacher Management')] class extends Component
             ->all();
     }
 
+    public function resendVerification(int $teacherUserId): void
+    {
+        abort_unless(auth()->user()->can('edit teacher'), 403);
+
+        $teacherUser = User::findOrFail($teacherUserId);
+        try {
+            $teacherUser->sendEmailVerificationNotification();
+            session()->flash('success', "Verification email link sent to {$teacherUser->email}!");
+        } catch (Throwable $e) {
+            session()->flash('error', "Could not send email to {$teacherUser->email}: {$e->getMessage()}");
+        }
+    }
+
     public function verifyTeacher(int $teacherUserId): void
     {
         abort_unless(auth()->user()->can('edit teacher'), 403);
@@ -386,8 +399,8 @@ new #[Title('Teacher Management')] class extends Component
 
                                 <div class="flex items-center gap-1 shrink-0">
                                     @if($teacherUser && ! $teacherUser->hasVerifiedEmail())
-                                        <flux:button wire:click.stop="verifyTeacher({{ $teacherUser->id }})" size="xs" variant="primary" color="amber" class="text-[10px] px-2 py-0.5" title="Verify Email">
-                                            Verify
+                                        <flux:button wire:click.stop="resendVerification({{ $teacherUser->id }})" size="xs" variant="primary" color="amber" class="text-[10px] px-2 py-0.5" title="Resend email verification link to {{ $teacherUser->email }}">
+                                            Resend Link
                                         </flux:button>
                                     @endif
                                     <flux:button href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" wire:navigate.hover size="xs" variant="subtle" title="View Profile">
@@ -507,9 +520,9 @@ new #[Title('Teacher Management')] class extends Component
                                             @endif
 
                                             @if($teacherUser && ! $teacherUser->hasVerifiedEmail())
-                                                <button type="button" wire:click.stop="verifyTeacher({{ $teacherUser->id }})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 hover:bg-amber-100 transition shadow-2xs" title="Click to manually verify email and grant login access">
-                                                    <flux:icon icon="exclamation-circle" class="size-3.5 text-amber-600" />
-                                                    Verify Email
+                                                <button type="button" wire:click.stop="resendVerification({{ $teacherUser->id }})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="Resend email verification link to {{ $teacherUser->email }}">
+                                                    <flux:icon icon="paper-airplane" class="size-3.5 text-amber-600" />
+                                                    Resend Link
                                                 </button>
                                             @endif
 

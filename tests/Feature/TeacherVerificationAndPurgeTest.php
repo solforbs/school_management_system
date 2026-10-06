@@ -32,7 +32,7 @@ function makeTeacherTestSchool(): array
     return [$director->refresh(), $institution];
 }
 
-test('new teachers created by admin/director are auto-verified upon creation', function () {
+test('new teachers created by admin/director are not auto-verified and require email verification link', function () {
     [$director, $institution] = makeTeacherTestSchool();
 
     $teacher = SaveTeacher::create([
@@ -42,11 +42,11 @@ test('new teachers created by admin/director are auto-verified upon creation', f
         'employee_number' => 'EMP-'.uniqid(),
     ], $institution->id);
 
-    expect($teacher->email_verified_at)->not->toBeNull();
-    expect($teacher->hasVerifiedEmail())->toBeTrue();
+    expect($teacher->email_verified_at)->toBeNull();
+    expect($teacher->hasVerifiedEmail())->toBeFalse();
 });
 
-test('unverified teachers can be manually verified by director via 1-tap in livewire index', function () {
+test('unverified teachers can have email verification link resent via livewire index', function () {
     [$director, $institution] = makeTeacherTestSchool();
 
     $user = User::factory()->create([
@@ -66,11 +66,10 @@ test('unverified teachers can be manually verified by director via 1-tap in live
 
     Livewire::actingAs($director)
         ->test('teacher::index')
-        ->call('verifyTeacher', $user->id)
+        ->call('resendVerification', $user->id)
         ->assertHasNoErrors();
 
-    expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    expect($user->fresh()->email_verified_at)->not->toBeNull();
+    expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
 
 test('purge-seeded-data command removes @school.test teachers and timetable entries for target school', function () {
@@ -120,6 +119,7 @@ test('purge-seeded-data command removes @school.test teachers and timetable entr
     $this->artisan('school:purge-seeded-data', [
         '--institution' => $institution->id,
         '--timetables' => true,
+        '--verify-teachers' => true,
     ])->assertSuccessful();
 
     // Verification: Fake user and details deleted
