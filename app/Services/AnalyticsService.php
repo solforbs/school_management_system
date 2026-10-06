@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Modules\Attendance\Models\Attendance;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Examinations\Models\ExamSitting;
@@ -362,12 +363,32 @@ class AnalyticsService
             ->first();
 
         $todayDate = today()->toDateString();
-        $attendanceRecords = Attendance::whereIn('institution_id', $institutionIds)
-            ->whereDate('date', $todayDate)
-            ->get();
+        $attendanceRecords = collect();
+        $attendancePresentCount = 0;
+        $attendanceAbsentCount = 0;
+        $classesCompleted = 0;
 
-        $attendancePresentCount = $attendanceRecords->whereIn('status', ['present', 'late'])->count();
-        $attendanceAbsentCount = $attendanceRecords->where('status', 'absent')->count();
+        $totalClasses = SchoolClass::whereIn('institution_id', $institutionIds)->count();
+
+        try {
+            if (Schema::hasTable('attendances')) {
+                $attendanceRecords = Attendance::whereIn('institution_id', $institutionIds)
+                    ->whereDate('date', $todayDate)
+                    ->get();
+
+                $attendancePresentCount = $attendanceRecords->whereIn('status', ['present', 'late'])->count();
+                $attendanceAbsentCount = $attendanceRecords->where('status', 'absent')->count();
+
+                $classesCompleted = $totalClasses > 0
+                    ? Attendance::whereIn('institution_id', $institutionIds)
+                        ->whereDate('date', $todayDate)
+                        ->distinct('school_class_id')
+                        ->count('school_class_id')
+                    : 0;
+            }
+        } catch (\Throwable) {
+            // Graceful fallback if attendances table is not yet migrated
+        }
 
         $biometricScansTodayCount = ZktecoAttendanceLog::whereIn('device_id', $deviceIds)
             ->whereDate('occurred_at', today())
@@ -376,14 +397,6 @@ class AnalyticsService
             ->count();
 
         $presentToday = $attendanceRecords->isNotEmpty() ? $attendancePresentCount : $biometricScansTodayCount;
-        $totalClasses = SchoolClass::whereIn('institution_id', $institutionIds)->count();
-        $classesCompleted = $totalClasses > 0
-            ? Attendance::whereIn('institution_id', $institutionIds)
-                ->whereDate('date', $todayDate)
-                ->distinct('school_class_id')
-                ->count('school_class_id')
-            : 0;
-
         $activeStudentsCount = (clone $studentQuery)->where('enrollment_status', 'active')->count();
         $attendanceRate = $activeStudentsCount > 0 ? (int) round(($presentToday / $activeStudentsCount) * 100) : 0;
 
@@ -584,11 +597,18 @@ class AnalyticsService
 
         // 4. Classroom Roll-Call Attendances Today
         $todayDate = today()->toDateString();
-        $todayAttendances = Attendance::where('institution_id', $institution->id)
-            ->whereIn('school_class_id', $taughtClassIds)
-            ->whereDate('date', $todayDate)
-            ->with(['student', 'studentDetails', 'schoolClass'])
-            ->get();
+        $todayAttendances = collect();
+        try {
+            if (Schema::hasTable('attendances')) {
+                $todayAttendances = Attendance::where('institution_id', $institution->id)
+                    ->whereIn('school_class_id', $taughtClassIds)
+                    ->whereDate('date', $todayDate)
+                    ->with(['student', 'studentDetails', 'schoolClass'])
+                    ->get();
+            }
+        } catch (\Throwable) {
+            // Graceful fallback if attendances table is not yet migrated
+        }
 
         $rollcallMarkedCount = $todayAttendances->count();
         $rollcallPresentCount = $todayAttendances->whereIn('status', ['present', 'late'])->count();
@@ -668,11 +688,18 @@ class AnalyticsService
         }
         $days = array_reverse($days);
 
-        $trendAttendances = Attendance::where('institution_id', $institution->id)
-            ->whereIn('school_class_id', $taughtClassIds)
-            ->whereIn('date', array_map(fn ($d) => $d->toDateString(), $days))
-            ->get()
-            ->groupBy(fn (Attendance $att): string => Carbon::parse($att->date)->toDateString());
+        $trendAttendances = collect();
+        try {
+            if (Schema::hasTable('attendances')) {
+                $trendAttendances = Attendance::where('institution_id', $institution->id)
+                    ->whereIn('school_class_id', $taughtClassIds)
+                    ->whereIn('date', array_map(fn ($d) => $d->toDateString(), $days))
+                    ->get()
+                    ->groupBy(fn (Attendance $att): string => Carbon::parse($att->date)->toDateString());
+            }
+        } catch (\Throwable) {
+            // Graceful fallback if attendances table is not yet migrated
+        }
 
         $weeklyAttendanceTrend = [];
         foreach ($days as $day) {
