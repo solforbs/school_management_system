@@ -31,6 +31,9 @@ new #[Title('Student Directory')] class extends Component
     public string $gender = '';
 
     #[Url]
+    public string $biometric = '';
+
+    #[Url]
     public string $sort = 'created_at';
 
     #[Url]
@@ -43,14 +46,14 @@ new #[Title('Student Directory')] class extends Component
 
     public function updating(string $property): void
     {
-        if (in_array($property, ['search', 'status', 'classId', 'gender'], true)) {
+        if (in_array($property, ['search', 'status', 'classId', 'gender', 'biometric'], true)) {
             $this->resetPage();
         }
     }
 
     public function resetFilters(): void
     {
-        $this->reset(['search', 'status', 'classId', 'gender']);
+        $this->reset(['search', 'status', 'classId', 'gender', 'biometric']);
         $this->resetPage();
     }
 
@@ -94,6 +97,8 @@ new #[Title('Student Directory')] class extends Component
             ->when($this->status !== '', fn ($query) => $query->where('enrollment_status', $this->status))
             ->when($this->classId !== '', fn ($query) => $query->where('class_id', $this->classId))
             ->when($this->gender !== '', fn ($query) => $query->where('gender', $this->gender))
+            ->when($this->biometric === 'synced', fn ($query) => $query->whereHas('student', fn ($q) => $q->where('zkteco_synced', true)))
+            ->when($this->biometric === 'not_synced', fn ($query) => $query->whereHas('student', fn ($q) => $q->where('zkteco_synced', false)))
             ->when($this->search !== '', function ($query) {
                 $term = '%'.$this->search.'%';
 
@@ -127,6 +132,58 @@ new #[Title('Student Directory')] class extends Component
     public function totalActive()
     {
         return $this->scoped()->where('enrollment_status', 'active')->count();
+    }
+
+    #[Computed]
+    public function totalUnsynced()
+    {
+        return $this->scoped()->whereHas('student', fn ($q) => $q->where('zkteco_synced', false))->count();
+    }
+
+    #[Computed]
+    public function totalSynced()
+    {
+        return $this->scoped()->whereHas('student', fn ($q) => $q->where('zkteco_synced', true))->count();
+    }
+
+    #[Computed]
+    public function activeDevices()
+    {
+        return \App\Models\Devices::where('institution_id', currentInstitutionId() ?? 0)
+            ->where('is_active', true)
+            ->get();
+    }
+
+    public function syncUnsyncedToBiometrics(): void
+    {
+        abort_unless(auth()->user()->can('edit student') || isAdmin(), 403);
+
+        $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            Flux::toast(text: 'No active institution selected.', variant: 'danger');
+
+            return;
+        }
+
+        if ($this->activeDevices->isEmpty()) {
+            Flux::toast(text: 'No active biometric hardware devices configured for this school.', variant: 'warning');
+
+            return;
+        }
+
+        $syncService = app(\App\Services\ZKTecoUserSyncService::class);
+        $result = $syncService->bulkSyncUnsyncedForInstitution($institutionId);
+
+        if ($result['synced'] > 0) {
+            Flux::toast(
+                text: "Successfully queued {$result['synced']} student(s) to {$result['devices_count']} biometric device(s).",
+                variant: 'success'
+            );
+        } elseif ($result['total_students'] === 0) {
+            Flux::toast(text: 'All students are already synced to biometric devices.', variant: 'info');
+        } else {
+            Flux::toast(text: 'Could not queue students to biometric devices. Please verify device connection.', variant: 'warning');
+        }
     }
 
     #[Computed]
@@ -183,7 +240,7 @@ new #[Title('Student Directory')] class extends Component
 @php
     $totalCount = method_exists($this->students, 'total') ? $this->students->total() : count($this->students);
     $hasActiveFilters =
-        !empty($this->search) || !empty($this->classId) || !empty($this->status) || !empty($this->gender);
+        !empty($this->search) || !empty($this->classId) || !empty($this->status) || !empty($this->gender) || !empty($this->biometric);
     $selectedClass = $this->classes->firstWhere('id', $this->classId);
     $institution = $this->currentInstitutionModel;
 @endphp
@@ -209,7 +266,17 @@ new #[Title('Student Directory')] class extends Component
 
         <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <x-export-buttons base-route="student.export" module="student"
-                :params="['search' => $this->search, 'status' => $this->status, 'class_id' => $this->classId, 'gender' => $this->gender]" />
+                :params="['search' => $this->search, 'status' => $this->status, 'class_id' => $this->classId, 'gender' => $this->gender, 'biometric' => $this->biometric]" />
+            @if ($this->activeDevices->isNotEmpty() && $this->totalUnsynced > 0)
+                @can('edit student')
+                    <button type="button" wire:click="syncUnsyncedToBiometrics" wire:loading.attr="disabled"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold text-xs border border-blue-200 dark:border-blue-800 transition shadow-2xs cursor-pointer">
+                        <flux:icon icon="finger-print" class="size-3.5 text-blue-600 dark:text-blue-400" />
+                        <span wire:loading.remove wire:target="syncUnsyncedToBiometrics">Sync to Biometrics ({{ number_format($this->totalUnsynced) }})</span>
+                        <span wire:loading wire:target="syncUnsyncedToBiometrics">Queuing Commands...</span>
+                    </button>
+                @endcan
+            @endif
             @can('create student')
                 <flux:button href="{{ route('student.upload') }}" wire:navigate.hover icon="arrow-up-tray" variant="ghost"
                     class="font-semibold shadow-sm px-4">
@@ -324,6 +391,16 @@ new #[Title('Student Directory')] class extends Component
                     <option value="female">Female ({{ number_format($this->femaleStudents) }})</option>
                 </select>
 
+                {{-- Biometric Filter --}}
+                @if ($this->activeDevices->isNotEmpty())
+                    <select wire:model.live="biometric"
+                        class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 py-2 px-3 text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 cursor-pointer transition">
+                        <option value="">All Biometric Status</option>
+                        <option value="synced">Biometric: Synced ({{ number_format($this->totalSynced) }})</option>
+                        <option value="not_synced">Biometric: Not Synced ({{ number_format($this->totalUnsynced) }})</option>
+                    </select>
+                @endif
+
                 {{-- Reset Button --}}
                 @if ($hasActiveFilters)
                     <button type="button" wire:click="resetFilters"
@@ -362,6 +439,12 @@ new #[Title('Student Directory')] class extends Component
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold border border-zinc-200/80 dark:border-zinc-700">
                         <span>Gender: <strong>{{ ucfirst($this->gender) }}</strong></span>
                         <button type="button" wire:click="$set('gender', '')" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-bold ml-0.5 cursor-pointer">×</button>
+                    </span>
+                @endif
+                @if ($this->biometric)
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold border border-zinc-200/80 dark:border-zinc-700">
+                        <span>Biometric: <strong>{{ $this->biometric === 'synced' ? 'Synced' : 'Not Synced' }}</strong></span>
+                        <button type="button" wire:click="$set('biometric', '')" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-bold ml-0.5 cursor-pointer">×</button>
                     </span>
                 @endif
                 <button type="button" wire:click="resetFilters" class="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 underline ml-1 cursor-pointer">
@@ -426,18 +509,33 @@ new #[Title('Student Directory')] class extends Component
                                 </div>
                             </div>
 
-                            {{-- Status Badge --}}
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap shrink-0
-                                {{ $status === 'active'
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
-                                    : ($status === 'suspended'
-                                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60'
-                                        : ($status === 'graduated'
-                                            ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
-                                            : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60')) }}">
-                                <span class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-zinc-500' : 'bg-rose-500')) }}"></span>
-                                {{ ucfirst($status) }}
-                            </span>
+                            {{-- Status Badge & Biometric Indicator --}}
+                            <div class="flex flex-col items-end gap-1 shrink-0">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap
+                                    {{ $status === 'active'
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
+                                        : ($status === 'suspended'
+                                            ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60'
+                                            : ($status === 'graduated'
+                                                ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
+                                                : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60')) }}">
+                                    <span class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-zinc-500' : 'bg-rose-500')) }}"></span>
+                                    {{ ucfirst($status) }}
+                                </span>
+                                @if ($this->activeDevices->isNotEmpty())
+                                    @if ($user?->zkteco_synced)
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400" title="Synced to biometric device">
+                                            <flux:icon icon="finger-print" class="size-2.5 text-emerald-500" />
+                                            <span>Synced</span>
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 dark:text-zinc-500" title="Not synced to biometric device">
+                                            <flux:icon icon="finger-print" class="size-2.5 text-zinc-400" />
+                                            <span>Pending</span>
+                                        </span>
+                                    @endif
+                                @endif
+                            </div>
                         </div>
 
                         {{-- Row 2: Guardian Contact & Quick Action Buttons --}}
@@ -582,19 +680,34 @@ new #[Title('Student Directory')] class extends Component
                                 {{-- Col 4: Status & Actions --}}
                                 <td class="py-4 px-5 text-right">
                                     <div class="flex flex-col items-end gap-2">
-                                        <span
-                                            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
-                                                {{ $status === 'active'
-                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
-                                                    : ($status === 'suspended'
-                                                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60'
-                                                        : ($status === 'graduated'
-                                                            ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
-                                                            : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60')) }}">
+                                        <div class="flex items-center gap-1.5">
+                                            @if ($this->activeDevices->isNotEmpty())
+                                                @if ($user?->zkteco_synced)
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60" title="Synced to biometric device">
+                                                        <flux:icon icon="finger-print" class="size-2.5 text-emerald-600 dark:text-emerald-400" />
+                                                        <span>Synced</span>
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-zinc-500 bg-zinc-100 dark:text-zinc-400 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700" title="Pending biometric device sync">
+                                                        <flux:icon icon="finger-print" class="size-2.5 text-zinc-400" />
+                                                        <span>Pending</span>
+                                                    </span>
+                                                @endif
+                                            @endif
                                             <span
-                                                class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-zinc-500' : 'bg-rose-500')) }}"></span>
-                                            {{ ucfirst($status) }}
-                                        </span>
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold
+                                                    {{ $status === 'active'
+                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
+                                                        : ($status === 'suspended'
+                                                            ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60'
+                                                            : ($status === 'graduated'
+                                                                ? 'bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
+                                                                : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/60')) }}">
+                                                <span
+                                                    class="size-1.5 rounded-full {{ $status === 'active' ? 'bg-emerald-500' : ($status === 'suspended' ? 'bg-amber-500' : ($status === 'graduated' ? 'bg-zinc-500' : 'bg-rose-500')) }}"></span>
+                                                {{ ucfirst($status) }}
+                                            </span>
+                                        </div>
 
                                         @if ($user)
                                             <div class="flex items-center justify-end gap-1">

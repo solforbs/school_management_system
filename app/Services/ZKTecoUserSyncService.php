@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\Devices;
 use Athwari\LaravelZktecoAdms\DTOs\UserRecord;
 use Athwari\LaravelZktecoAdms\Models\ZktecoUser;
 use Athwari\LaravelZktecoAdms\Services\CommandManager;
 use Athwari\LaravelZktecoAdms\Services\DeviceManager;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Modules\Student\Models\StudentDetails;
 
 /**
  * @param  array<string, string>  $userData
@@ -27,12 +30,16 @@ class ZKTecoUserSyncService
 
     private CommandManager $commandManager;
 
+    private ?ProfilePhotoResolver $photoResolver;
+
     public function __construct(
         DeviceManager $deviceManager,
-        CommandManager $commandManager
+        CommandManager $commandManager,
+        ?ProfilePhotoResolver $photoResolver = null
     ) {
         $this->deviceManager = $deviceManager;
         $this->commandManager = $commandManager;
+        $this->photoResolver = $photoResolver;
     }
 
     /**
@@ -425,5 +432,110 @@ class ZKTecoUserSyncService
         imagedestroy($resized);
 
         return $contents !== false ? $contents : null;
+    }
+
+    /**
+     * Bulk sync a list of students to all active devices for an institution.
+     *
+     * @param  array<int>|Collection<int, int>  $studentIds  Array or Collection of User IDs
+     * @param  bool  $force  Whether to re-sync if student is already marked as synced
+     * @return array{synced: int, total_students: int, devices_count: int, device_serials: array<int, string>}
+     */
+    public function bulkSyncStudents(array|Collection $studentIds, int $institutionId, bool $force = false): array
+    {
+        $ids = $studentIds instanceof Collection ? $studentIds->all() : $studentIds;
+
+        if (empty($ids)) {
+            return [
+                'synced' => 0,
+                'total_students' => 0,
+                'devices_count' => 0,
+                'device_serials' => [],
+            ];
+        }
+
+        $devices = Devices::where('institution_id', $institutionId)
+            ->where('is_active', true)
+            ->get();
+
+        if ($devices->isEmpty()) {
+            return [
+                'synced' => 0,
+                'total_students' => count($ids),
+                'devices_count' => 0,
+                'device_serials' => [],
+            ];
+        }
+
+        $studentDetails = StudentDetails::where('institution_id', $institutionId)
+            ->whereIn('student_id', $ids)
+            ->with('student')
+            ->get();
+
+        $photoResolver = $this->photoResolver ?? app(ProfilePhotoResolver::class);
+        $syncedCount = 0;
+        $deviceSerials = $devices->pluck('serial_number')->all();
+
+        foreach ($studentDetails as $details) {
+            $student = $details->student;
+            if (! $student) {
+                continue;
+            }
+
+            if (! $force && $student->zkteco_synced) {
+                continue;
+            }
+
+            $photoResolver->withLocalPath($details->profile_photo, function (?string $photoPath) use ($student, $details, $devices, &$syncedCount) {
+                $deviceUserData = [
+                    'pin' => (string) $student->id,
+                    'name' => $student->name,
+                    'privilege' => 0,
+                    'card' => $details->student_number ?? '',
+                    'password' => $details->admission_number ?? '',
+                    'app_user_id' => $student->id,
+                    'photo_path' => $photoPath,
+                ];
+
+                $queuedOnAny = false;
+                foreach ($devices as $device) {
+                    if ($this->addUserToDevice($device->serial_number, $deviceUserData)) {
+                        $queuedOnAny = true;
+                    }
+                }
+
+                if ($queuedOnAny) {
+                    $student->update([
+                        'zkteco_synced' => true,
+                        'zkteco_synced_at' => now(),
+                        'zkteco_sync_error' => null,
+                    ]);
+                    $syncedCount++;
+                }
+            });
+        }
+
+        return [
+            'synced' => $syncedCount,
+            'total_students' => $studentDetails->count(),
+            'devices_count' => $devices->count(),
+            'device_serials' => $deviceSerials,
+        ];
+    }
+
+    /**
+     * Bulk sync all unsynced students in an institution to its active devices.
+     *
+     * @param  int  $limit  Max students to queue in one batch
+     * @return array{synced: int, total_students: int, devices_count: int, device_serials: array<int, string>}
+     */
+    public function bulkSyncUnsyncedForInstitution(int $institutionId, int $limit = 500): array
+    {
+        $unsyncedIds = StudentDetails::where('institution_id', $institutionId)
+            ->whereHas('student', fn ($q) => $q->where('zkteco_synced', false))
+            ->limit($limit)
+            ->pluck('student_id');
+
+        return $this->bulkSyncStudents($unsyncedIds, $institutionId, force: false);
     }
 }

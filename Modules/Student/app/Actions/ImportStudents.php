@@ -92,13 +92,14 @@ class ImportStudents
      * one bad line abort the rest of the file.
      *
      * @param  array<int, array<string, string>>  $rows
-     * @return array{created: int, errors: array<int, string>} Errors keyed by the row's index.
+     * @return array{created: int, created_ids: array<int, int>, errors: array<int, string>}
      */
     public function import(array $rows, int $institutionId): array
     {
         $classes = SchoolClass::where('institution_id', $institutionId)->get();
 
         $created = 0;
+        $createdIds = [];
         $errors = [];
         $seenAdmissionNumbers = [];
         $seenStudentNumbers = [];
@@ -172,7 +173,7 @@ class ImportStudents
             $seenAdmissionNumbers[$admissionNumber] = $index;
 
             try {
-                $this->saveStudent->create([
+                $student = $this->saveStudent->create([
                     'name' => $row['name'],
                     'email' => $this->uniqueEmail($row['name'], $admissionNumber),
                     'password' => Str::random(16),
@@ -187,6 +188,7 @@ class ImportStudents
                 ], $institutionId);
 
                 $created++;
+                $createdIds[] = $student->id;
             } catch (StudentLimitException $e) {
                 $errors[$index] = $e->getMessage();
             } catch (QueryException $e) {
@@ -211,7 +213,7 @@ class ImportStudents
             }
         }
 
-        return ['created' => $created, 'errors' => $errors];
+        return ['created' => $created, 'created_ids' => $createdIds, 'errors' => $errors];
     }
 
     /**

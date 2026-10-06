@@ -34,6 +34,8 @@ new #[Title('Upload Student Records')] class extends Component {
 
     public string $rosterSearch = '';
 
+    public bool $syncToBiometrics = true;
+
     public function mount(): void
     {
         abort_unless(auth()->user()->can('create student'), 403);
@@ -208,20 +210,36 @@ new #[Title('Upload Student Records')] class extends Component {
         $this->created = $result['created'];
         $this->rowErrors = $result['errors'];
 
+        $biometricSummary = '';
+        if ($this->syncToBiometrics && ! empty($result['created_ids']) && $this->activeDevices->isNotEmpty()) {
+            $syncResult = app(\App\Services\ZKTecoUserSyncService::class)->bulkSyncStudents($result['created_ids'], $institutionId);
+            if ($syncResult['synced'] > 0) {
+                $biometricSummary = " and queued {$syncResult['synced']} student(s) to {$syncResult['devices_count']} biometric device(s)";
+            }
+        }
+
         $failed = array_intersect_key($this->rows, $result['errors']);
         $this->rows = $failed === [] ? array_fill(0, 5, $this->blankRow()) : array_values($failed);
         $this->rowErrors = array_values($result['errors']);
         $this->file = null;
 
         if ($result['errors'] === []) {
-            session()->flash('success', $result['created'].' student record(s) created successfully.');
+            session()->flash('success', $result['created'].' student record(s) created successfully'.$biometricSummary.'.');
             $this->dispatch('clear-bulk-draft');
             $this->redirectRoute('student.index', navigate: true);
 
             return;
         }
 
-        Flux::toast(text: $result['created'].' saved, '.count($result['errors']).' row(s) need attention below.', variant: $result['created'] > 0 ? 'warning' : 'danger');
+        Flux::toast(text: $result['created'].' saved'.$biometricSummary.', '.count($result['errors']).' row(s) need attention below.', variant: $result['created'] > 0 ? 'warning' : 'danger');
+    }
+
+    #[Computed]
+    public function activeDevices()
+    {
+        return \App\Models\Devices::where('institution_id', currentInstitutionId() ?? 0)
+            ->where('is_active', true)
+            ->get();
     }
 
     #[Computed]
@@ -418,6 +436,15 @@ new #[Title('Upload Student Records')] class extends Component {
                 Back to Directory
             </a>
             @if ($activeTab === 'grid')
+                @if ($this->activeDevices->isNotEmpty())
+                    <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs text-zinc-700 dark:text-zinc-300 font-medium bg-zinc-100/90 dark:bg-zinc-800/90 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 transition shadow-2xs">
+                        <input type="checkbox" wire:model.live="syncToBiometrics" class="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 size-4 cursor-pointer">
+                        <span class="flex items-center gap-1.5">
+                            <flux:icon icon="finger-print" class="size-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>Sync to {{ $this->activeDevices->count() }} Biometric Device{{ $this->activeDevices->count() > 1 ? 's' : '' }}</span>
+                        </span>
+                    </label>
+                @endif
                 <flux:button wire:click="save" wire:loading.attr="disabled" icon="check" variant="primary"
                     class="font-semibold shadow-sm px-6">
                     <span wire:loading.remove wire:target="save">Save All Students</span>
@@ -806,6 +833,15 @@ new #[Title('Upload Student Records')] class extends Component {
                 </div>
 
                 <div class="flex items-center gap-3">
+                    @if ($this->activeDevices->isNotEmpty())
+                        <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs text-zinc-700 dark:text-zinc-300 font-medium bg-white dark:bg-zinc-800 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 transition shadow-2xs">
+                            <input type="checkbox" wire:model.live="syncToBiometrics" class="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 size-4 cursor-pointer">
+                            <span class="flex items-center gap-1.5">
+                                <flux:icon icon="finger-print" class="size-3.5 text-blue-600 dark:text-blue-400" />
+                                <span>Sync to {{ $this->activeDevices->count() }} Device{{ $this->activeDevices->count() > 1 ? 's' : '' }}</span>
+                            </span>
+                        </label>
+                    @endif
                     <flux:button wire:click="save" wire:loading.attr="disabled" icon="check" variant="primary"
                         class="font-semibold shadow-sm px-6">
                         <span wire:loading.remove wire:target="save">Save All Students</span>

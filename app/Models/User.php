@@ -82,6 +82,8 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'zkteco_synced' => 'boolean',
+            'zkteco_synced_at' => 'datetime',
         ];
     }
 
