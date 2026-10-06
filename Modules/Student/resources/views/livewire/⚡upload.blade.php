@@ -328,26 +328,23 @@ new #[Title('Upload Student Records')] class extends Component
     #[Computed]
     public function classStats(): array
     {
-        if (! $this->selectedClassId) {
-            return [
-                'total' => 0,
-                'male' => 0,
-                'female' => 0,
-                'latest_admission' => 'None',
-                'school_latest_admission' => 'None',
-            ];
-        }
+        $emptyStats = [
+            'total' => 0,
+            'male' => 0,
+            'female' => 0,
+            'latest_admission' => 'None',
+            'school_latest_admission' => 'None',
+        ];
 
         $institutionId = currentInstitutionId();
         if (! $institutionId) {
-            return [
-                'total' => 0,
-                'male' => 0,
-                'female' => 0,
-                'latest_admission' => 'None',
-                'school_latest_admission' => 'None',
-            ];
+            return $emptyStats;
         }
+
+        if (! $this->selectedClassId) {
+            return app(StudentCacheService::class)->getInstitutionStats($institutionId);
+        }
+
 
         return app(StudentCacheService::class)->getClassStats($institutionId, (int) $this->selectedClassId);
     }
@@ -355,10 +352,6 @@ new #[Title('Upload Student Records')] class extends Component
     #[Computed]
     public function classRoster()
     {
-        if (! $this->selectedClassId) {
-            return collect();
-        }
-
         $institutionId = currentInstitutionId();
         if (! $institutionId) {
             return collect();
@@ -369,7 +362,7 @@ new #[Title('Upload Student Records')] class extends Component
 
             return StudentDetails::query()
                 ->where('institution_id', $institutionId)
-                ->where('class_id', $this->selectedClassId)
+                ->when($this->selectedClassId, fn ($q, $classId) => $q->where('class_id', $classId))
                 ->with('student')
                 ->where(function ($sub) use ($term) {
                     $sub->where('admission_number', 'like', $term)
@@ -378,6 +371,10 @@ new #[Title('Upload Student Records')] class extends Component
                 })
                 ->orderBy('admission_number')
                 ->get();
+        }
+
+        if (! $this->selectedClassId) {
+            return app(StudentCacheService::class)->getInstitutionRoster($institutionId);
         }
 
         $cacheKey = "inst_{$institutionId}_class_{$this->selectedClassId}_roster";
@@ -423,19 +420,25 @@ new #[Title('Upload Student Records')] class extends Component
             }
             $student->student?->update(['name' => $value]);
         } elseif ($field === 'admission_number') {
-            if ($value !== '') {
-                $exists = StudentDetails::where('institution_id', $institutionId)
-                    ->where('admission_number', $value)
-                    ->where('id', '!=', $student->id)
-                    ->exists();
+            if ($value === '') {
+                Flux::toast(text: 'Admission number cannot be empty. Previous value kept.', variant: 'danger');
+                $this->js('$wire.$refresh()');
 
-                if ($exists) {
-                    Flux::toast(text: "Admission number '{$value}' is already used by another student.", variant: 'danger');
-
-                    return;
-                }
+                return;
             }
-            $student->update(['admission_number' => $value ?: null]);
+
+            $exists = StudentDetails::withTrashed()
+                ->where('admission_number', $value)
+                ->where('id', '!=', $student->id)
+                ->exists();
+
+            if ($exists) {
+                Flux::toast(text: "Admission number '{$value}' is already used by another student.", variant: 'danger');
+                $this->js('$wire.$refresh()');
+
+                return;
+            }
+            $student->update(['admission_number' => $value]);
         } elseif ($field === 'student_number') {
             if ($value !== '') {
                 $exists = StudentDetails::where('institution_id', $institutionId)
@@ -455,8 +458,10 @@ new #[Title('Upload Student Records')] class extends Component
             $student->update(['gender' => $genderVal]);
         } elseif ($field === 'guardian_name') {
             $student->update(['guardian_name' => $value ?: null]);
+            app(SaveStudent::class)->syncParentFromGuardian($student->refresh());
         } elseif ($field === 'guardian_phone') {
             $student->update(['guardian_phone' => $value ?: null]);
+            app(SaveStudent::class)->syncParentFromGuardian($student->refresh());
         }
 
         if ($this->syncToBiometrics && $student->student_id && in_array($field, ['name', 'admission_number', 'student_number'], true)) {
@@ -584,6 +589,10 @@ new #[Title('Upload Student Records')] class extends Component
             }
 
             // Check admission number uniqueness
+            if (! $isNew && $adm === '') {
+                $this->rosterErrors[$key]['admission_number'] = 'Admission number cannot be empty.';
+            }
+
             if ($adm !== '') {
                 if (isset($seenAdmissions[$adm])) {
                     $this->rosterErrors[$key]['admission_number'] = "Duplicate admission number '{$adm}' in this form.";
@@ -591,7 +600,7 @@ new #[Title('Upload Student Records')] class extends Component
                     $seenAdmissions[$adm] = $key;
                 }
 
-                $query = StudentDetails::where('institution_id', $institutionId)
+                $query = StudentDetails::withTrashed()
                     ->where('admission_number', $adm);
                 if (! $isNew && ! empty($row['id'])) {
                     $query->where('id', '!=', (int) $row['id']);
@@ -653,7 +662,7 @@ new #[Title('Upload Student Records')] class extends Component
                     if (! $generatedAdm) {
                         do {
                             $admToUse = strtoupper('ADM-'.now()->year.'-'.Str::random(6));
-                        } while (StudentDetails::where('admission_number', $admToUse)->exists());
+                        } while (StudentDetails::withTrashed()->where('admission_number', $admToUse)->exists());
                     }
 
                     $newStudent = app(SaveStudent::class)->create([
@@ -666,6 +675,8 @@ new #[Title('Upload Student Records')] class extends Component
                         'gender' => $genderVal,
                         'guardian_name' => $guardianName ?: null,
                         'guardian_phone' => $guardianPhone ?: null,
+                        'parent_name' => $guardianName ?: null,
+                        'parent_phone' => $guardianPhone ?: null,
                         'enrollment_status' => 'active',
                         'is_active' => true,
                     ], $institutionId);
@@ -690,19 +701,14 @@ new #[Title('Upload Student Records')] class extends Component
                 }
 
                 $details->update([
-                    'admission_number' => $adm ?: null,
+                    'admission_number' => $adm !== '' ? $adm : $details->admission_number,
                     'student_number' => $stuNo ?: null,
                     'gender' => $genderVal,
                     'guardian_name' => $guardianName ?: null,
                     'guardian_phone' => $guardianPhone ?: null,
                 ]);
 
-                if ($details->parent_id && $guardianName) {
-                    $parent = User::find($details->parent_id);
-                    if ($parent && $parent->name !== $guardianName) {
-                        $parent->update(['name' => $guardianName]);
-                    }
-                }
+                app(SaveStudent::class)->syncParentFromGuardian($details->refresh());
 
                 $updatedCount++;
             }
@@ -720,6 +726,7 @@ new #[Title('Upload Student Records')] class extends Component
         $this->isEditingRoster = false;
         $this->rosterEdits = [];
         $this->rosterErrors = [];
+        app(StudentCacheService::class)->invalidateClass($institutionId, $this->selectedClassId);
         unset($this->classRoster, $this->classStats);
 
         $msgParts = [];
@@ -974,11 +981,11 @@ new #[Title('Upload Student Records')] class extends Component
             </div>
 
             {{-- Live Class Headcount & Next Admission Helper --}}
-            @if ($this->selectedClass)
+            @if ($this->selectedClass || $this->classStats['total'] > 0)
                 @php $stats = $this->classStats; @endphp
                 <div wire:loading.class="opacity-60" wire:target="onClassSelectChange, switchClass" class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs transition-opacity">
                     <div class="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-700 shadow-2xs">
-                        Class Size: <strong class="text-zinc-900 dark:text-white ml-0.5">{{ $stats['total'] }}</strong>
+                        {{ $this->selectedClass ? 'Class Size' : 'All Students' }}: <strong class="text-zinc-900 dark:text-white ml-0.5">{{ $stats['total'] }}</strong>
                     </div>
                     <div class="px-2.5 py-1.5 rounded-lg bg-blue-50/90 dark:bg-blue-950/40 font-semibold text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800 shadow-2xs">
                         Boys: <strong class="ml-0.5">{{ $stats['male'] }}</strong>
@@ -1075,7 +1082,7 @@ new #[Title('Upload Student Records')] class extends Component
 
         {{-- Enrolled Roster Accordion (Open by default, hides only on user click) --}}
         {{-- Enrolled Roster Accordion (Open by default, hides only on user click) --}}
-        @if ($this->selectedClass && $this->classRoster->isNotEmpty())
+        @if ($this->classRoster->isNotEmpty() || $rosterSearch !== '')
             @php $stats = $this->classStats; @endphp
             <div class="bg-white dark:bg-zinc-900 shadow-sm border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden transition-all">
                 <div class="w-full px-5 py-3.5 flex items-center justify-between text-left bg-zinc-50/70 dark:bg-zinc-950/40 border-b border-zinc-200/80 dark:border-zinc-800 flex-wrap gap-3">
@@ -1085,7 +1092,7 @@ new #[Title('Upload Student Records')] class extends Component
                         </div>
                         <div>
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white">{{ $this->selectedClass->name }} Enrolled Roster</h4>
+                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white">{{ $this->selectedClass?->name ?? 'All Classes' }} Enrolled Roster</h4>
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
                                     {{ $stats['total'] }} Students Enrolled
                                 </span>

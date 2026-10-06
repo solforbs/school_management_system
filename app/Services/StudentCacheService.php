@@ -56,6 +56,54 @@ class StudentCacheService
     }
 
     /**
+     * Institution-wide headcount stats (the "All / Mixed Classes" view).
+     *
+     * @return array{total: int, male: int, female: int, latest_admission: string, school_latest_admission: string}
+     */
+    public function getInstitutionStats(int $institutionId): array
+    {
+        return Cache::remember("inst_{$institutionId}_all_stats", self::STATS_TTL, function () use ($institutionId) {
+            $row = DB::table('student_details')
+                ->where('institution_id', $institutionId)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->selectRaw("
+                    COUNT(*) as total,
+                    SUM(CASE WHEN LOWER(gender) = 'male' THEN 1 ELSE 0 END) as male,
+                    SUM(CASE WHEN LOWER(gender) = 'female' THEN 1 ELSE 0 END) as female
+                ")
+                ->first();
+
+            $latest = $this->getSchoolLatestAdmission($institutionId);
+
+            return [
+                'total' => $row ? (int) $row->total : 0,
+                'male' => $row ? (int) $row->male : 0,
+                'female' => $row ? (int) $row->female : 0,
+                'latest_admission' => $latest,
+                'school_latest_admission' => $latest,
+            ];
+        });
+    }
+
+    /**
+     * Cached roster of every student in the institution (capped for safety).
+     *
+     * @return Collection<int, StudentDetails>
+     */
+    public function getInstitutionRoster(int $institutionId, int $limit = 1000): Collection
+    {
+        return Cache::remember("inst_{$institutionId}_all_roster", self::STATS_TTL, function () use ($institutionId, $limit) {
+            return StudentDetails::query()
+                ->where('institution_id', $institutionId)
+                ->with('student')
+                ->orderBy('admission_number')
+                ->limit($limit)
+                ->get();
+        });
+    }
+
+    /**
      * Get the latest admission number recorded for the institution.
      */
     public function getSchoolLatestAdmission(int $institutionId): string
@@ -113,6 +161,8 @@ class StudentCacheService
 
         Cache::forget("inst_{$institutionId}_student_count");
         Cache::forget("inst_{$institutionId}_latest_adm");
+        Cache::forget("inst_{$institutionId}_all_stats");
+        Cache::forget("inst_{$institutionId}_all_roster");
     }
 
     /**
@@ -124,5 +174,7 @@ class StudentCacheService
         Cache::forget("inst_{$institutionId}_classes_tenant");
         Cache::forget("inst_{$institutionId}_student_count");
         Cache::forget("inst_{$institutionId}_latest_adm");
+        Cache::forget("inst_{$institutionId}_all_stats");
+        Cache::forget("inst_{$institutionId}_all_roster");
     }
 }

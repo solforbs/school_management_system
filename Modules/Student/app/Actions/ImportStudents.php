@@ -183,6 +183,8 @@ class ImportStudents
                     'gender' => in_array(strtolower($row['gender']), ['male', 'female', 'other'], true) ? strtolower($row['gender']) : null,
                     'guardian_name' => $row['guardian_name'] ?: null,
                     'guardian_phone' => $row['guardian_phone'] ?: null,
+                    'parent_name' => $row['guardian_name'] ?: null,
+                    'parent_phone' => $row['guardian_phone'] ?: null,
                     'enrollment_status' => $status,
                     'is_active' => $status === 'active',
                 ], $institutionId);

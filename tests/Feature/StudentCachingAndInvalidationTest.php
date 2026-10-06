@@ -6,6 +6,7 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Facades\Cache;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
+use Modules\Student\Actions\ImportStudents;
 use Modules\Student\Models\StudentDetails;
 
 beforeEach(function () {
@@ -203,4 +204,51 @@ it('caches institution student count and invalidates when student is added or re
 
     $student->delete();
     expect($institution->currentStudentCount())->toBe(0);
+});
+
+it('serves institution-wide stats and roster for all classes and keeps them fresh', function () {
+    $institution = createTestInstitution();
+    $classA = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Grade 3', 'level' => 'Primary']);
+    $classB = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Grade 4', 'level' => 'Primary']);
+
+    $make = function (string $adm, $class, string $gender) use ($institution) {
+        return StudentDetails::create([
+            'student_id' => User::factory()->create()->id,
+            'institution_id' => $institution->id,
+            'class_id' => $class->id,
+            'admission_number' => $adm,
+            'gender' => $gender,
+            'is_active' => true,
+        ]);
+    };
+
+    $make('ALL-001', $classA, 'Male');
+    $service = app(StudentCacheService::class);
+
+    expect($service->getInstitutionStats($institution->id)['total'])->toBe(1)
+        ->and($service->getInstitutionRoster($institution->id))->toHaveCount(1);
+
+    $make('ALL-002', $classB, 'Female');
+
+    $stats = $service->getInstitutionStats($institution->id);
+    expect($stats['total'])->toBe(2)
+        ->and($stats['female'])->toBe(1)
+        ->and($service->getInstitutionRoster($institution->id))->toHaveCount(2);
+});
+
+it('creates and links a parent account from bulk-imported guardian details', function () {
+    $institution = createTestInstitution();
+    $class = SchoolClass::create(['institution_id' => $institution->id, 'name' => 'Grade 3', 'level' => 'Primary']);
+
+    $result = app(ImportStudents::class)->import([[
+        'name' => 'Amina Test', 'admission_number' => 'BLK-001', 'student_number' => '',
+        'class_name' => 'Grade 3', 'gender' => 'female', 'guardian_name' => 'Mama Amina',
+        'guardian_phone' => '0712345678', 'enrollment_status' => 'active',
+    ]], $institution->id);
+
+    expect($result['errors'])->toBe([])->and($result['created'])->toBe(1);
+
+    $details = StudentDetails::where('admission_number', 'BLK-001')->first();
+    expect($details->parent_id)->not->toBeNull()
+        ->and(User::find($details->parent_id)->name)->toBe('Mama Amina');
 });

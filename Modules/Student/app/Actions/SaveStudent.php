@@ -303,6 +303,25 @@ class SaveStudent
     }
 
     /**
+     * Create/link the Parent account from the denormalised guardian_name /
+     * guardian_phone columns (used by bulk upload and in-place roster edits).
+     */
+    public function syncParentFromGuardian(StudentDetails $studentDetails): void
+    {
+        $name = trim((string) $studentDetails->guardian_name);
+        $phone = trim((string) $studentDetails->guardian_phone);
+
+        if ($name === '' && $phone === '') {
+            return;
+        }
+
+        DB::transaction(fn () => $this->syncParentOnUpdate($studentDetails, [
+            'parent_name' => $name !== '' ? $name : null,
+            'parent_phone' => $phone !== '' ? $phone : null,
+        ]));
+    }
+
+    /**
      * Link the parent account that was chosen, or create one from whatever
      * parent details were filled in. Neither given means the student simply
      * has no parent on file yet.
