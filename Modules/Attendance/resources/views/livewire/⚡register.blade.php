@@ -1,6 +1,8 @@
 <?php
 
+use App\Services\SmsService;
 use Carbon\Carbon;
+use Flux\Flux;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -260,7 +262,7 @@ new #[Title('Class Attendance Register')] class extends Component
         );
 
         $msg = 'Attendance for '.$class->name.' ('.Carbon::parse($this->date)->format('D, M j, Y').') saved successfully!';
-        \Flux\Flux::toast(text: $msg, variant: 'success');
+        Flux::toast(text: $msg, variant: 'success');
         $this->showSuccessBanner = true;
         $this->successMessage = $msg;
     }
@@ -300,9 +302,9 @@ new #[Title('Class Attendance Register')] class extends Component
 
         if ($result['success']) {
             $this->parentNotified[$studentId] = true;
-            \Flux\Flux::toast(text: $result['message'], variant: 'success');
+            Flux::toast(text: $result['message'], variant: 'success');
         } else {
-            \Flux\Flux::toast(text: $result['message'], variant: 'danger');
+            Flux::toast(text: $result['message'], variant: 'danger');
         }
 
         return $result;
@@ -336,13 +338,13 @@ new #[Title('Class Attendance Register')] class extends Component
             ]
         );
 
-        \Flux\Flux::toast(text: 'Marked as notified via direct contact (call/email).', variant: 'success');
+        Flux::toast(text: 'Marked as notified via direct contact (call/email).', variant: 'success');
     }
 
     #[Computed]
     public function isSmsConfigured(): bool
     {
-        return app(\App\Services\SmsService::class)->isConfigured();
+        return app(SmsService::class)->isConfigured();
     }
 }; ?>
 
@@ -408,8 +410,11 @@ new #[Title('Class Attendance Register')] class extends Component
                     @foreach ($this->selectableClasses as $classOption)
                         <button type="button"
                             wire:click="$set('classId', {{ $classOption->id }})"
-                            class="flex-1 sm:flex-none text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100' }}">
-                            {{ $classOption->name }} <span class="opacity-80">({{ $classOption->students_count }})</span>
+                            wire:loading.attr="disabled"
+                            class="inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700' }}">
+                            <flux:icon wire:loading wire:target="$set('classId', {{ $classOption->id }})" icon="arrow-path" class="size-3 animate-spin shrink-0" />
+                            <span>{{ $classOption->name }}</span>
+                            <span class="opacity-80 font-normal">({{ $classOption->students_count }})</span>
                         </button>
                     @endforeach
                 </div>

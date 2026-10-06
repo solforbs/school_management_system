@@ -17,6 +17,15 @@ use Modules\Subject\Models\SubjectTeacher;
 
 class ClassAttendanceService
 {
+    /** @var array<string, Collection<int, array<string, mixed>>> */
+    private array $registerCache = [];
+
+    /** @var array<string, array<string, mixed>> */
+    private array $metaCache = [];
+
+    /** @var array<int, Collection<int, SchoolClass>> */
+    private array $selectableClassesCache = [];
+
     /**
      * Resolve the class a user is authorized to manage or view attendance for.
      */
@@ -62,6 +71,10 @@ class ClassAttendanceService
      */
     public function getSelectableClasses(User $user): Collection
     {
+        if (isset($this->selectableClassesCache[$user->id])) {
+            return $this->selectableClassesCache[$user->id];
+        }
+
         $institutionId = currentInstitution()?->id
             ?? $user->teacherUserDetails?->institution_id
             ?? $user->active_institution_id;
@@ -71,7 +84,7 @@ class ClassAttendanceService
         }
 
         if (! $user->hasRole('Teacher')) {
-            return SchoolClass::where('institution_id', $institutionId)
+            return $this->selectableClassesCache[$user->id] = SchoolClass::where('institution_id', $institutionId)
                 ->withCount('students')
                 ->orderBy('name')
                 ->get();
@@ -97,7 +110,7 @@ class ClassAttendanceService
             ->unique()
             ->values();
 
-        return SchoolClass::whereIn('id', $accessibleClassIds)
+        return $this->selectableClassesCache[$user->id] = SchoolClass::whereIn('id', $accessibleClassIds)
             ->withCount('students')
             ->orderBy('name')
             ->get();
@@ -111,6 +124,10 @@ class ClassAttendanceService
     public function getRegister(SchoolClass $class, string $date): Collection
     {
         $parsedDate = Carbon::parse($date)->toDateString();
+        $cacheKey = "{$class->id}_{$parsedDate}";
+        if (isset($this->registerCache[$cacheKey])) {
+            return $this->registerCache[$cacheKey];
+        }
 
         // 1. Get all active students enrolled in this class
         $studentDetails = StudentDetails::query()
@@ -122,7 +139,7 @@ class ClassAttendanceService
             ->values();
 
         if ($studentDetails->isEmpty()) {
-            return collect();
+            return $this->registerCache[$cacheKey] = collect();
         }
 
         $studentUserIds = $studentDetails->pluck('student_id')->filter()->unique()->values();
@@ -154,7 +171,7 @@ class ClassAttendanceService
         }
 
         // 4. Combine into display-ready student rows
-        return $studentDetails->map(function (StudentDetails $detail, int $index) use ($existingRecords, $gateLogs) {
+        return $this->registerCache[$cacheKey] = $studentDetails->map(function (StudentDetails $detail, int $index) use ($existingRecords, $gateLogs) {
             $userId = $detail->student_id;
             $user = $detail->student;
             /** @var Attendance|null $saved */
@@ -290,6 +307,9 @@ class ClassAttendanceService
                 );
             }
         });
+
+        $this->registerCache = [];
+        $this->metaCache = [];
     }
 
     /**
@@ -301,6 +321,11 @@ class ClassAttendanceService
     {
         $parsedDate = Carbon::parse($date)->toDateString();
         $viewer ??= auth()->user();
+        $viewerId = $viewer?->id ?? 0;
+        $cacheKey = "{$class->id}_{$parsedDate}_{$viewerId}";
+        if (isset($this->metaCache[$cacheKey])) {
+            return $this->metaCache[$cacheKey];
+        }
 
         // Class teacher check
         $classTeacher = $class->classTeacher;
@@ -362,7 +387,7 @@ class ClassAttendanceService
             $savedAbsentCount = $savedRecords->where('status', 'absent')->count();
         }
 
-        return [
+        return $this->metaCache[$cacheKey] = [
             'class_name' => $class->name,
             'class_teacher_name' => $classTeacher?->name,
             'is_current_user_class_teacher' => $isClassTeacher,
