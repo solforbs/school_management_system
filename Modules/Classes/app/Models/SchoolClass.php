@@ -3,6 +3,7 @@
 namespace Modules\Classes\Models;
 
 use App\Models\User;
+use App\Services\StudentCacheService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,6 +50,17 @@ class SchoolClass extends Model
         'class_teacher_id',
         'capacity',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function (SchoolClass $class) {
+            app(StudentCacheService::class)->invalidateInstitution((int) $class->institution_id);
+        });
+
+        static::deleted(function (SchoolClass $class) {
+            app(StudentCacheService::class)->invalidateInstitution((int) $class->institution_id);
+        });
+    }
 
     public function institution(): BelongsTo
     {

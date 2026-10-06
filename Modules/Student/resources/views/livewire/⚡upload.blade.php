@@ -2,8 +2,10 @@
 
 use App\Models\Devices;
 use App\Models\User;
+use App\Services\StudentCacheService;
 use App\Services\ZKTecoUserSyncService;
 use Flux\Flux;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
@@ -295,9 +297,12 @@ new #[Title('Upload Student Records')] class extends Component
     #[Computed]
     public function classes()
     {
-        return SchoolClass::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
-            ->orderBy('name')
-            ->get();
+        $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            return collect();
+        }
+
+        return app(StudentCacheService::class)->getClasses($institutionId, isAdmin());
     }
 
     #[Computed]
@@ -329,37 +334,22 @@ new #[Title('Upload Student Records')] class extends Component
                 'male' => 0,
                 'female' => 0,
                 'latest_admission' => 'None',
+                'school_latest_admission' => 'None',
             ];
         }
 
         $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            return [
+                'total' => 0,
+                'male' => 0,
+                'female' => 0,
+                'latest_admission' => 'None',
+                'school_latest_admission' => 'None',
+            ];
+        }
 
-        $query = StudentDetails::query()
-            ->where('institution_id', $institutionId)
-            ->where('class_id', $this->selectedClassId);
-
-        $total = (clone $query)->count();
-        $male = (clone $query)->where('gender', 'male')->count();
-        $female = (clone $query)->where('gender', 'female')->count();
-        $latest = (clone $query)->whereNotNull('admission_number')
-            ->where('admission_number', '!=', '')
-            ->latest('id')
-            ->value('admission_number') ?? 'None';
-
-        $schoolLatest = StudentDetails::query()
-            ->where('institution_id', $institutionId)
-            ->whereNotNull('admission_number')
-            ->where('admission_number', '!=', '')
-            ->latest('id')
-            ->value('admission_number') ?? 'None';
-
-        return [
-            'total' => $total,
-            'male' => $male,
-            'female' => $female,
-            'latest_admission' => $latest,
-            'school_latest_admission' => $schoolLatest,
-        ];
+        return app(StudentCacheService::class)->getClassStats($institutionId, (int) $this->selectedClassId);
     }
 
     #[Computed]
@@ -370,21 +360,36 @@ new #[Title('Upload Student Records')] class extends Component
         }
 
         $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            return collect();
+        }
 
-        return StudentDetails::query()
-            ->where('institution_id', $institutionId)
-            ->where('class_id', $this->selectedClassId)
-            ->with('student')
-            ->when($this->rosterSearch !== '', function ($q) {
-                $term = '%'.$this->rosterSearch.'%';
-                $q->where(function ($sub) use ($term) {
+        if ($this->rosterSearch !== '') {
+            $term = '%'.$this->rosterSearch.'%';
+
+            return StudentDetails::query()
+                ->where('institution_id', $institutionId)
+                ->where('class_id', $this->selectedClassId)
+                ->with('student')
+                ->where(function ($sub) use ($term) {
                     $sub->where('admission_number', 'like', $term)
                         ->orWhere('student_number', 'like', $term)
                         ->orWhereHas('student', fn ($u) => $u->where('name', 'like', $term));
-                });
-            })
-            ->orderBy('admission_number')
-            ->get();
+                })
+                ->orderBy('admission_number')
+                ->get();
+        }
+
+        $cacheKey = "inst_{$institutionId}_class_{$this->selectedClassId}_roster";
+
+        return Cache::remember($cacheKey, 1800, function () use ($institutionId) {
+            return StudentDetails::query()
+                ->where('institution_id', $institutionId)
+                ->where('class_id', $this->selectedClassId)
+                ->with('student')
+                ->orderBy('admission_number')
+                ->get();
+        });
     }
 
     private function filledRows(): array
@@ -461,6 +466,8 @@ new #[Title('Upload Student Records')] class extends Component
                 force: true
             );
         }
+
+        app(StudentCacheService::class)->invalidateClass($institutionId, $student->class_id ? (int) $student->class_id : null);
 
         Flux::toast(text: 'Updated '.$student->student?->name.'.', variant: 'success');
     }
@@ -948,8 +955,15 @@ new #[Title('Upload Student Records')] class extends Component
                     <flux:icon icon="academic-cap" class="size-5 text-sky-600 dark:text-sky-400" />
                 </div>
                 <div>
-                    <label for="targetClass" class="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Target Class</label>
+                    <div class="flex items-center gap-2">
+                        <label for="targetClass" class="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Target Class</label>
+                        <span wire:loading wire:target="onClassSelectChange, switchClass" class="inline-flex items-center gap-1 text-[11px] text-sky-600 dark:text-sky-400 font-semibold">
+                            <flux:icon icon="arrow-path" class="size-3 animate-spin" />
+                            Loading...
+                        </span>
+                    </div>
                     <select id="targetClass" wire:change="onClassSelectChange($event.target.value)"
+                        wire:loading.attr="disabled" wire:target="onClassSelectChange, switchClass"
                         class="mt-1 text-sm font-bold rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white py-1.5 px-3 focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors min-w-[220px]">
                         <option value="" @selected($selectedClassId === null)>-- All / Mixed Classes --</option>
                         @foreach ($this->classes as $c)
@@ -962,7 +976,7 @@ new #[Title('Upload Student Records')] class extends Component
             {{-- Live Class Headcount & Next Admission Helper --}}
             @if ($this->selectedClass)
                 @php $stats = $this->classStats; @endphp
-                <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
+                <div wire:loading.class="opacity-60" wire:target="onClassSelectChange, switchClass" class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs transition-opacity">
                     <div class="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-700 shadow-2xs">
                         Class Size: <strong class="text-zinc-900 dark:text-white ml-0.5">{{ $stats['total'] }}</strong>
                     </div>

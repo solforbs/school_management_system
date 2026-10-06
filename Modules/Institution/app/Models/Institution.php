@@ -7,6 +7,7 @@ use App\Models\Devices;
 use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\StudentCacheService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -218,7 +219,7 @@ class Institution extends Model
      */
     public function currentStudentCount(): int
     {
-        return $this->studentDetails()->count();
+        return app(StudentCacheService::class)->getInstitutionStudentCount($this->id);
     }
 
     /**

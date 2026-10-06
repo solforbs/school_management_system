@@ -4,6 +4,7 @@ namespace Modules\Student\Models;
 
 use App\Concerns\TetherSyncable;
 use App\Models\User;
+use App\Services\StudentCacheService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -71,6 +72,22 @@ class StudentDetails extends Model
     // {
     //     // return StudentDetailsFactory::new();
     // }
+
+    protected static function booted(): void
+    {
+        static::saved(function (StudentDetails $student) {
+            $service = app(StudentCacheService::class);
+            $service->invalidateClass((int) $student->institution_id, $student->class_id ? (int) $student->class_id : null);
+            if ($student->isDirty('class_id') && $student->getOriginal('class_id')) {
+                $service->invalidateClass((int) $student->institution_id, (int) $student->getOriginal('class_id'));
+            }
+        });
+
+        static::deleted(function (StudentDetails $student) {
+            $service = app(StudentCacheService::class);
+            $service->invalidateClass((int) $student->institution_id, $student->class_id ? (int) $student->class_id : null);
+        });
+    }
 
     public function student(): BelongsTo
     {

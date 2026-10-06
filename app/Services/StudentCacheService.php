@@ -1,0 +1,128 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Modules\Classes\Models\SchoolClass;
+use Modules\Student\Models\StudentDetails;
+
+class StudentCacheService
+{
+    public const STATS_TTL = 1800; // 30 minutes
+
+    public const CLASSES_TTL = 3600; // 1 hour
+
+    /**
+     * Get aggregated class headcount stats with single-query efficiency and caching.
+     *
+     * @return array{total: int, male: int, female: int, latest_admission: string, school_latest_admission: string}
+     */
+    public function getClassStats(int $institutionId, int $classId): array
+    {
+        $cacheKey = "inst_{$institutionId}_class_{$classId}_stats";
+
+        return Cache::remember($cacheKey, self::STATS_TTL, function () use ($institutionId, $classId) {
+            $row = DB::table('student_details')
+                ->where('institution_id', $institutionId)
+                ->where('class_id', $classId)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->selectRaw("
+                    COUNT(*) as total,
+                    SUM(CASE WHEN LOWER(gender) = 'male' THEN 1 ELSE 0 END) as male,
+                    SUM(CASE WHEN LOWER(gender) = 'female' THEN 1 ELSE 0 END) as female
+                ")
+                ->first();
+
+            $latestAdmission = StudentDetails::where('institution_id', $institutionId)
+                ->where('class_id', $classId)
+                ->whereNotNull('admission_number')
+                ->where('admission_number', '!=', '')
+                ->latest('id')
+                ->value('admission_number') ?? 'None';
+
+            $schoolLatest = $this->getSchoolLatestAdmission($institutionId);
+
+            return [
+                'total' => $row ? (int) $row->total : 0,
+                'male' => $row ? (int) $row->male : 0,
+                'female' => $row ? (int) $row->female : 0,
+                'latest_admission' => $latestAdmission,
+                'school_latest_admission' => $schoolLatest,
+            ];
+        });
+    }
+
+    /**
+     * Get the latest admission number recorded for the institution.
+     */
+    public function getSchoolLatestAdmission(int $institutionId): string
+    {
+        $cacheKey = "inst_{$institutionId}_latest_adm";
+
+        return Cache::remember($cacheKey, self::STATS_TTL, function () use ($institutionId) {
+            return StudentDetails::where('institution_id', $institutionId)
+                ->whereNotNull('admission_number')
+                ->where('admission_number', '!=', '')
+                ->latest('id')
+                ->value('admission_number') ?? 'None';
+        });
+    }
+
+    /**
+     * Get cached classes list for an institution.
+     *
+     * @return Collection<int, SchoolClass>
+     */
+    public function getClasses(int $institutionId, bool $isAdmin = false): Collection
+    {
+        $cacheKey = "inst_{$institutionId}_classes_".($isAdmin ? 'admin' : 'tenant');
+
+        return Cache::remember($cacheKey, self::CLASSES_TTL, function () use ($institutionId, $isAdmin) {
+            return SchoolClass::when(! $isAdmin, fn ($q) => $q->where('institution_id', $institutionId))
+                ->orderBy('name')
+                ->get();
+        });
+    }
+
+    /**
+     * Get cached active student count for an institution (used for plan limit badges).
+     */
+    public function getInstitutionStudentCount(int $institutionId): int
+    {
+        $cacheKey = "inst_{$institutionId}_student_count";
+
+        return Cache::remember($cacheKey, self::STATS_TTL, function () use ($institutionId) {
+            return StudentDetails::where('institution_id', $institutionId)
+                ->where('is_active', true)
+                ->count();
+        });
+    }
+
+    /**
+     * Invalidate caches for a specific class (stats & roster) and update school totals.
+     */
+    public function invalidateClass(int $institutionId, ?int $classId = null): void
+    {
+        if ($classId !== null) {
+            Cache::forget("inst_{$institutionId}_class_{$classId}_stats");
+            Cache::forget("inst_{$institutionId}_class_{$classId}_roster");
+        }
+
+        Cache::forget("inst_{$institutionId}_student_count");
+        Cache::forget("inst_{$institutionId}_latest_adm");
+    }
+
+    /**
+     * Invalidate institution-wide caches (classes, counts, admission sequences).
+     */
+    public function invalidateInstitution(int $institutionId): void
+    {
+        Cache::forget("inst_{$institutionId}_classes_admin");
+        Cache::forget("inst_{$institutionId}_classes_tenant");
+        Cache::forget("inst_{$institutionId}_student_count");
+        Cache::forget("inst_{$institutionId}_latest_adm");
+    }
+}
