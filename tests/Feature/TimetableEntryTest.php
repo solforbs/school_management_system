@@ -152,3 +152,58 @@ test('the livewire timetable index renders weekly grid for a class', function ()
         ->assertSee('Mathematics')
         ->assertSee('Lab 1');
 });
+
+test('a director can delete an individual timetable slot via livewire', function () {
+    [$director, $institution, $class] = makeTimetableEntrySchool();
+
+    $entry = TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'subject' => 'Science',
+        'day_of_week' => 'Tuesday',
+        'start_time' => '09:00',
+        'end_time' => '09:45',
+    ]);
+
+    expect(TimetableEntry::where('id', $entry->id)->exists())->toBeTrue();
+
+    Livewire::actingAs($director)
+        ->test('timetable::index')
+        ->set('classId', (string) $class->id)
+        ->call('deleteEntry', $entry->id)
+        ->assertHasNoErrors();
+
+    expect(TimetableEntry::where('id', $entry->id)->exists())->toBeFalse();
+});
+
+test('a director can completely clear a class timetable via livewire', function () {
+    [$director, $institution, $class] = makeTimetableEntrySchool();
+
+    TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'subject' => 'English',
+        'day_of_week' => 'Monday',
+        'start_time' => '08:00',
+        'end_time' => '08:45',
+    ]);
+
+    TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'subject' => 'Chemistry',
+        'day_of_week' => 'Tuesday',
+        'start_time' => '08:45',
+        'end_time' => '09:30',
+    ]);
+
+    expect(TimetableEntry::where('class_id', $class->id)->count())->toBe(2);
+
+    Livewire::actingAs($director)
+        ->test('timetable::index')
+        ->set('classId', (string) $class->id)
+        ->call('clearClassTimetable')
+        ->assertHasNoErrors();
+
+    expect(TimetableEntry::where('class_id', $class->id)->count())->toBe(0);
+});

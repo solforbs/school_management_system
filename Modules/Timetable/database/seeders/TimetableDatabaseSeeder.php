@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Modules\Classes\Models\SchoolClass;
+use Modules\Institution\Models\Institution;
 use Modules\Subject\Models\Subject;
 use Modules\Teacher\Models\TeacherDetails;
 use Modules\Timetable\Models\TimetableEntry;
@@ -81,22 +82,25 @@ class TimetableDatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $classes = SchoolClass::orderBy('institution_id')->orderBy('name')->get();
+        $demoInstitution = Institution::where('code', 'GVA001')->first();
+        if (! $demoInstitution) {
+            return;
+        }
+
+        $classes = SchoolClass::where('institution_id', $demoInstitution->id)->orderBy('name')->get();
 
         if ($classes->isEmpty()) {
             return;
         }
 
-        // Wipe anything a previous run of this seeder produced, so it can
-        // be re-run safely: this class's entries, and the teachers we
-        // auto-created for them (identified by their @school.test email -
-        // cascade-deletes their teacher_details row too).
+        // Wipe only demo class entries and demo teachers
         TimetableEntry::whereIn('class_id', $classes->pluck('id'))->delete();
-        User::where('email', 'like', '%'.self::GENERATED_EMAIL_DOMAIN)->delete();
+        User::where('email', 'like', '%'.self::GENERATED_EMAIL_DOMAIN)
+            ->whereHas('teacherUserDetails', fn ($q) => $q->where('institution_id', $demoInstitution->id))
+            ->delete();
 
         // Put any already-existing teacher to use as a Mathematics teacher
-        // instead of leaving them idle and minting a redundant one.
-        if ($existingTeacher = User::role('Teacher')->first()) {
+        if ($existingTeacher = User::role('Teacher')->whereHas('teacherUserDetails', fn ($q) => $q->where('institution_id', $demoInstitution->id))->first()) {
             $this->teacherPool['Mathematics'] = [$existingTeacher->id];
         }
 

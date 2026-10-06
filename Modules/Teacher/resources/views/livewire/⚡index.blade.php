@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -77,6 +78,34 @@ new #[Title('Teacher Management')] class extends Component
             ->sort()
             ->values()
             ->all();
+    }
+
+    public function verifyTeacher(int $teacherUserId): void
+    {
+        abort_unless(auth()->user()->can('edit teacher'), 403);
+
+        $teacherUser = User::findOrFail($teacherUserId);
+        $teacherUser->forceFill(['email_verified_at' => now()])->save();
+
+        session()->flash('success', "Email for {$teacherUser->name} has been verified! They can now log in immediately.");
+    }
+
+    public function deleteTeacher(int $teacherDetailsId): void
+    {
+        abort_unless(auth()->user()->can('delete teacher'), 403);
+
+        $details = TeacherDetails::findOrFail($teacherDetailsId);
+        if (! isAdmin()) {
+            abort_unless($details->institution_id === currentInstitutionId(), 403);
+        }
+
+        $teacherUser = $details->teacher;
+        $name = $teacherUser?->name ?? 'Teacher';
+
+        $details->delete();
+        $teacherUser?->delete();
+
+        session()->flash('success', "{$name} removed successfully from the faculty roster.");
     }
 }; ?>
 
@@ -356,6 +385,11 @@ new #[Title('Teacher Management')] class extends Component
                                 </div>
 
                                 <div class="flex items-center gap-1 shrink-0">
+                                    @if($teacherUser && ! $teacherUser->hasVerifiedEmail())
+                                        <flux:button wire:click.stop="verifyTeacher({{ $teacherUser->id }})" size="xs" variant="primary" color="amber" class="text-[10px] px-2 py-0.5" title="Verify Email">
+                                            Verify
+                                        </flux:button>
+                                    @endif
                                     <flux:button href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" wire:navigate.hover size="xs" variant="subtle" title="View Profile">
                                         View
                                     </flux:button>
@@ -472,8 +506,20 @@ new #[Title('Teacher Management')] class extends Component
                                                 </span>
                                             @endif
 
+                                            @if($teacherUser && ! $teacherUser->hasVerifiedEmail())
+                                                <button type="button" wire:click.stop="verifyTeacher({{ $teacherUser->id }})" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 hover:bg-amber-100 transition shadow-2xs" title="Click to manually verify email and grant login access">
+                                                    <flux:icon icon="exclamation-circle" class="size-3.5 text-amber-600" />
+                                                    Verify Email
+                                                </button>
+                                            @endif
+
                                             <flux:button href="{{ route('teacher.show', $teacherDetails->teacher_id) }}" wire:navigate.hover size="sm" icon="eye" variant="subtle" title="View Profile" />
                                             <x-impersonate-button :user="$teacherDetails->teacher" />
+                                            @can('delete teacher')
+                                                <button type="button" wire:click.stop="deleteTeacher({{ $teacherDetails->id }})" wire:confirm="Are you sure you want to remove {{ $teacherName }} from the faculty roster?" class="size-7 inline-flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" title="Remove Teacher">
+                                                    <flux:icon icon="trash" class="size-4" />
+                                                </button>
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>

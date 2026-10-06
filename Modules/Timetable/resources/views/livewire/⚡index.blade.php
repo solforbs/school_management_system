@@ -129,6 +129,39 @@ new #[Title('Timetable')] class extends Component
     {
         return $entry->start_time?->format('H:i').'-'.$entry->end_time?->format('H:i');
     }
+
+    public function deleteEntry(int $entryId): void
+    {
+        abort_unless(auth()->user()->can('delete timetable'), 403);
+
+        $entry = TimetableEntry::findOrFail($entryId);
+
+        if (! isAdmin()) {
+            abort_unless($entry->institution_id === currentInstitutionId(), 403);
+        }
+
+        $entry->delete();
+
+        session()->flash('success', 'Lesson slot removed from schedule.');
+    }
+
+    public function clearClassTimetable(): void
+    {
+        abort_unless(auth()->user()->can('delete timetable'), 403);
+
+        $class = $this->selectedClass;
+        if (! $class) {
+            return;
+        }
+
+        if (! isAdmin()) {
+            abort_unless($class->institution_id === currentInstitutionId(), 403);
+        }
+
+        $count = TimetableEntry::where('class_id', $class->id)->delete();
+
+        session()->flash('success', "Timetable for {$class->name} completely cleared ({$count} lessons deleted).");
+    }
 }; ?>
 @php
     $isTeacher = $this->isTeacher;
@@ -325,14 +358,36 @@ new #[Title('Timetable')] class extends Component
                 />
                 
             @else
-                <div class="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <flux:heading size="lg" class="font-bold">{{ $selectedClass->name }} Master Schedule</flux:heading>
-                    @if ($selectedClass->classTeacher)
-                        <div class="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">
-                            <flux:icon icon="user" class="size-3.5 text-indigo-500" />
-                            Class Teacher: <span class="font-bold text-zinc-900 dark:text-white">{{ $selectedClass->classTeacher->name }}</span>
-                        </div>
-                    @endif
+                <div class="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <flux:heading size="lg" class="font-bold">{{ $selectedClass->name }} Master Schedule</flux:heading>
+                        @if ($selectedClass->classTeacher)
+                            <div class="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">
+                                <flux:icon icon="user" class="size-3.5 text-indigo-500" />
+                                Class Teacher: <span class="font-bold text-zinc-900 dark:text-white">{{ $selectedClass->classTeacher->name }}</span>
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        @can('create timetable')
+                            <flux:button href="{{ route('timetable.create', ['class_id' => $selectedClass->id]) }}" wire:navigate.hover icon="plus" size="sm" variant="subtle" class="font-semibold text-xs">
+                                Add Lesson
+                            </flux:button>
+                        @endcan
+
+                        @can('delete timetable')
+                            @if ($entries->isNotEmpty())
+                                <button type="button" 
+                                    wire:click="clearClassTimetable"
+                                    wire:confirm="Are you sure you want to completely clear the timetable for {{ $selectedClass->name }}? This will permanently delete all {{ $entries->count() }} scheduled lessons for this class."
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/60 border border-rose-200/80 dark:border-rose-800/60 transition-colors shadow-2xs">
+                                    <flux:icon icon="trash" class="size-3.5 text-rose-600 dark:text-rose-400" />
+                                    Clear Timetable
+                                </button>
+                            @endif
+                        @endcan
+                    </div>
                 </div>
 
                 @if ($periods->isEmpty())

@@ -8,7 +8,6 @@ use Database\Seeders\PermissionSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Modules\Institution\Models\Institution;
-use Modules\Timetable\Database\Seeders\TimetableDatabaseSeeder;
 
 class InstitutionDatabaseSeeder extends Seeder
 {
@@ -80,7 +79,6 @@ class InstitutionDatabaseSeeder extends Seeder
             GreenValleyFeeHistorySeeder::class,
             GreenValleyAcademicHistorySeeder::class,
             GreenValleyExpenditureHistorySeeder::class,
-            TimetableDatabaseSeeder::class,
         ]);
     }
 }

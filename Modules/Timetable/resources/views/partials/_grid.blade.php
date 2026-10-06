@@ -30,12 +30,28 @@
                     </td>
                     @foreach ($periods as $period)
                         @php $entry = $grid[$day][$period] ?? null; @endphp
-                        <td class="p-2.5 align-top text-center border-r border-zinc-200/60 dark:border-zinc-800/60 last:border-r-0">
+                        <td class="p-2 align-top text-center border-r border-zinc-200/60 dark:border-zinc-800/60 last:border-r-0 relative group/cell">
                             @if ($entry)
-                                <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block p-2.5 rounded-xl bg-indigo-50/60 hover:bg-indigo-100/70 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-200/70 dark:border-indigo-800/60 transition-all hover:shadow-xs text-left group">
-                                    <span class="block font-bold text-xs text-indigo-900 dark:text-indigo-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 leading-snug">
-                                        {{ $entry->subject }}
-                                    </span>
+                                <div class="relative p-2.5 rounded-xl bg-indigo-50/60 hover:bg-indigo-100/70 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-200/70 dark:border-indigo-800/60 transition-all hover:shadow-xs text-left group">
+                                    <div class="flex items-start justify-between gap-1">
+                                        <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block font-bold text-xs text-indigo-900 dark:text-indigo-200 hover:text-indigo-600 dark:hover:text-indigo-300 leading-snug truncate flex-1" title="View details">
+                                            {{ $entry->subject }}
+                                        </a>
+
+                                        {{-- Quick Actions: Edit and Delete --}}
+                                        <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                            @can('edit timetable')
+                                                <a href="{{ route('timetable.edit', $entry->id) }}" wire:navigate.hover class="p-1 rounded-md text-zinc-400 hover:text-indigo-600 hover:bg-white/90 dark:hover:bg-zinc-800 transition shadow-2xs" title="Edit lesson slot">
+                                                    <flux:icon icon="pencil-square" class="size-3" />
+                                                </a>
+                                            @endcan
+                                            @can('delete timetable')
+                                                <button type="button" wire:click="deleteEntry({{ $entry->id }})" wire:confirm="Remove {{ $entry->subject }} from {{ $day }} ({{ $period }})?" class="p-1 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-white/90 dark:hover:bg-zinc-800 transition shadow-2xs" title="Remove lesson slot">
+                                                    <flux:icon icon="trash" class="size-3" />
+                                                </button>
+                                            @endcan
+                                        </div>
+                                    </div>
                                     
                                     <div class="flex items-center justify-between gap-1 mt-1.5 pt-1.5 border-t border-indigo-100/80 dark:border-indigo-900/40 text-[10px]">
                                         <span class="font-medium text-indigo-600 dark:text-indigo-400 truncate">
@@ -49,10 +65,18 @@
                                             </span>
                                         @endif
                                     </div>
-                                </a>
+                                </div>
                             @else
                                 <div class="h-14 flex items-center justify-center">
-                                    <span class="text-zinc-200 dark:text-zinc-700">&mdash;</span>
+                                    @can('create timetable')
+                                        @if (isset($selectedClass))
+                                            <a href="{{ route('timetable.create', ['class_id' => $selectedClass->id, 'day' => $day]) }}" wire:navigate.hover class="opacity-0 group-hover/cell:opacity-100 inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition">
+                                                <flux:icon icon="plus" class="size-3" />
+                                                <span>Add</span>
+                                            </a>
+                                        @endif
+                                    @endcan
+                                    <span class="text-zinc-200 dark:text-zinc-700 group-hover/cell:hidden">&mdash;</span>
                                 </div>
                             @endif
                         </td>

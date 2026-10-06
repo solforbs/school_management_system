@@ -40,7 +40,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'zkteco_synced', 'zkteco_synced_at', 'zkteco_sync_error', 'active_institution_id'])]
+#[Fillable(['name', 'email', 'password', 'email_verified_at', 'zkteco_synced', 'zkteco_synced_at', 'zkteco_sync_error', 'active_institution_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {

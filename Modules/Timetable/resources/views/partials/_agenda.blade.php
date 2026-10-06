@@ -26,22 +26,36 @@
 
             <div class="flex-1 space-y-2.5">
                 @forelse ($dayEntries as $entry)
-                    <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block p-3 rounded-xl border border-zinc-200/70 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 hover:bg-indigo-50/40 hover:border-indigo-200 dark:hover:bg-zinc-800 transition-all hover:shadow-xs group">
+                    <div class="block p-3 rounded-xl border border-zinc-200/70 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 hover:bg-indigo-50/40 hover:border-indigo-200 dark:hover:bg-zinc-800 transition-all hover:shadow-xs group">
                         <div class="flex items-center justify-between mb-1.5">
                             <span class="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
                                 {{ $entry->start_time?->format('H:i') }} - {{ $entry->end_time?->format('H:i') }}
                             </span>
-                            @if ($entry->room)
-                                <span class="inline-flex items-center gap-1 text-[10px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700 font-medium">
-                                    <flux:icon icon="map-pin" class="size-3 text-zinc-400" />
-                                    {{ $entry->room }}
-                                </span>
-                            @endif
+                            <div class="flex items-center gap-1">
+                                @if ($entry->room)
+                                    <span class="inline-flex items-center gap-1 text-[10px] text-zinc-500 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700 font-medium">
+                                        <flux:icon icon="map-pin" class="size-3 text-zinc-400" />
+                                        {{ $entry->room }}
+                                    </span>
+                                @endif
+                                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    @can('edit timetable')
+                                        <a href="{{ route('timetable.edit', $entry->id) }}" wire:navigate.hover class="p-1 rounded text-zinc-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-zinc-800 transition" title="Edit lesson">
+                                            <flux:icon icon="pencil-square" class="size-3" />
+                                        </a>
+                                    @endcan
+                                    @can('delete timetable')
+                                        <button type="button" wire:click="deleteEntry({{ $entry->id }})" wire:confirm="Remove {{ $entry->subject }} from {{ $day }}?" class="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-white dark:hover:bg-zinc-800 transition" title="Remove lesson">
+                                            <flux:icon icon="trash" class="size-3" />
+                                        </button>
+                                    @endcan
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block font-bold text-sm text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                             {{ $entry->subject }}
-                        </div>
+                        </a>
 
                         <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mt-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-800/60">
                             <span>{{ $entry->schoolClass?->name ?? $entry->class_name }}</span>
@@ -49,7 +63,7 @@
                                 <span class="text-zinc-400">{{ $entry->teacher->name }}</span>
                             @endif
                         </div>
-                    </a>
+                    </div>
                 @empty
                     <div class="py-8 text-center">
                         <p class="text-xs text-zinc-400">No lessons scheduled</p>

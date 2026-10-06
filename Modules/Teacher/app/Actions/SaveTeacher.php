@@ -67,6 +67,7 @@ class SaveTeacher
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
+                'email_verified_at' => now(),
             ]);
             $teacher->syncRoles('Teacher');
 
