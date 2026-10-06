@@ -26,7 +26,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SettingSeeder::class,
             PermissionSeeder::class,
-            PlanSeeder::class,
             InstitutionDatabaseSeeder::class,
         ]);
     }

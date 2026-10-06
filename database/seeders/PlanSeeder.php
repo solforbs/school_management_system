@@ -10,7 +10,7 @@ class PlanSeeder extends Seeder
     public function run(): void
     {
         // 1. Standard Plan
-        Plan::updateOrCreate(
+        Plan::firstOrCreate(
             ['slug' => 'standard'],
             [
                 'name' => 'Standard',
@@ -39,7 +39,7 @@ class PlanSeeder extends Seeder
         );
 
         // 2. Premium Plan (Featured / Most Popular)
-        Plan::updateOrCreate(
+        Plan::firstOrCreate(
             ['slug' => 'premium'],
             [
                 'name' => 'Premium',
@@ -74,7 +74,7 @@ class PlanSeeder extends Seeder
         );
 
         // 3. Enterprise Plan
-        Plan::updateOrCreate(
+        Plan::firstOrCreate(
             ['slug' => 'enterprise'],
             [
                 'name' => 'Enterprise',

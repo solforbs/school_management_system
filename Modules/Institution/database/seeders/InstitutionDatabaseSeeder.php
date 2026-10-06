@@ -5,7 +5,6 @@ namespace Modules\Institution\Database\Seeders;
 use App\Models\Plan;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
-use Database\Seeders\PlanSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Modules\Institution\Models\Institution;
@@ -20,7 +19,6 @@ class InstitutionDatabaseSeeder extends Seeder
     {
         $this->call([
             PermissionSeeder::class,
-            PlanSeeder::class,
         ]);
 
         $plan = Plan::where('slug', 'premium')->first() ?? Plan::first();

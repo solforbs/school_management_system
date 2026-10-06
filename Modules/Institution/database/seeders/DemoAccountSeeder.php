@@ -5,7 +5,6 @@ namespace Modules\Institution\Database\Seeders;
 use App\Models\Plan;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
-use Database\Seeders\PlanSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -86,7 +85,7 @@ class DemoAccountSeeder extends Seeder
         // system the roles already exist and re-syncing every permission on
         // every six-hourly reset is pure waste.
         if (! DB::table('roles')->where('name', 'Director')->exists()) {
-            $this->call([PermissionSeeder::class, PlanSeeder::class]);
+            $this->call([PermissionSeeder::class]);
         }
 
         $director = $this->director();
