@@ -113,7 +113,7 @@ class ReportCardPdfService
     /**
      * Generates a combined multi-page PDF containing all report cards for a class.
      *
-     * @param Collection<int, ReportCard> $reportCards
+     * @param  Collection<int, ReportCard>  $reportCards
      */
     public function generateClassBundle(Collection $reportCards): \Barryvdh\DomPDF\PDF
     {

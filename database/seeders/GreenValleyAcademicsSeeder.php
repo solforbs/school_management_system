@@ -473,7 +473,7 @@ class GreenValleyAcademicsSeeder extends Seeder
                 [
                     'institution_id' => $institution->id,
                     'class_id' => $grade7East->id,
-                    'subject_id' => $examMathG7->subject_id,
+                    'subject_id' => $subjectModels['Mathematics']->id,
                     'cbc_band' => $bandMath,
                     'grade' => $bandMath,
                 ]
@@ -487,7 +487,7 @@ class GreenValleyAcademicsSeeder extends Seeder
                 [
                     'institution_id' => $institution->id,
                     'class_id' => $grade7East->id,
-                    'subject_id' => $examSciG7->subject_id,
+                    'subject_id' => $subjectModels['Integrated Science']->id,
                     'cbc_band' => $bandSci,
                     'grade' => $bandSci,
                 ]
@@ -507,7 +507,7 @@ class GreenValleyAcademicsSeeder extends Seeder
                 [
                     'institution_id' => $institution->id,
                     'class_id' => $grade8East->id,
-                    'subject_id' => $examMathG8->subject_id,
+                    'subject_id' => $subjectModels['Mathematics']->id,
                     'cbc_band' => $bandMath,
                     'grade' => $bandMath,
                 ]

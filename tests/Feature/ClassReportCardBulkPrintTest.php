@@ -10,6 +10,7 @@ use Modules\Examinations\Models\Examination;
 use Modules\Institution\Models\Institution;
 use Modules\ReportCard\Models\GradingBand;
 use Modules\ReportCard\Models\ReportCard;
+use Modules\ReportCard\Services\ReportCardGenerationService;
 use Modules\ReportCard\Support\GradingScaleDefaults;
 use Modules\Result\Models\Result;
 use Modules\Student\Models\StudentDetails;
@@ -190,7 +191,7 @@ test('livewire reportcard index shows class bundle print shortcut', function () 
     $data = setupBulkPrintSchool();
 
     // Pre-generate report cards
-    app(\Modules\ReportCard\Services\ReportCardGenerationService::class)
+    app(ReportCardGenerationService::class)
         ->forClass($data['class'], 'Term 1', 2026);
 
     // As Homeroom Teacher
