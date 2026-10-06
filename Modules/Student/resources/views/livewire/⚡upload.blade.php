@@ -180,14 +180,46 @@ new #[Title('Upload Student Records')] class extends Component {
     public function restoreDraft(array $draftRows): void
     {
         if (! empty($draftRows)) {
-            $this->rows = $draftRows;
-            $this->activeTab = 'grid';
-            Flux::toast(text: 'Draft rows restored successfully.', variant: 'success');
+            $normalised = [];
+            foreach ($draftRows as $draft) {
+                if (! is_array($draft)) {
+                    continue;
+                }
+
+                $row = $this->blankRow();
+                foreach (ImportStudents::COLUMNS as $col) {
+                    if (isset($draft[$col]) && $draft[$col] !== null) {
+                        $row[$col] = (string) $draft[$col];
+                    }
+                }
+
+                if (trim($row['name']) !== '' || trim($row['admission_number']) !== '' || trim($row['student_number']) !== '') {
+                    $normalised[] = $row;
+                }
+            }
+
+            if (! empty($normalised)) {
+                $count = count($normalised);
+                while (count($normalised) < 10) {
+                    $normalised[] = $this->blankRow();
+                }
+
+                $this->rows = $normalised;
+                $this->rowErrors = [];
+                $this->activeTab = 'grid';
+                Flux::toast(text: "{$count} draft student row(s) restored successfully.", variant: 'success');
+
+                return;
+            }
         }
+
+        Flux::toast(text: 'No restorable student data was found in the session draft.', variant: 'warning');
     }
 
     public function discardDraft(): void
     {
+        $this->rows = array_fill(0, 10, $this->blankRow());
+        $this->rowErrors = [];
         $this->dispatch('clear-bulk-draft');
         Flux::toast(text: 'Session draft discarded.', variant: 'info');
     }
@@ -355,7 +387,106 @@ new #[Title('Upload Student Records')] class extends Component {
     }
 }; ?>
 
-<div x-data="bulkUploadSafety($wire)" x-init="init()" class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+<div x-data="{
+    isDirty: false,
+    hasDraft: false,
+    draftKey: 'sms_bulk_draft_{{ currentInstitutionId() }}',
+    _draftTimer: null,
+
+    init() {
+        this.checkDraft();
+
+        window.addEventListener('beforeunload', (e) => {
+            if (this.isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        window.addEventListener('clear-bulk-draft', () => {
+            clearTimeout(this._draftTimer);
+            try {
+                localStorage.removeItem(this.draftKey);
+            } catch (e) {}
+            this.isDirty = false;
+            this.hasDraft = false;
+        });
+    },
+
+    onInput(e) {
+        if (e && e.target && typeof e.target.value === 'string' && e.target.value.trim() !== '') {
+            this.isDirty = true;
+        }
+        this.saveDraftDebounced();
+    },
+
+    saveDraftDebounced() {
+        clearTimeout(this._draftTimer);
+        this._draftTimer = setTimeout(() => {
+            try {
+                const inputs = document.querySelectorAll('[data-grid-input]');
+                if (inputs.length > 0) {
+                    const rowData = {};
+                    inputs.forEach(el => {
+                        const row = el.dataset.row;
+                        const col = el.dataset.col;
+                        if (row !== undefined && col) {
+                            if (!rowData[row]) rowData[row] = {};
+                            rowData[row][col] = el.value;
+                        }
+                    });
+                    const rows = Object.values(rowData);
+                    const hasContent = rows.some(r => (r.name || '').trim() !== '' || (r.admission_number || '').trim() !== '');
+                    if (hasContent) {
+                        localStorage.setItem(this.draftKey, JSON.stringify(rows));
+                        this.isDirty = true;
+                    }
+                }
+            } catch (e) {}
+        }, 600);
+    },
+
+    checkDraft() {
+        try {
+            const saved = localStorage.getItem(this.draftKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                const hasData = Array.isArray(parsed) && parsed.some(r => (r.name || '').trim() !== '');
+                if (hasData) {
+                    this.hasDraft = true;
+                }
+            }
+        } catch (e) {}
+    },
+
+    restoreLocalDraft() {
+        try {
+            const saved = localStorage.getItem(this.draftKey);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    $wire.restoreDraft(parsed);
+                    this.hasDraft = false;
+                    this.isDirty = true;
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to restore draft:', e);
+        }
+        this.dismissDraft();
+    },
+
+    dismissDraft() {
+        clearTimeout(this._draftTimer);
+        try {
+            localStorage.removeItem(this.draftKey);
+        } catch (e) {}
+        this.hasDraft = false;
+        this.isDirty = false;
+        $wire.discardDraft();
+    }
+}" class="flex flex-col gap-6 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
     {{-- Local Draft Recovery Banner --}}
     <div x-show="hasDraft" x-cloak
@@ -893,117 +1024,3 @@ new #[Title('Upload Student Records')] class extends Component {
 
 </div>
 
-<script>
-function bulkUploadSafety($wire) {
-    return {
-        $wire: $wire,
-        isDirty: false,
-        hasDraft: false,
-        institutionId: @js(currentInstitutionId()),
-        draftKey: 'sms_bulk_draft_' + @js(currentInstitutionId()),
-        _draftTimer: null,
-
-        init() {
-            this.checkDraft();
-
-            window.addEventListener('beforeunload', (e) => {
-                if (this.isDirty) {
-                    e.preventDefault();
-                    e.returnValue = '';
-                }
-            });
-
-            window.addEventListener('clear-bulk-draft', () => {
-                clearTimeout(this._draftTimer);
-                try {
-                    localStorage.removeItem(this.draftKey);
-                } catch (e) {}
-                this.isDirty = false;
-                this.hasDraft = false;
-            });
-        },
-
-        onInput(e) {
-            if (e && e.target && typeof e.target.value === 'string' && e.target.value.trim() !== '') {
-                this.isDirty = true;
-            }
-            this.saveDraftDebounced();
-        },
-
-        saveDraftDebounced() {
-            clearTimeout(this._draftTimer);
-            this._draftTimer = setTimeout(() => {
-                try {
-                    const inputs = document.querySelectorAll('[data-grid-input]');
-                    if (inputs.length > 0) {
-                        const rowData = {};
-                        inputs.forEach(el => {
-                            const row = el.dataset.row;
-                            const col = el.dataset.col;
-                            if (row !== undefined && col) {
-                                if (!rowData[row]) rowData[row] = {};
-                                rowData[row][col] = el.value;
-                            }
-                        });
-                        const rows = Object.values(rowData);
-                        const hasContent = rows.some(r => (r.name || '').trim() !== '' || (r.admission_number || '').trim() !== '');
-                        if (hasContent) {
-                            localStorage.setItem(this.draftKey, JSON.stringify(rows));
-                            this.isDirty = true;
-                        }
-                    }
-                } catch (e) {
-                    // ignore storage errors
-                }
-            }, 600);
-        },
-
-        checkDraft() {
-            try {
-                const saved = localStorage.getItem(this.draftKey);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    const hasData = Array.isArray(parsed) && parsed.some(r => (r.name || '').trim() !== '');
-                    if (hasData) {
-                        this.hasDraft = true;
-                    }
-                }
-            } catch (e) {
-                // ignore
-            }
-        },
-
-        restoreLocalDraft() {
-            try {
-                const saved = localStorage.getItem(this.draftKey);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        if (this.$wire) {
-                            this.$wire.restoreDraft(parsed);
-                        }
-                        this.hasDraft = false;
-                        this.isDirty = true;
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to restore draft:', e);
-            }
-            this.dismissDraft();
-        },
-
-        dismissDraft() {
-            clearTimeout(this._draftTimer);
-            try {
-                localStorage.removeItem(this.draftKey);
-            } catch (e) {}
-            this.hasDraft = false;
-            this.isDirty = false;
-            if (this.$wire) {
-                this.$wire.discardDraft();
-            }
-        }
-    }
-}
-</script>

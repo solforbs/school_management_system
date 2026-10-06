@@ -209,3 +209,43 @@ test('Student directory Livewire component filters by biometric status and allow
 
     expect($student2->fresh()->zkteco_synced)->toBeTrue();
 });
+
+test('Student upload Livewire component restores and discards session draft rows properly', function () {
+    [$director, $institution, $device, $class] = createBulkSyncEnvironment();
+
+    $this->actingAs($director);
+
+    $component = Livewire::test('student::upload');
+
+    // Test restoreDraft with partial row data (as parsed from localStorage)
+    $draftRows = [
+        [
+            'name' => 'Restored John Doe',
+            'admission_number' => 'ADM-RESTORE-1',
+        ],
+        [
+            'name' => 'Restored Jane Doe',
+            'admission_number' => 'ADM-RESTORE-2',
+            'gender' => 'female',
+        ],
+    ];
+
+    $component->call('restoreDraft', $draftRows);
+
+    $rows = $component->get('rows');
+    expect(count($rows))->toBeGreaterThanOrEqual(10);
+    expect($rows[0]['name'])->toBe('Restored John Doe');
+    expect($rows[0]['admission_number'])->toBe('ADM-RESTORE-1');
+    expect($rows[0])->toHaveKeys(['name', 'admission_number', 'student_number', 'class_name', 'gender', 'guardian_name', 'guardian_phone', 'enrollment_status']);
+    expect($rows[1]['name'])->toBe('Restored Jane Doe');
+    expect($rows[1]['gender'])->toBe('female');
+
+    // Test discardDraft clears all rows back to blank
+    $component->call('discardDraft');
+    $component->assertDispatched('clear-bulk-draft');
+
+    $clearedRows = $component->get('rows');
+    expect(count($clearedRows))->toBe(10);
+    expect($clearedRows[0]['name'])->toBe('');
+    expect($clearedRows[1]['name'])->toBe('');
+});
