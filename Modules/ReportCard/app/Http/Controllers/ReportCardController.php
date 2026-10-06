@@ -9,10 +9,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\Classes\Models\SchoolClass;
 use Modules\ReportCard\Models\ReportCard;
+use Modules\ReportCard\Services\ReportCardGenerationService;
 use Modules\ReportCard\Services\ReportCardPdfService;
 use Modules\ReportCard\Services\ReportCardQueuer;
+use Modules\ReportCard\Services\ReportSheetBuilder;
 use Modules\Student\Models\StudentDetails;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportCardController extends Controller
@@ -114,16 +118,18 @@ class ReportCardController extends Controller
     /**
      * Show the specified resource.
      */
-    public function show($id)
+    public function show($id, ReportSheetBuilder $builder)
     {
         abort_unless(Auth::user()->can('view reportcard'), 403);
 
-        $query = ReportCard::with(['institution', 'schoolClass', 'student']);
+        $query = ReportCard::with(['institution', 'schoolClass.curriculum', 'student.studentUserDetails']);
         $this->scopeToViewer($query);
 
         $reportCard = $query->findOrFail($id);
+        $institution = $reportCard->institution ?? currentInstitution();
+        $rows = $institution ? $builder->rows($reportCard, $institution) : collect();
 
-        return view('reportcard::show', compact('reportCard'));
+        return view('reportcard::show', compact('reportCard', 'rows'));
     }
 
     /**
@@ -176,10 +182,8 @@ class ReportCardController extends Controller
 
         $reportCardModel = $query->findOrFail($reportCard);
 
-        if (! $reportCardModel->pdf_path || ! Storage::disk('public')->exists($reportCardModel->pdf_path)) {
-            $pdfService->generate($reportCardModel);
-            $reportCardModel->refresh();
-        }
+        $pdfService->generate($reportCardModel);
+        $reportCardModel->refresh();
 
         $studentName = Str::slug($reportCardModel->student?->name ?? 'student');
 
@@ -187,6 +191,72 @@ class ReportCardController extends Controller
             $reportCardModel->pdf_path,
             "{$studentName}-report-card.pdf",
         );
+    }
+
+    /**
+     * Generate and stream a single combined multi-page PDF bundle containing
+     * all report cards for an entire class stream.
+     */
+    public function classBundlePdf(
+        SchoolClass $schoolClass,
+        Request $request,
+        ReportCardPdfService $pdfService,
+        ReportCardGenerationService $generationService
+    ): Response {
+        abort_unless(Auth::user()->can('view reportcard'), 403);
+
+        if (! isAdmin()) {
+            $userInstitutionId = Auth::user()->hasRole('Teacher')
+                ? (Auth::user()->teacherUserDetails?->institution_id ?? 0)
+                : (currentInstitutionId() ?? 0);
+
+            abort_if((int) $schoolClass->institution_id !== (int) $userInstitutionId, 403);
+        }
+
+        $term = $request->string('term')->value() ?: 'Term 1';
+        $academicYear = $request->filled('academic_year')
+            ? (int) $request->input('academic_year')
+            : (int) date('Y');
+
+        $query = ReportCard::with([
+            'institution',
+            'schoolClass.curriculum',
+            'student.studentUserDetails',
+        ])
+            ->where('class_id', $schoolClass->id)
+            ->where('term', $term)
+            ->where('academic_year', $academicYear);
+
+        $this->scopeToViewer($query);
+
+        $reportCards = $query->get();
+
+        // If no report cards exist yet for this class and term, attempt on-demand generation
+        if ($reportCards->isEmpty()) {
+            $generationService->forClass($schoolClass, $term, $academicYear);
+
+            $query = ReportCard::with([
+                'institution',
+                'schoolClass.curriculum',
+                'student.studentUserDetails',
+            ])
+                ->where('class_id', $schoolClass->id)
+                ->where('term', $term)
+                ->where('academic_year', $academicYear);
+
+            $this->scopeToViewer($query);
+            $reportCards = $query->get();
+        }
+
+        if ($reportCards->isEmpty()) {
+            return back()->with('error', "No report cards or examination results found for {$schoolClass->name} in {$term} {$academicYear}.");
+        }
+
+        $classNameSlug = Str::slug($schoolClass->name);
+        $termSlug = Str::slug($term);
+        $filename = "{$classNameSlug}-{$termSlug}-report-cards.pdf";
+
+        return $pdfService->generateClassBundle($reportCards)->stream($filename);
     }
 
     /**

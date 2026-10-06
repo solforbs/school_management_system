@@ -79,7 +79,7 @@ class ReportSheetBuilder
             $result->subject?->name ?? $result->examination?->subject?->name ?? $result->examination?->subject_name
         ));
 
-        return collect($subjects)
+        $rows = collect($subjects)
             ->map(function (array $subject, $key) use ($grouped, $institution, $curriculumId) {
                 $subjectResults = $grouped->get($key, collect())
                     ->filter(fn ($result) => $result->examination && $result->examination->total_marks > 0);
@@ -115,9 +115,16 @@ class ReportSheetBuilder
                     learningArea: $subject['learning_area'] ?? null,
                     strand: $subject['strand'] ?? null,
                 );
-            })
-            ->sortBy(fn (SubjectRow $row) => $row->name)
-            ->values();
+            });
+
+        if ($grouped->isNotEmpty() && count($subjects) > 10) {
+            $assessedRows = $rows->filter(fn (SubjectRow $row) => $row->isAssessed());
+            if ($assessedRows->isNotEmpty()) {
+                $rows = $assessedRows;
+            }
+        }
+
+        return $rows->sortBy(fn (SubjectRow $row) => $row->name)->values();
     }
 
     /**
@@ -162,7 +169,7 @@ class ReportSheetBuilder
             $result->subject?->name ?? $result->examination?->subject?->name ?? $result->examination?->subject_name
         ));
 
-        return collect($subjects)
+        $rows = collect($subjects)
             ->map(function (array $subject, $key) use ($grouped, $institution, $curriculumId) {
                 $subjectResults = $grouped->get($key, collect());
 
@@ -230,9 +237,19 @@ class ReportSheetBuilder
                     learningArea: $subject['learning_area'] ?? null,
                     strand: $subject['strand'] ?? null,
                 );
-            })
-            ->sortBy(fn (SubjectRow $row) => $row->name)
-            ->values();
+            });
+
+        // When a class has an excessive number of subjects assigned (e.g. cross-level or elective catalogs > 10),
+        // and the learner has evaluations recorded, filter out unassessed subjects so the report card doesn't
+        // overflow with irrelevant secondary/stray subjects.
+        if ($grouped->isNotEmpty() && count($subjects) > 10) {
+            $assessedRows = $rows->filter(fn (SubjectRow $row) => $row->isAssessed());
+            if ($assessedRows->isNotEmpty()) {
+                $rows = $assessedRows;
+            }
+        }
+
+        return $rows->sortBy(fn (SubjectRow $row) => $row->name)->values();
     }
 
     /**

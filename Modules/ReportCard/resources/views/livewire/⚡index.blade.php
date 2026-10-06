@@ -109,6 +109,18 @@ new #[Title('Report Cards')] class extends Component
     {
         return currentInstitution();
     }
+
+    #[Computed]
+    public function homeroomClass(): ?SchoolClass
+    {
+        if (! auth()->user()?->hasRole('Teacher')) {
+            return null;
+        }
+
+        return SchoolClass::where('institution_id', currentInstitutionId())
+            ->where('class_teacher_id', auth()->id())
+            ->first();
+    }
 }; ?>
 
 @php
@@ -122,6 +134,9 @@ new #[Title('Report Cards')] class extends Component
     $currentClass = $this->class_id;
     $currentTerm = $this->term_id;
     $currentYear = $this->academic_year_id;
+
+    $homeroomClass = $this->homeroomClass;
+    $targetClassId = $currentClass ?: $homeroomClass?->id;
 
     $totalCount = method_exists($reportCards, 'total') ? $reportCards->total() : count($reportCards);
     $hasActiveFilters = !empty($currentSearch) || !empty($currentClass) || !empty($currentTerm) || !empty($currentYear);
@@ -150,6 +165,16 @@ new #[Title('Report Cards')] class extends Component
             </div>
 
             <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                @if ($targetClassId && auth()->user()->can('view reportcard'))
+                    <flux:button 
+                        href="{{ route('reportcard.class.bulk-pdf', ['schoolClass' => $targetClassId, 'term' => $currentTerm, 'academic_year' => $currentYear]) }}" 
+                        target="_blank" 
+                        icon="printer" 
+                        variant="primary" 
+                        class="font-semibold shadow-sm px-4">
+                        {{ $currentClass ? 'Print Class Bundle (PDF)' : 'Print ' . ($homeroomClass ? $homeroomClass->name : 'Class') . ' Bundle' }}
+                    </flux:button>
+                @endif
                 <x-export-buttons base-route="reportcard.export" module="reportcard" :params="[
                     'search' => $currentSearch,
                     'class_id' => $currentClass,
@@ -168,7 +193,7 @@ new #[Title('Report Cards')] class extends Component
                         icon="paper-airplane"
                         variant="subtle"
                         trigger-class="font-semibold shadow-sm" />
-                    <flux:button href="{{ route('reportcard.settings') }}" wire:navigate.hover icon="cog-6-tooth" variant="primary" class="font-semibold shadow-sm px-4">
+                    <flux:button href="{{ route('reportcard.settings') }}" wire:navigate.hover icon="cog-6-tooth" variant="subtle" class="font-semibold shadow-sm px-4">
                         Grading Settings
                     </flux:button>
                 @endcan
@@ -260,6 +285,13 @@ new #[Title('Report Cards')] class extends Component
 
             <x-slot:scopeTags>
                 @if ($currentClass)
+                    <a href="{{ route('reportcard.class.bulk-pdf', ['schoolClass' => $currentClass, 'term' => $currentTerm, 'academic_year' => $currentYear]) }}"
+                        target="_blank"
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition"
+                        title="Print All Report Cards for This Class">
+                        <flux:icon icon="printer" class="size-3.5" />
+                        <span>Print Entire Class Report Cards (PDF)</span>
+                    </a>
                     <a href="{{ route('reportcard.index', ['search' => $currentSearch, 'term_id' => $currentTerm, 'academic_year_id' => $currentYear]) }}" 
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 font-semibold transition border border-zinc-200/60"
                         title="Remove Class Filter">
@@ -353,6 +385,7 @@ new #[Title('Report Cards')] class extends Component
 
                                     <td class="py-4 px-5 text-right">
                                         <div class="flex items-center justify-end gap-1.5">
+                                            <flux:button href="{{ route('reportcard.pdf', $reportCard->id) }}" target="_blank" size="sm" icon="printer" variant="ghost" class="text-xs font-semibold hover:text-blue-600" tooltip="Print PDF" />
                                             @can('edit reportcard')
                                                 <flux:button wire:click="send({{ $reportCard->id }})" size="sm" icon="paper-airplane" variant="subtle" class="text-xs font-semibold hover:text-blue-600">
                                                     Send

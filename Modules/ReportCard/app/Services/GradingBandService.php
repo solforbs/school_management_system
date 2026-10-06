@@ -7,6 +7,7 @@ use Modules\Classes\Models\SchoolClass;
 use Modules\Curriculum\Models\Curriculum;
 use Modules\Institution\Models\Institution;
 use Modules\ReportCard\Models\GradingBand;
+use Modules\ReportCard\Support\GradingScaleDefaults;
 
 class GradingBandService
 {
@@ -44,7 +45,25 @@ class GradingBandService
             }
         }
 
-        return self::lookup($institution, $percentage, null);
+        $globalBand = self::lookup($institution, $percentage, null);
+        if ($globalBand) {
+            return $globalBand;
+        }
+
+        // Automatic fallback to system defaults so CBC or 8-4-4 report cards never fail to resolve
+        $curriculum = $curriculumId ? Curriculum::find($curriculumId) : null;
+        $defaults = $curriculum?->isCbc() ? GradingScaleDefaults::cbc() : GradingScaleDefaults::eightFourFour();
+
+        foreach ($defaults as $b) {
+            if ($b['min_percentage'] <= $percentage && $b['max_percentage'] >= $percentage) {
+                return new GradingBand($b + [
+                    'institution_id' => $institution->id,
+                    'curriculum_id' => $curriculumId,
+                ]);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -61,7 +80,24 @@ class GradingBandService
             return $band;
         }
 
-        return $query(null);
+        $global = $query(null);
+        if ($global) {
+            return $global;
+        }
+
+        $curriculum = $curriculumId ? Curriculum::find($curriculumId) : null;
+        $defaults = $curriculum?->isCbc() ? GradingScaleDefaults::cbc() : GradingScaleDefaults::eightFourFour();
+
+        foreach ($defaults as $b) {
+            if (strtoupper($b['grade']) === strtoupper($grade)) {
+                return new GradingBand($b + [
+                    'institution_id' => $institution->id,
+                    'curriculum_id' => $curriculumId,
+                ]);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -148,9 +184,24 @@ class GradingBandService
     {
         $bands = self::orderedBands($institution, $curriculumId);
 
-        return ($bands->isEmpty() && $curriculumId)
-            ? self::orderedBands($institution, null)
-            : $bands;
+        if ($bands->isNotEmpty()) {
+            return $bands;
+        }
+
+        if ($curriculumId) {
+            $globalBands = self::orderedBands($institution, null);
+            if ($globalBands->isNotEmpty()) {
+                return $globalBands;
+            }
+        }
+
+        $curriculum = $curriculumId ? Curriculum::find($curriculumId) : null;
+        $defaults = $curriculum?->isCbc() ? GradingScaleDefaults::cbc() : GradingScaleDefaults::eightFourFour();
+
+        return collect($defaults)->map(fn ($b) => new GradingBand($b + [
+            'institution_id' => $institution->id,
+            'curriculum_id' => $curriculumId,
+        ]));
     }
 
     /**

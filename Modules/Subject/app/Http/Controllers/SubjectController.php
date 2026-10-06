@@ -33,10 +33,13 @@ class SubjectController extends Controller
             ->withCount('examinations')
             ->when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))
             ->when(isTeacher(), function ($q) {
-                $q->whereIn('id', function ($sub) {
-                    $sub->select('subject_id')
-                        ->from('teacher_subjects')
-                        ->where('teacher_id', auth()->id());
+                $teacherId = auth()->id();
+                $q->where(function ($sq) use ($teacherId) {
+                    $sq->whereIn('id', function ($sub) use ($teacherId) {
+                        $sub->select('subject_id')->from('subject_teachers')->where('teacher_id', $teacherId);
+                    })->orWhereIn('id', function ($sub) use ($teacherId) {
+                        $sub->select('subject_id')->from('teacher_subjects')->where('teacher_id', $teacherId);
+                    });
                 });
             })
             ->when($search !== '', function ($q) use ($search) {

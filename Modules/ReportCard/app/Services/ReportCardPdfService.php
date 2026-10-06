@@ -24,6 +24,28 @@ class ReportCardPdfService
      */
     public function generate(ReportCard $reportCard): string
     {
+        $data = $this->prepareCardData($reportCard);
+        $pdf = Pdf::loadView('reportcard::pdf.report-card', $data)->setPaper('a4');
+
+        $path = "report-cards/{$reportCard->id}.pdf";
+        Storage::disk('public')->put($path, $pdf->output());
+
+        $reportCard->update(['pdf_path' => $path]);
+
+        return $path;
+    }
+
+    /**
+     * Prepares all view data for a single student report card.
+     */
+    public function prepareCardData(
+        ReportCard $reportCard,
+        ?string $cachedLogo = null,
+        ?ReportTemplate $cachedTemplate = null,
+        ?Collection $cachedScaleBands = null,
+        ?Curriculum $cachedCurriculum = null,
+        ?int $cachedCurriculumId = null
+    ): array {
         $reportCard->loadMissing(['institution', 'student', 'schoolClass']);
 
         $institution = $reportCard->institution;
@@ -31,9 +53,9 @@ class ReportCardPdfService
 
         // The mean is graded on the scale the class's curriculum runs on,
         // the same one each individual subject was marked against.
-        $curriculumId = GradingBandService::curriculumIdFor($reportCard->schoolClass, $institution);
-        $curriculum = $reportCard->schoolClass?->curriculum
-            ?? ($curriculumId ? Curriculum::find($curriculumId) : null);
+        $curriculumId = $cachedCurriculumId ?? GradingBandService::curriculumIdFor($reportCard->schoolClass, $institution);
+        $curriculum = $cachedCurriculum ?? ($reportCard->schoolClass?->curriculum
+            ?? ($curriculumId ? Curriculum::find($curriculumId) : null));
 
         $builder = new ReportSheetBuilder;
         $rows = $builder->rows($reportCard, $institution);
@@ -47,7 +69,7 @@ class ReportCardPdfService
             'mean_grade' => $meanGrade,
         ]);
 
-        $template = ReportTemplate::where('institution_id', $institution->id)->first();
+        $template = $cachedTemplate ?? ReportTemplate::where('institution_id', $institution->id)->first();
 
         $prose = ReportCardProse::render($template, [
             '{{student_name}}' => $student->name,
@@ -59,14 +81,14 @@ class ReportCardPdfService
         ]);
 
         $termHistory = $this->termHistory($reportCard);
-        $scaleBands = GradingBandService::scaleFor($institution, $curriculumId);
+        $scaleBands = $cachedScaleBands ?? GradingBandService::scaleFor($institution, $curriculumId);
 
         $pathwayRecommendations = null;
         if ($curriculum?->isCbc()) {
             $pathwayRecommendations = (new CbcPathwayService)->evaluate($rows);
         }
 
-        $pdf = Pdf::loadView('reportcard::pdf.report-card', [
+        return [
             'institution' => $institution,
             'student' => $student,
             'studentDetails' => $this->studentDetails($reportCard),
@@ -82,17 +104,49 @@ class ReportCardPdfService
             'closingHtml' => $prose['closing'],
             'signatoryName' => $template?->signatory_name,
             'signatoryTitle' => $template?->signatory_title,
-            'logoDataUri' => InstitutionLogo::dataUri($institution),
+            'logoDataUri' => $cachedLogo ?? InstitutionLogo::dataUri($institution),
             'termHistory' => $termHistory,
             'pathwayRecommendations' => $pathwayRecommendations,
+        ];
+    }
+
+    /**
+     * Generates a combined multi-page PDF containing all report cards for a class.
+     *
+     * @param Collection<int, ReportCard> $reportCards
+     */
+    public function generateClassBundle(Collection $reportCards): \Barryvdh\DomPDF\PDF
+    {
+        if ($reportCards->isEmpty()) {
+            throw new \InvalidArgumentException('No report cards provided for bundle generation.');
+        }
+
+        $first = $reportCards->first();
+        $institution = $first->institution;
+        $schoolClass = $first->schoolClass;
+
+        // Pre-cache shared assets across the entire class to optimize generation time
+        $cachedLogo = InstitutionLogo::dataUri($institution);
+        $cachedTemplate = ReportTemplate::where('institution_id', $institution->id)->first();
+        $curriculumId = GradingBandService::curriculumIdFor($schoolClass, $institution);
+        $curriculum = $schoolClass?->curriculum ?? ($curriculumId ? Curriculum::find($curriculumId) : null);
+        $cachedScaleBands = GradingBandService::scaleFor($institution, $curriculumId);
+
+        $cards = [];
+        foreach ($reportCards as $rc) {
+            $cards[] = $this->prepareCardData(
+                $rc,
+                $cachedLogo,
+                $cachedTemplate,
+                $cachedScaleBands,
+                $curriculum,
+                $curriculumId
+            );
+        }
+
+        return Pdf::loadView('reportcard::pdf.class-bundle', [
+            'cards' => $cards,
         ])->setPaper('a4');
-
-        $path = "report-cards/{$reportCard->id}.pdf";
-        Storage::disk('public')->put($path, $pdf->output());
-
-        $reportCard->update(['pdf_path' => $path]);
-
-        return $path;
     }
 
     /**

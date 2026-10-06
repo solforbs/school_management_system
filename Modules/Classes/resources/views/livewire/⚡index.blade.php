@@ -400,6 +400,11 @@ new #[Title('Class Management')] class extends Component
                                 Timetable
                             </flux:button>
                         @endif
+                        @if (Route::has('reportcard.class.bulk-pdf') && auth()->user()->can('view reportcard'))
+                            <flux:button href="{{ route('reportcard.class.bulk-pdf', $homeroomClass->id) }}" target="_blank" variant="subtle" icon="printer" class="font-semibold text-xs">
+                                Print Report Cards
+                            </flux:button>
+                        @endif
                         <flux:button href="{{ route('classes.show', $homeroomClass->id) }}" wire:navigate.hover variant="ghost" icon="eye" class="text-xs">
                             Class Dossier
                         </flux:button>
@@ -427,7 +432,7 @@ new #[Title('Class Management')] class extends Component
                         <flux:table.column>Your Role</flux:table.column>
                         <flux:table.column>Subjects You Teach</flux:table.column>
                         <flux:table.column>Learners</flux:table.column>
-                        <flux:table.column align="end">Quick Actions</flux:table.column>
+                        <flux:table.column align="end" class="whitespace-nowrap">Quick Actions</flux:table.column>
                     </flux:table.columns>
 
                     <flux:table.rows>
@@ -449,7 +454,7 @@ new #[Title('Class Management')] class extends Component
                                                 <a href="{{ route('classes.show', $schoolClass->id) }}" class="font-bold text-sm text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                     {{ $schoolClass->name }}
                                                 </a>
-                                                <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold {{ $isCbc ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200' }}">
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-tight {{ $isCbc ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60' : 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60' }}">
                                                     {{ $isCbc ? 'CBC' : '8-4-4' }}
                                                 </span>
                                             </div>
@@ -475,14 +480,19 @@ new #[Title('Class Management')] class extends Component
                                 </flux:table.cell>
 
                                 {{-- Subjects You Teach --}}
-                                <flux:table.cell>
+                                <flux:table.cell class="whitespace-nowrap">
                                     @if ($taughtSubjects->isNotEmpty())
-                                        <div class="flex flex-wrap items-center gap-1.5">
-                                            @foreach ($taughtSubjects as $alloc)
+                                        <div class="flex items-center gap-1.5 whitespace-nowrap">
+                                            @foreach ($taughtSubjects->take(2) as $alloc)
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200/70 dark:border-violet-800/50">
                                                     {{ $alloc->subject?->name ?? 'Subject' }}
                                                 </span>
                                             @endforeach
+                                            @if ($taughtSubjects->count() > 2)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="{{ $taughtSubjects->skip(2)->pluck('subject.name')->filter()->join(', ') }}">
+                                                    +{{ $taughtSubjects->count() - 2 }} more
+                                                </span>
+                                            @endif
                                         </div>
                                     @elseif ($isHomeroom)
                                         <span class="text-xs text-zinc-400 italic">Homeroom Pastoral Supervision</span>
@@ -492,37 +502,37 @@ new #[Title('Class Management')] class extends Component
                                 </flux:table.cell>
 
                                 {{-- Learners --}}
-                                <flux:table.cell>
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-bold text-xs text-zinc-900 dark:text-white">
+                                <flux:table.cell class="whitespace-nowrap">
+                                    <a href="{{ route('student.index', ['class_id' => $schoolClass->id]) }}" wire:navigate.hover class="group/learners inline-flex items-center gap-2 text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="View {{ $schoolClass->name }} Student Roster">
+                                        <span class="font-bold text-xs group-hover/learners:underline underline-offset-2">
                                             {{ $schoolClass->students_count }} Learners
                                         </span>
                                         <span class="text-[11px] text-zinc-400">
                                             ({{ $schoolClass->male_students_count }}M &middot; {{ $schoolClass->female_students_count }}F)
                                         </span>
-                                    </div>
+                                    </a>
                                 </flux:table.cell>
 
                                 {{-- Quick Actions --}}
-                                <flux:table.cell align="end">
-                                    <div class="flex flex-wrap items-center justify-end gap-1.5">
-                                        <flux:button href="{{ route('student.index', ['class_id' => $schoolClass->id]) }}" wire:navigate.hover size="xs" variant="subtle" icon="users">
+                                <flux:table.cell align="end" class="whitespace-nowrap">
+                                    <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+                                        <flux:button href="{{ route('student.index', ['class_id' => $schoolClass->id]) }}" wire:navigate.hover size="xs" variant="subtle" icon="users" tooltip="View {{ $schoolClass->name }} Learners" class="w-[84px] justify-center text-center shrink-0">
                                             Learners
                                         </flux:button>
                                         @if ($isCbc)
-                                            <flux:button href="{{ route('assessment.formative', ['classId' => $schoolClass->id]) }}" wire:navigate.hover size="xs" variant="primary" icon="sparkles">
+                                            <flux:button href="{{ route('assessment.formative', ['classId' => $schoolClass->id]) }}" wire:navigate.hover size="xs" variant="primary" icon="sparkles" class="w-[150px] justify-center text-center shrink-0 font-medium shadow-2xs">
                                                 Record Assessment
                                             </flux:button>
                                         @else
-                                            <flux:button href="{{ route('result.entry.classes') }}" wire:navigate.hover size="xs" variant="primary" icon="table-cells">
+                                            <flux:button href="{{ route('result.entry.classes') }}" wire:navigate.hover size="xs" variant="primary" icon="table-cells" class="w-[150px] justify-center text-center shrink-0 font-medium shadow-2xs">
                                                 Enter Marks
                                             </flux:button>
                                         @endif
-                                        <flux:button href="{{ route('attendance.register', ['classId' => $schoolClass->id]) }}" wire:navigate.hover size="xs" variant="subtle" icon="clipboard-document-check" tooltip="Attendance Register">
-                                            Attendance
-                                        </flux:button>
-                                        <flux:button href="{{ route('classes.show', $schoolClass->id) }}" wire:navigate.hover size="xs" variant="ghost" icon="eye" tooltip="View Class">
-                                        </flux:button>
+                                        <flux:button href="{{ route('attendance.register', ['classId' => $schoolClass->id]) }}" wire:navigate.hover size="xs" variant="subtle" icon="clipboard-document-check" class="size-7 p-0 flex items-center justify-center shrink-0" tooltip="{{ $isHomeroom ? 'Conduct Roll-Call Register' : 'View Attendance Register (Read-Only)' }}" />
+                                        @if (Route::has('reportcard.class.bulk-pdf') && auth()->user()->can('view reportcard'))
+                                            <flux:button href="{{ route('reportcard.class.bulk-pdf', $schoolClass->id) }}" target="_blank" size="xs" variant="ghost" icon="printer" class="size-7 p-0 flex items-center justify-center shrink-0" tooltip="Print Entire Class Report Cards (PDF)" />
+                                        @endif
+                                        <flux:button href="{{ route('classes.show', $schoolClass->id) }}" wire:navigate.hover size="xs" variant="ghost" icon="eye" class="size-7 p-0 flex items-center justify-center shrink-0" tooltip="View Class Dossier &amp; Timetable" />
                                     </div>
                                 </flux:table.cell>
                             </flux:table.row>

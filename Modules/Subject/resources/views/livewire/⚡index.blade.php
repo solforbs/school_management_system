@@ -17,9 +17,58 @@ new #[Title('Academic Subjects')] class extends Component {
     #[Url]
     public string $compulsory = '';
 
+    #[Url]
+    public string $tab = 'all';
+
     public function mount(): void
     {
         abort_unless(auth()->user()->can('view subject') || auth()->user()->can('view subjects'), 403);
+    }
+
+    #[Computed]
+    public function assignedSubjectMap(): array
+    {
+        if (! isTeacher()) {
+            return [];
+        }
+
+        $userId = auth()->id();
+
+        // Map subject_id => array of class names taught by this teacher
+        $allocations = \Modules\Subject\Models\SubjectTeacher::where('teacher_id', $userId)
+            ->with('schoolClass')
+            ->get();
+
+        $map = [];
+        foreach ($allocations as $alloc) {
+            $map[$alloc->subject_id][] = $alloc->schoolClass?->name ?? 'Class';
+        }
+
+        // Also merge legacy teacher_subjects if any
+        $legacySubjIds = \Illuminate\Support\Facades\DB::table('teacher_subjects')
+            ->where('teacher_id', $userId)
+            ->pluck('subject_id')
+            ->toArray();
+
+        foreach ($legacySubjIds as $sId) {
+            if (! isset($map[$sId])) {
+                $map[$sId] = ['Assigned'];
+            }
+        }
+
+        return $map;
+    }
+
+    #[Computed]
+    public function assignedSubjectIds(): array
+    {
+        return array_keys($this->assignedSubjectMap);
+    }
+
+    #[Computed]
+    public function allSchoolSubjectsCount(): int
+    {
+        return Subject::when(! isAdmin(), fn ($q) => $q->where('institution_id', currentInstitutionId()))->count();
     }
 
     #[Computed]
@@ -29,18 +78,14 @@ new #[Title('Academic Subjects')] class extends Component {
             ->withCount('examinations')
             // Institution filter (for non‑admins)
             ->when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
-            // Teacher filter – only subjects assigned to this teacher
-            ->when(isTeacher(), function ($q) {
-                $q->whereIn('id', function ($sub) {
-                    $sub->select('subject_id')
-                        ->from('teacher_subjects')
-                        ->where('teacher_id', auth()->id());
-                });
+            // Teacher scope filter: if tab is 'my', show only assigned subjects
+            ->when(isTeacher() && $this->tab === 'my', function ($q) {
+                $q->whereIn('id', $this->assignedSubjectIds);
             })
             // Search filter
             ->when($this->search !== '', function ($q) {
                 $term = '%' . $this->search . '%';
-                $q->where('name', 'like', $term)->orWhere('code', 'like', $term);
+                $q->where(fn($sq) => $sq->where('name', 'like', $term)->orWhere('code', 'like', $term));
             })
             // Compulsory filter
             ->when($this->compulsory !== '', fn($q) => $q->where('is_compulsory', $this->compulsory === 'yes'))
@@ -52,13 +97,7 @@ new #[Title('Academic Subjects')] class extends Component {
     public function totalSubjects(): int
     {
         return Subject::when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
-            ->when(isTeacher(), function ($q) {
-                $q->whereIn('id', function ($sub) {
-                    $sub->select('subject_id')
-                        ->from('teacher_subjects')
-                        ->where('teacher_id', auth()->id());
-                });
-            })
+            ->when(isTeacher() && $this->tab === 'my', fn ($q) => $q->whereIn('id', $this->assignedSubjectIds))
             ->count();
     }
 
@@ -66,13 +105,7 @@ new #[Title('Academic Subjects')] class extends Component {
     public function compulsorySubjects(): int
     {
         return Subject::when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
-            ->when(isTeacher(), function ($q) {
-                $q->whereIn('id', function ($sub) {
-                    $sub->select('subject_id')
-                        ->from('teacher_subjects')
-                        ->where('teacher_id', auth()->id());
-                });
-            })
+            ->when(isTeacher() && $this->tab === 'my', fn ($q) => $q->whereIn('id', $this->assignedSubjectIds))
             ->where('is_compulsory', true)
             ->count();
     }
@@ -81,13 +114,7 @@ new #[Title('Academic Subjects')] class extends Component {
     public function optionalSubjects(): int
     {
         return Subject::when(!isAdmin(), fn($q) => $q->where('institution_id', currentInstitutionId()))
-            ->when(isTeacher(), function ($q) {
-                $q->whereIn('id', function ($sub) {
-                    $sub->select('subject_id')
-                        ->from('teacher_subjects')
-                        ->where('teacher_id', auth()->id());
-                });
-            })
+            ->when(isTeacher() && $this->tab === 'my', fn ($q) => $q->whereIn('id', $this->assignedSubjectIds))
             ->where('is_compulsory', false)
             ->count();
     }
@@ -150,10 +177,32 @@ new #[Title('Academic Subjects')] class extends Component {
         </div>
     @endif
 
+    {{-- Teacher Scope Navigation Tabs --}}
+    @if (isTeacher())
+        <div class="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+            <button type="button" wire:click="$set('tab', 'all')"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 {{ $this->tab === 'all' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}">
+                <flux:icon icon="academic-cap" class="size-3.5" />
+                All School Disciplines
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $this->tab === 'all' ? 'bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300' }}">
+                    {{ $this->allSchoolSubjectsCount }}
+                </span>
+            </button>
+            <button type="button" wire:click="$set('tab', 'my')"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 {{ $this->tab === 'my' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800' }}">
+                <flux:icon icon="star" class="size-3.5 text-amber-500" />
+                My Teaching Allocations
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $this->tab === 'my' ? 'bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900' : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300' }}">
+                    {{ count($this->assignedSubjectIds) }}
+                </span>
+            </button>
+        </div>
+    @endif
+
     {{-- Top Executive Metrics Strip --}}
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-5">
         <x-kpi-card title="Total Subjects" icon="book-open" color="sky" :count="$totalSubjects"
-            subtext="Registered academic disciplines" />
+            subtext="{{ isTeacher() && $this->tab === 'my' ? 'Your allocated disciplines' : 'Registered academic disciplines' }}" />
 
         <x-kpi-card title="Compulsory Subjects" icon="academic-cap" color="indigo" :count="$compulsorySubjects"
             subtext="Mandatory curriculum courses" href="{{ route('subject.index', ['compulsory' => 'yes']) }}" />
@@ -219,26 +268,41 @@ new #[Title('Academic Subjects')] class extends Component {
                         @foreach ($this->subjects as $subject)
                             @php
                                 $examCount = $subject->examinations_count ?? $subject->examinations->count();
+                                $assignedClasses = $this->assignedSubjectMap[$subject->id] ?? null;
+                                $isTaughtByMe = !empty($assignedClasses);
                             @endphp
                             <tr class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40 transition-colors">
                                 <td class="py-3.5 px-5">
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="size-9 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800 font-medium">
-                                            <flux:icon icon="book-open" class="size-4" />
+                                            class="size-9 rounded-xl {{ $isTaughtByMe ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-100 dark:border-blue-800' }} flex items-center justify-center shrink-0 font-medium">
+                                            <flux:icon icon="{{ $isTaughtByMe ? 'star' : 'book-open' }}" class="size-4" />
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <a href="{{ route('subject.show', $subject->id) }}" wire:navigate.hover
-                                                class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition truncate block text-xs sm:text-sm">
-                                                {{ $subject->name }}
-                                            </a>
+                                            <div class="flex items-center gap-2">
+                                                <a href="{{ route('subject.show', $subject->id) }}" wire:navigate.hover
+                                                    class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition truncate block text-xs sm:text-sm">
+                                                    {{ $subject->name }}
+                                                </a>
+                                                @if ($isTaughtByMe)
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/50 shrink-0">
+                                                        <flux:icon icon="star" class="size-2.5" />
+                                                        You Teach: {{ implode(', ', array_unique($assignedClasses)) }}
+                                                    </span>
+                                                @endif
+                                            </div>
                                             <div
-                                                class="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                                                class="text-[11px] text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">
                                                 <span
                                                     class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200/80 dark:border-zinc-700 text-[10px]">{{ $subject->code ?? '—' }}</span>
-                                                <span class="text-zinc-300">&bull;</span>
-                                                <span
-                                                    class="font-sans text-[11px] text-zinc-500">{{ $subject->institution?->name ?? 'Main Campus' }}</span>
+                                                @if ($subject->learning_area)
+                                                    <span class="text-zinc-300">&bull;</span>
+                                                    <span class="font-sans text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">{{ $subject->learning_area }}</span>
+                                                @endif
+                                                @if ($subject->strand)
+                                                    <span class="text-zinc-300">&bull;</span>
+                                                    <span class="font-sans text-[10px] text-zinc-400 italic">{{ $subject->strand }}</span>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -258,10 +322,17 @@ new #[Title('Academic Subjects')] class extends Component {
                                 </td>
 
                                 <td class="py-3.5 px-5 text-right">
-                                    <div class="flex items-center justify-end gap-1">
+                                    <div class="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                                        @if ($isTaughtByMe)
+                                            <flux:button href="{{ route('assessment.formative') }}"
+                                                wire:navigate.hover size="xs" variant="primary" icon="sparkles"
+                                                tooltip="Record Assessment for {{ $subject->name }}">
+                                                Assess
+                                            </flux:button>
+                                        @endif
                                         <flux:button href="{{ route('subject.show', $subject->id) }}"
-                                            wire:navigate.hover size="sm" icon="eye" variant="subtle"
-                                            title="View Subject Details" />
+                                            wire:navigate.hover size="xs" icon="eye" variant="subtle"
+                                            tooltip="View Subject Details" />
                                         @can('edit subject')
                                             <flux:button href="{{ route('subject.edit', $subject->id) }}"
                                                 wire:navigate.hover size="sm" icon="pencil-square" variant="subtle"

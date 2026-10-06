@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
     Route::post('report-cards/send-ready', [ReportCardController::class, 'sendReady'])->name('reportcard.send-ready');
     Route::get('report-cards/export', [ReportCardController::class, 'export'])->name('reportcard.export');
     Route::livewire('report-cards', 'reportcard::index')->name('reportcard.index');
+    Route::get('report-cards/class/{schoolClass}/bulk-pdf', [ReportCardController::class, 'classBundlePdf'])->name('reportcard.class.bulk-pdf');
     Route::get('report-cards/{reportcard}', [ReportCardController::class, 'show'])->name('reportcard.show');
     Route::get('report-cards/{reportcard}/pdf', [ReportCardController::class, 'pdf'])->name('reportcard.pdf');
 });
