@@ -49,7 +49,14 @@ class SaveStudent
             'email' => 'nullable|email|max:255|unique:users,email',
             'password' => 'nullable|string|min:8',
             'profile_image' => 'nullable|image|max:2048',
-            'admission_number' => 'nullable|string|max:100|unique:student_details,admission_number',
+            'admission_number' => [
+                'required',
+                'string',
+                'max:100',
+                $institutionId > 0
+                    ? Rule::unique('student_details', 'admission_number')->where('institution_id', $institutionId)
+                    : Rule::unique('student_details', 'admission_number'),
+            ],
 
             // Either link an existing parent account (a parent can have more
             // than one student) or fill in the fields below to create one.
@@ -87,7 +94,7 @@ class SaveStudent
     /**
      * @return array<string, mixed>
      */
-    public static function updateRules(?int $studentUserId = null, ?int $studentDetailsId = null): array
+    public static function updateRules(?int $studentUserId = null, ?int $studentDetailsId = null, int $institutionId = 0): array
     {
         return array_merge([
             'name' => 'required|string|max:255',
@@ -100,10 +107,14 @@ class SaveStudent
             'password' => 'nullable|string|min:8',
             'profile_image' => 'nullable|image|max:2048',
             'admission_number' => [
-                'nullable',
+                'required',
                 'string',
                 'max:100',
-                $studentDetailsId ? Rule::unique('student_details', 'admission_number')->ignore($studentDetailsId) : 'nullable',
+                $studentDetailsId
+                    ? ($institutionId > 0
+                        ? Rule::unique('student_details', 'admission_number')->where('institution_id', $institutionId)->ignore($studentDetailsId)
+                        : Rule::unique('student_details', 'admission_number')->ignore($studentDetailsId))
+                    : 'required',
             ],
         ], self::sharedRules());
     }
@@ -154,6 +165,13 @@ class SaveStudent
      */
     public function create(array $data, int $institutionId, ?UploadedFile $photo = null): User
     {
+        // 1. Idempotency & Duplicate Prevention:
+        // Before creating a new user or student details, search for an existing active student match.
+        $existing = $this->findExistingStudentMatch($institutionId, $data);
+        if ($existing) {
+            return $this->enrichExistingStudent($existing, $data, $photo);
+        }
+
         $this->guardStudentLimit($institutionId);
 
         return DB::transaction(function () use ($data, $institutionId, $photo) {
@@ -163,9 +181,15 @@ class SaveStudent
                 ? trim((string) $data['admission_number'])
                 : null;
 
+            if (empty($admissionNumber)) {
+                throw new \InvalidArgumentException('Admission number is required to enroll a student. Student details cannot be saved without it.');
+            }
+
+            // Student email must NOT be automatically generated with fake domains.
+            // Leave it NULL when not supplied.
             $email = ! empty($data['email'])
                 ? trim((string) $data['email'])
-                : $this->uniqueEmail($data['name'], $admissionNumber);
+                : null;
 
             $password = ! empty($data['password'])
                 ? Hash::make($data['password'])
@@ -192,7 +216,7 @@ class SaveStudent
                 $studentData['user_id'] = $student->id;
             }
             $studentData['institution_id'] = $institutionId;
-            $studentData['is_active'] = (bool) ($data['is_active'] ?? false);
+            $studentData['is_active'] = (bool) ($data['is_active'] ?? true);
 
             if ($parent) {
                 $studentData['parent_id'] = $parent->id;
@@ -205,6 +229,154 @@ class SaveStudent
             $student->studentUserDetails()->create($studentData);
 
             return $student;
+        });
+    }
+
+    /**
+     * Find an existing active student record that safely matches this identity.
+     * Checks admission_number, student_number, and normalized student name while
+     * strictly verifying there are no conflicting identity fields (different DOB, different parent phone).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function findExistingStudentMatch(int $institutionId, array $data): ?StudentDetails
+    {
+        $name = trim((string) ($data['name'] ?? ''));
+        $admissionNumber = ! empty($data['admission_number']) ? trim((string) $data['admission_number']) : null;
+        $studentNumber = ! empty($data['student_number']) ? trim((string) $data['student_number']) : null;
+
+        // 1. If admission number is supplied, check for existing student with that admission number in this institution
+        if ($admissionNumber) {
+            $byAdm = StudentDetails::where('institution_id', $institutionId)
+                ->where('admission_number', $admissionNumber)
+                ->with(['student', 'parent'])
+                ->first();
+
+            if ($byAdm) {
+                return $byAdm;
+            }
+        }
+
+        // 2. If student_number is supplied, check by student_number in this institution
+        if ($studentNumber) {
+            $byStuNo = StudentDetails::where('institution_id', $institutionId)
+                ->where('student_number', $studentNumber)
+                ->with(['student', 'parent'])
+                ->first();
+
+            if ($byStuNo) {
+                return $byStuNo;
+            }
+        }
+
+        if ($name === '') {
+            return null;
+        }
+
+        $normName = preg_replace('/\s+/', ' ', strtolower($name));
+        $classId = ! empty($data['class_id']) ? (int) $data['class_id'] : null;
+
+        // 3. Search for candidates with the same normalized name in this institution
+        $candidates = StudentDetails::where('institution_id', $institutionId)
+            ->whereHas('student', function ($q) use ($normName) {
+                $q->whereRaw('LOWER(TRIM(name)) = ?', [$normName]);
+            })
+            ->with(['student', 'parent'])
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $matcher = app(ParentMatchingService::class);
+        $rawPhone = ! empty($data['guardian_phone']) ? $data['guardian_phone'] : (! empty($data['parent_phone']) ? $data['parent_phone'] : null);
+        $inputPhone = $rawPhone ? $matcher->normalizePhone($rawPhone) : null;
+        $rawGuardian = ! empty($data['guardian_name']) ? $data['guardian_name'] : (! empty($data['parent_name']) ? $data['parent_name'] : null);
+        $inputGuardian = $rawGuardian ? $matcher->normalizeName($rawGuardian) : null;
+        $inputDob = ! empty($data['date_of_birth']) ? $data['date_of_birth'] : null;
+
+        $matching = $candidates->filter(function (StudentDetails $cand) use ($classId, $inputPhone, $inputDob, $admissionNumber, $matcher) {
+            // If candidate already has an explicit admission number and a DIFFERENT admission number was passed, conflict!
+            if ($admissionNumber && ! empty($cand->admission_number) && strcasecmp($cand->admission_number, $admissionNumber) !== 0) {
+                return false;
+            }
+
+            // Conflict if DOB differs
+            if ($inputDob && ! empty($cand->date_of_birth) && $cand->date_of_birth !== $inputDob) {
+                return false;
+            }
+
+            // Conflict if guardian phone differs
+            if ($inputPhone && ! empty($cand->guardian_phone)) {
+                $candPhone = $matcher->normalizePhone($cand->guardian_phone);
+                if ($candPhone && $candPhone !== $inputPhone) {
+                    return false;
+                }
+            }
+
+            // Conflict if explicit classes differ
+            if ($classId && ! empty($cand->class_id) && (int) $cand->class_id !== $classId) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if ($matching->count() === 1) {
+            return $matching->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Enrich an existing student details record in-place instead of creating a duplicate student.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function enrichExistingStudent(StudentDetails $existing, array $data, ?UploadedFile $photo = null): User
+    {
+        return DB::transaction(function () use ($existing, $data, $photo) {
+            $user = $existing->student ?? User::find($existing->student_id);
+
+            $adm = ! empty($data['admission_number']) ? trim((string) $data['admission_number']) : null;
+            if ($adm && empty($existing->admission_number)) {
+                $existing->admission_number = $adm;
+            }
+
+            if (! empty($data['class_id']) && empty($existing->class_id)) {
+                $existing->class_id = $data['class_id'];
+            }
+
+            if (! empty($data['student_number']) && empty($existing->student_number)) {
+                $existing->student_number = $data['student_number'];
+            }
+
+            if (! empty($data['gender']) && empty($existing->gender)) {
+                $existing->gender = in_array(strtolower($data['gender']), ['male', 'female', 'other'], true) ? strtolower($data['gender']) : null;
+            }
+
+            if (! empty($data['date_of_birth']) && empty($existing->date_of_birth)) {
+                $existing->date_of_birth = $data['date_of_birth'];
+            }
+
+            if (! empty($data['guardian_name']) && empty($existing->guardian_name)) {
+                $existing->guardian_name = $data['guardian_name'];
+            }
+
+            if (! empty($data['guardian_phone']) && empty($existing->guardian_phone)) {
+                $existing->guardian_phone = $data['guardian_phone'];
+            }
+
+            if ($photo) {
+                $existing->profile_photo = $this->imageCompressor->store($photo, 'students/photos');
+            }
+
+            $existing->save();
+
+            $this->syncParentOnUpdate($existing, $data);
+
+            return $user ?? $existing->student;
         });
     }
 
@@ -444,7 +616,7 @@ class SaveStudent
                 if ($phone) {
                     $q->where('parent_phone', $phone);
                 }
-                if ($rawPhone && $rawPhone !== $phone) {
+                if ($rawPhone !== $phone) {
                     $q->orWhere('parent_phone', $rawPhone);
                 }
             })->first();

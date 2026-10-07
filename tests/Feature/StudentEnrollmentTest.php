@@ -53,11 +53,12 @@ function makeEnrollmentSchool(): array
     return [$director->refresh(), $institution, $class];
 }
 
-test('a student can be enrolled with only name, auto-generating email, password, and admission number', function () {
+test('a student can be enrolled leaving email null when not provided and saving admission number', function () {
     [$director, $institution, $class] = makeEnrollmentSchool();
 
     $response = $this->actingAs($director)->post(route('student.store'), [
         'name' => 'Minimal Student',
+        'admission_number' => 'MIN-001',
         'class_id' => $class->id,
     ]);
 
@@ -67,13 +68,13 @@ test('a student can be enrolled with only name, auto-generating email, password,
     $user = User::where('name', 'Minimal Student')->first();
     expect($user)->not->toBeNull()
         ->and($user->hasRole('Student'))->toBeTrue()
-        ->and($user->email)->toContain('@students.generated');
+        ->and($user->email)->toBeNull();
 
     $details = StudentDetails::where('student_id', $user->id)->first();
     expect($details)->not->toBeNull()
         ->and($details->institution_id)->toBe($institution->id)
         ->and((int) $details->class_id)->toBe($class->id)
-        ->and($details->admission_number)->toBeNull();
+        ->and($details->admission_number)->toBe('MIN-001');
 });
 
 test('a student enrolled via bulk or minimal form can be edited later to add medical and guardian details', function () {
@@ -83,6 +84,7 @@ test('a student enrolled via bulk or minimal form can be edited later to add med
     $saveStudent = app(SaveStudent::class);
     $student = $saveStudent->create([
         'name' => 'Alex Smith',
+        'admission_number' => 'ALX-001',
         'class_id' => $class->id,
     ], $institution->id);
 
@@ -91,6 +93,7 @@ test('a student enrolled via bulk or minimal form can be edited later to add med
     // Now edit the student adding medical, notes, parent, and updated name
     $response = $this->actingAs($director)->put(route('student.update', $student->id), [
         'name' => 'Alex Alexander Smith',
+        'admission_number' => 'ALX-001',
         'email' => 'alex.smith@realdomain.com',
         'medical_conditions' => 'Asthma',
         'allergies' => 'Peanuts',
@@ -128,6 +131,7 @@ test('a teacher with can_enroll_students permission can enroll students via stud
 
     $response = $this->actingAs($teacher)->post(route('student.store'), [
         'name' => 'Teacher Enrolled Student',
+        'admission_number' => 'TEA-001',
         'class_id' => $class->id,
     ]);
 
@@ -144,6 +148,7 @@ test('editing student with a parent phone number that already belongs to another
     // 1. Enroll first child with parent phone +254 796905322
     $child1 = $saveStudent->create([
         'name' => 'First Child',
+        'admission_number' => 'CHI-001',
         'class_id' => $class->id,
         'parent_name' => 'Existing Parent',
         'parent_phone' => '+254 796905322',
@@ -156,12 +161,14 @@ test('editing student with a parent phone number that already belongs to another
     // 2. Enroll second child minimally
     $child2 = $saveStudent->create([
         'name' => 'Second Child',
+        'admission_number' => 'CHI-002',
         'class_id' => $class->id,
     ], $institution->id);
 
     // 3. Edit second child to add the same parent phone number
     $response = $this->actingAs($director)->put(route('student.update', $child2->id), [
         'name' => 'Second Child',
+        'admission_number' => 'CHI-002',
         'parent_name' => 'Existing Parent',
         'parent_phone' => '+254 796905322',
         'parent_occupation' => 'Software Engineer',

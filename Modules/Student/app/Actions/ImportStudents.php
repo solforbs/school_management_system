@@ -2,7 +2,6 @@
 
 namespace Modules\Student\Actions;
 
-use App\Models\User;
 use App\Services\ParentMatchingService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
@@ -115,6 +114,7 @@ class ImportStudents
         $errors = [];
         $seenAdmissionNumbers = [];
         $seenStudentNumbers = [];
+        $seenNames = [];
         $intraBatchParents = [];
 
         $existingStudentIdsBeforeBatch = StudentDetails::where('institution_id', $institutionId)
@@ -137,6 +137,12 @@ class ImportStudents
                 continue;
             }
 
+            if ($row['admission_number'] === '') {
+                $errors[$index] = 'Admission number is required. Student details cannot be saved without an admission number.';
+
+                continue;
+            }
+
             $classId = null;
 
             if ($row['class_name'] !== '') {
@@ -151,23 +157,40 @@ class ImportStudents
                 $classId = $class->id;
             }
 
+            // Check duplicate names within the same upload batch
+            $normRowName = preg_replace('/\s+/', ' ', strtolower(trim($row['name'])));
+            $nameBatchKey = $normRowName.'_'.($classId ?? 'all');
+            if (isset($seenNames[$nameBatchKey])) {
+                $firstRowNumber = $seenNames[$nameBatchKey] + 1;
+                $errors[$index] = "Student name \"{$row['name']}\" is duplicated in row {$firstRowNumber}. Each student must only be entered once.";
+
+                continue;
+            }
+            $seenNames[$nameBatchKey] = $index;
+
             // Check admission number duplicates before saving
-            if ($row['admission_number'] !== '') {
-                if (isset($seenAdmissionNumbers[$row['admission_number']])) {
-                    $firstRowNumber = $seenAdmissionNumbers[$row['admission_number']] + 1;
-                    $errors[$index] = "Admission number \"{$row['admission_number']}\" is duplicated in row {$firstRowNumber}. Each student must have a unique admission number.";
+            if (isset($seenAdmissionNumbers[$row['admission_number']])) {
+                $firstRowNumber = $seenAdmissionNumbers[$row['admission_number']] + 1;
+                $errors[$index] = "Admission number \"{$row['admission_number']}\" is duplicated in row {$firstRowNumber}. Each student must have a unique admission number.";
 
-                    continue;
-                }
+                continue;
+            }
 
-                if (StudentDetails::where('admission_number', $row['admission_number'])->exists()) {
+            $existingAdmStudent = StudentDetails::where('institution_id', $institutionId)
+                ->where('admission_number', $row['admission_number'])
+                ->with('student')
+                ->first();
+
+            if ($existingAdmStudent) {
+                $existingName = preg_replace('/\s+/', ' ', strtolower(trim((string) ($existingAdmStudent->student->name ?? ''))));
+                if ($existingName !== $normRowName) {
                     $errors[$index] = "Admission number \"{$row['admission_number']}\" is already registered to an existing student in the system.";
 
                     continue;
                 }
-
-                $seenAdmissionNumbers[$row['admission_number']] = $index;
             }
+
+            $seenAdmissionNumbers[$row['admission_number']] = $index;
 
             // Check student number duplicates if provided
             if ($row['student_number'] !== '') {
@@ -178,17 +201,25 @@ class ImportStudents
                     continue;
                 }
 
-                if (StudentDetails::where('student_number', $row['student_number'])->exists()) {
-                    $errors[$index] = "Student number \"{$row['student_number']}\" is already registered to an existing student in the system.";
+                $existingStuNo = StudentDetails::where('institution_id', $institutionId)
+                    ->where('student_number', $row['student_number'])
+                    ->with('student')
+                    ->first();
 
-                    continue;
+                if ($existingStuNo) {
+                    $existingName = preg_replace('/\s+/', ' ', strtolower(trim((string) ($existingStuNo->student->name ?? ''))));
+                    if ($existingName !== $normRowName) {
+                        $errors[$index] = "Student number \"{$row['student_number']}\" is already registered to an existing student in the system.";
+
+                        continue;
+                    }
                 }
 
                 $seenStudentNumbers[$row['student_number']] = $index;
             }
 
             $status = strtolower($row['enrollment_status']) ?: 'active';
-            $admissionNumber = $row['admission_number'] !== '' ? $row['admission_number'] : null;
+            $admissionNumber = $row['admission_number'];
 
             $hasGuardian = ! empty($row['guardian_name']) || ! empty($row['guardian_phone']);
             $parent = null;
@@ -217,6 +248,16 @@ class ImportStudents
                     ->whereHas('student', fn ($sq) => $sq->whereRaw('LOWER(TRIM(name)) = ?', [$normRowName]))
                     ->when($classId, fn ($q) => $q->where(fn ($sub) => $sub->where('class_id', $classId)->orWhereNull('class_id')))
                     ->get();
+
+                $conflicting = $candidates->first(function ($cand) use ($admissionNumber) {
+                    return ! empty($cand->admission_number) && strcasecmp($cand->admission_number, $admissionNumber) !== 0;
+                });
+
+                if ($conflicting) {
+                    $errors[$index] = "Student \"{$row['name']}\" already exists with admission number \"{$conflicting->admission_number}\". Cannot assign conflicting admission number \"{$admissionNumber}\".";
+
+                    continue;
+                }
 
                 $existingStudentDetails = $candidates->first(function ($cand) use ($admissionNumber) {
                     return empty($cand->admission_number) || $cand->admission_number === $admissionNumber;
@@ -260,7 +301,7 @@ class ImportStudents
             try {
                 $student = $this->saveStudent->create([
                     'name' => $row['name'],
-                    'email' => $this->uniqueEmail($row['name'], $admissionNumber),
+                    'email' => null,
                     'password' => Str::random(16),
                     'admission_number' => $admissionNumber,
                     'student_number' => $row['student_number'] ?: null,
@@ -329,23 +370,5 @@ class ImportStudents
     private function isBlankPlaceholder(string $value): bool
     {
         return in_array(strtolower($value), self::BLANKS, true);
-    }
-
-    /**
-     * Uploaded sheets carry no email, but every student needs a login;
-     * derive one from the name/admission number and keep it unique.
-     */
-    private function uniqueEmail(string $name, ?string $admissionNumber = null): string
-    {
-        $baseSeed = (! empty($admissionNumber)) ? $admissionNumber : $name;
-        $base = Str::slug($baseSeed, '.') ?: 'student';
-        $email = $base.'@students.generated';
-        $suffix = 1;
-
-        while (User::where('email', $email)->exists()) {
-            $email = $base.'.'.$suffix++.'@students.generated';
-        }
-
-        return $email;
     }
 }

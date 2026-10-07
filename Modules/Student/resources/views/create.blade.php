@@ -53,7 +53,7 @@
                         <flux:input type="email" name="email" label="Student Email" value="{{ old('email') }}" autocomplete="new-password" required />
                         <flux:input type="password" name="password" label="Temporary Password" autocomplete="new-password" required />
                         
-                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number') }}" placeholder="e.g. ADM-2023-001" />
+                        <flux:input type="text" name="admission_number" label="Admission Number" value="{{ old('admission_number') }}" placeholder="e.g. ADM-2023-001" required />
                         <flux:input type="text" name="student_number" label="Student Number / ID" value="{{ old('student_number') }}" placeholder="e.g. STU-8492" />
                         
                         <div class="md:col-span-2">

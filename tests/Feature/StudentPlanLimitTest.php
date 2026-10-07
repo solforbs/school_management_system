@@ -112,6 +112,7 @@ test('the limit cannot be sidestepped by calling the enrolment action directly',
         'name' => 'Over The Line',
         'email' => 'over@example.com',
         'password' => 'password123',
+        'admission_number' => 'ADM-OVER-001',
     ], $institution->id))->toThrow(StudentLimitException::class);
 
     expect(User::where('email', 'over@example.com')->exists())->toBeFalse();

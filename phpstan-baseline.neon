@@ -756,23 +756,6 @@ parameters:
 			count: 1
 			path: app/Services/AnalyticsExportService.php
 
-		-
-			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$created_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$date_of_birth\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
-
-		-
-			message: '#^Access to an undefined property Modules\\Student\\Models\\StudentDetails\:\:\$enrollment_status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AnalyticsExportService.php
 
 		-
 			message: '#^Method App\\Services\\AnalyticsExportService\:\:addAttendanceSheet\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'

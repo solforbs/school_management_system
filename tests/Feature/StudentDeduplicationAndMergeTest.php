@@ -40,21 +40,16 @@ function setupStudentMergeTestInstitution(): array
     return [$director, $institution, $class];
 }
 
-it('does not create an auto-generated admission number when admission number is left blank', function () {
+it('requires admission number and does not save student details when admission number is omitted', function () {
     [, $institution, $class] = setupStudentMergeTestInstitution();
     $saveStudent = app(SaveStudent::class);
 
-    $student = $saveStudent->create([
+    expect(fn () => $saveStudent->create([
         'name' => 'Hassan Jama',
         'admission_number' => '', // Left blank
         'class_id' => $class->id,
         'gender' => 'male',
-    ], $institution->id);
-
-    $details = StudentDetails::where('student_id', $student->id)->firstOrFail();
-
-    expect($details->admission_number)->toBeNull()
-        ->and($student->email)->toBe('hassan.jama@students.generated');
+    ], $institution->id))->toThrow(InvalidArgumentException::class, 'Admission number is required');
 });
 
 it('merges duplicate student accounts in the same class and retains the real admission number', function () {
@@ -178,21 +173,21 @@ it('enriches existing student during subsequent bulk uploads instead of creating
     [, $institution, $class] = setupStudentMergeTestInstitution();
     $importer = app(ImportStudents::class);
 
-    // 1. First upload: Names alone
+    // 1. First upload: Name and admission number
     $result1 = $importer->import([
-        ['name' => 'Sundus Abdinoor', 'admission_number' => '', 'student_number' => '', 'gender' => '', 'guardian_name' => '', 'guardian_phone' => '', 'class_name' => $class->name, 'enrollment_status' => 'active'],
+        ['name' => 'Sundus Abdinoor', 'admission_number' => 'FAHAN-016-2025', 'student_number' => '', 'gender' => '', 'guardian_name' => '', 'guardian_phone' => '', 'class_name' => $class->name, 'enrollment_status' => 'active'],
     ], $institution->id);
 
     expect($result1['created'])->toBe(1);
     expect(StudentDetails::where('institution_id', $institution->id)->count())->toBe(1);
 
     $originalStudent = StudentDetails::where('institution_id', $institution->id)->first();
-    expect($originalStudent->admission_number)->toBeNull()
+    expect($originalStudent->admission_number)->toBe('FAHAN-016-2025')
         ->and($originalStudent->parent_id)->toBeNull();
 
     // 2. Second upload: Same student with guardian added
     $result2 = $importer->import([
-        ['name' => 'Sundus Abdinoor', 'admission_number' => '', 'student_number' => '', 'gender' => 'female', 'guardian_name' => 'Abdinoor Dabi', 'guardian_phone' => '0722971610', 'class_name' => $class->name, 'enrollment_status' => 'active'],
+        ['name' => 'Sundus Abdinoor', 'admission_number' => 'FAHAN-016-2025', 'student_number' => '', 'gender' => 'female', 'guardian_name' => 'Abdinoor Dabi', 'guardian_phone' => '0722971610', 'class_name' => $class->name, 'enrollment_status' => 'active'],
     ], $institution->id);
 
     expect($result2['created'])->toBe(1)
@@ -202,14 +197,14 @@ it('enriches existing student during subsequent bulk uploads instead of creating
     expect($originalStudent->parent_id)->not->toBeNull()
         ->and($originalStudent->gender)->toBe('female');
 
-    // 3. Third upload: Same student with admission number added
+    // 3. Third upload: Same student with student ID number added
     $result3 = $importer->import([
-        ['name' => 'Sundus Abdinoor', 'admission_number' => 'FAHAN-016-2025', 'student_number' => '', 'gender' => 'female', 'guardian_name' => 'Abdinoor Dabi', 'guardian_phone' => '0722971610', 'class_name' => $class->name, 'enrollment_status' => 'active'],
+        ['name' => 'Sundus Abdinoor', 'admission_number' => 'FAHAN-016-2025', 'student_number' => 'UPI-9900', 'gender' => 'female', 'guardian_name' => 'Abdinoor Dabi', 'guardian_phone' => '0722971610', 'class_name' => $class->name, 'enrollment_status' => 'active'],
     ], $institution->id);
 
     expect($result3['created'])->toBe(1)
         ->and(StudentDetails::where('institution_id', $institution->id)->count())->toBe(1); // STILL 1!
 
     $originalStudent->refresh();
-    expect($originalStudent->admission_number)->toBe('FAHAN-016-2025');
+    expect($originalStudent->student_number)->toBe('UPI-9900');
 });

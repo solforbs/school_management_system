@@ -394,29 +394,46 @@ class AdmissionNumberPatternService
      */
     public function suggestForRows(int $institutionId, array $rows, bool $fillBlanksOnly = true): array
     {
-        $blankIndices = [];
-        foreach ($rows as $i => $row) {
-            $hasName = trim((string) ($row['name'] ?? '')) !== '';
-            $adm = trim((string) ($row['admission_number'] ?? ''));
+        $existingStudents = DB::table('student_details')
+            ->join('users', 'student_details.student_id', '=', 'users.id')
+            ->where('student_details.institution_id', $institutionId)
+            ->whereNotNull('student_details.admission_number')
+            ->where('student_details.admission_number', '!=', '')
+            ->whereNull('student_details.deleted_at')
+            ->select('users.name', 'student_details.admission_number')
+            ->get()
+            ->keyBy(fn ($r): string => (string) preg_replace('/\s+/', ' ', strtolower(trim((string) $r->name))));
 
-            if ($fillBlanksOnly) {
-                if ($hasName && $adm === '') {
-                    $blankIndices[] = $i;
-                }
+        $blankIndicesNeedingGeneration = [];
+
+        foreach ($rows as $i => $row) {
+            $name = trim((string) ($row['name'] ?? ''));
+            $adm = trim((string) ($row['admission_number'] ?? ''));
+            $normName = preg_replace('/\s+/', ' ', strtolower($name));
+
+            if ($fillBlanksOnly && $adm !== '') {
+                continue;
+            }
+
+            if ($name === '') {
+                continue;
+            }
+
+            // If an existing student already has an admission number, reuse it instead of consuming a new one
+            if ($existingStudents->has($normName)) {
+                $rows[$i]['admission_number'] = $existingStudents->get($normName)->admission_number;
             } else {
-                if ($hasName) {
-                    $blankIndices[] = $i;
-                }
+                $blankIndicesNeedingGeneration[] = $i;
             }
         }
 
-        if (empty($blankIndices)) {
+        if (empty($blankIndicesNeedingGeneration)) {
             return $rows;
         }
 
-        $generated = $this->generateNextSequence($institutionId, count($blankIndices));
+        $generated = $this->generateNextSequence($institutionId, count($blankIndicesNeedingGeneration));
 
-        foreach ($blankIndices as $idx => $rowIdx) {
+        foreach ($blankIndicesNeedingGeneration as $idx => $rowIdx) {
             $rows[$rowIdx]['admission_number'] = $generated[$idx] ?? '';
         }
 

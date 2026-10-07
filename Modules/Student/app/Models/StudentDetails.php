@@ -5,6 +5,7 @@ namespace Modules\Student\Models;
 use App\Concerns\TetherSyncable;
 use App\Models\User;
 use App\Services\StudentCacheService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,14 @@ use Modules\Institution\Models\Institution;
  * @property int|null $class_id
  * @property string|null $gender
  * @property int|null $parent_id
+ * @property string|null $parent_name
+ * @property string|null $parent_phone
+ * @property string|null $phone
+ * @property string|null $enrollment_status
+ * @property Carbon|null $date_of_birth
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  * @property-read User|null $student
  * @property-read Institution|null $institution
  * @property-read SchoolClass|null $schoolClass
@@ -115,5 +124,13 @@ class StudentDetails extends Model
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'parent_id');
     }
 }

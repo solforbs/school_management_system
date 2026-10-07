@@ -169,35 +169,27 @@ test('an uploaded file can be saved end to end, keeping failed rows visible', fu
         ->and(StudentDetails::where('admission_number', 'fhn-9-2025')->exists())->toBeFalse();
 });
 
-test('generated login emails stay unique across duplicate names', function () {
+test('saving students without admission number fails with row error', function () {
     [$director, $institution] = directorForUpload();
 
     $component = Livewire::actingAs($director)->test('student::upload');
 
-    foreach ([0, 1] as $i) {
-        $component->set("rows.{$i}", [
-            'name' => 'Same Name',
-            'admission_number' => '',
-            'student_number' => '',
-            'class_name' => '',
-            'gender' => '',
-            'guardian_name' => '',
-            'guardian_phone' => '',
-            'enrollment_status' => '',
-        ]);
-    }
+    $component->set('rows.0', [
+        'name' => 'No Admission Student',
+        'admission_number' => '',
+        'student_number' => '',
+        'class_name' => '',
+        'gender' => '',
+        'guardian_name' => '',
+        'guardian_phone' => '',
+        'enrollment_status' => '',
+    ]);
 
     $component->call('save')->assertHasNoErrors();
 
-    expect($component->get('rowErrors'))->toBe([]);
-
-    $emails = StudentDetails::where('institution_id', $institution->id)
-        ->with('student')
-        ->get()
-        ->map(fn ($d) => $d->student?->email);
-
-    expect($emails)->toHaveCount(2)
-        ->and($emails->unique())->toHaveCount(2);
+    expect($component->get('created'))->toBe(0);
+    $errors = $component->get('rowErrors');
+    expect($errors[0])->toContain('Admission number is required');
 });
 
 test('student create form renders bulk upload button and quick switch link', function () {
@@ -314,7 +306,7 @@ test('import rejects student number already registered in database with a friend
 
     $component->set('rows.0', [
         'name' => 'Another Student',
-        'admission_number' => '',
+        'admission_number' => 'ADM-NEW-999',
         'student_number' => 'STU-10492',
         'class_name' => '',
         'gender' => 'female',

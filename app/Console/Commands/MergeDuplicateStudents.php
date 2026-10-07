@@ -3,10 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Services\ParentMatchingService;
 use App\Services\StudentCacheService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 use Modules\Student\Models\StudentDetails;
 
@@ -14,17 +16,21 @@ class MergeDuplicateStudents extends Command
 {
     protected $signature = 'students:merge-duplicates 
                             {--institution= : Limit merging to a specific institution ID}
-                            {--dry-run : Simulate the merge without making changes to the database}';
+                            {--class= : Limit merging to a specific class name or ID (e.g. "PP2")}
+                            {--dry-run : Simulate the merge without making changes to the database}
+                            {--audit : Output detailed duplicate reconciliation report without making changes}';
 
     protected $description = 'Detect and merge duplicate student accounts sharing the same name or admission number within an institution.';
 
     public function handle(): int
     {
         $institutionId = $this->option('institution');
-        $isDryRun = (bool) $this->option('dry-run');
+        $classFilter = $this->option('class');
+        $isDryRun = (bool) $this->option('dry-run') || (bool) $this->option('audit');
+        $isAudit = (bool) $this->option('audit');
 
         if ($isDryRun) {
-            $this->warn('Running in DRY-RUN mode. No changes will be committed to the database.');
+            $this->warn('Running in '.($isAudit ? 'AUDIT' : 'DRY-RUN').' mode. No changes will be committed to the database.');
         }
 
         $institutions = Institution::query()
@@ -39,19 +45,39 @@ class MergeDuplicateStudents extends Command
 
         $totalMerged = 0;
         $totalReassigned = 0;
+        $auditMappings = [];
 
         foreach ($institutions as $institution) {
             $this->line("Processing institution: {$institution->name} (ID: {$institution->id})...");
 
+            $classIdFilter = null;
+            if ($classFilter) {
+                $targetClass = SchoolClass::where('institution_id', $institution->id)
+                    ->where(function ($q) use ($classFilter) {
+                        $q->where('name', $classFilter)
+                            ->orWhere('id', $classFilter);
+                    })
+                    ->first();
+
+                if (! $targetClass) {
+                    $this->warn("Class '{$classFilter}' not found for institution {$institution->name} (ID: {$institution->id}). Skipping class filter.");
+                } else {
+                    $classIdFilter = $targetClass->id;
+                    $this->info("Filtering merge strictly to class: {$targetClass->name} (ID: {$targetClass->id})");
+                }
+            }
+
+            $affectedClassIds = [];
+
             $allStudents = StudentDetails::where('institution_id', $institution->id)
+                ->when($classIdFilter, fn ($q) => $q->where('class_id', $classIdFilter))
                 ->with(['student', 'schoolClass'])
                 ->get();
 
-            // Group by class_id and normalized student name
             // Group by normalized student name across the institution
             $groupedByName = $allStudents
                 ->filter(fn (StudentDetails $details) => ! empty(trim((string) ($details->student->name ?? ''))))
-                ->groupBy(fn (StudentDetails $details) => strtolower(trim((string) ($details->student->name ?? ''))))
+                ->groupBy(fn (StudentDetails $details): string => (string) preg_replace('/\s+/', ' ', strtolower(trim((string) ($details->student->name ?? '')))))
                 ->filter(fn ($group) => $group->count() > 1);
 
             foreach ($groupedByName as $groupKey => $records) {
@@ -80,7 +106,45 @@ class MergeDuplicateStudents extends Command
                     $duplicates = $sorted->slice(1);
 
                     $studentName = $keeper->student->name ?? 'Unknown';
-                    $this->info("Found duplicate cluster for '{$studentName}' (Keeper ID #{$keeper->id}, ADM: {$keeper->admission_number}, Class: {$keeper->class_id}): Duplicates [{$duplicates->pluck('id')->join(', ')}]");
+                    $this->info("Duplicate cluster for '{$studentName}': Keeper ID #{$keeper->student_id} (Details #{$keeper->id}, ADM: {$keeper->admission_number}), Duplicates: [{$duplicates->pluck('student_id')->join(', ')}]");
+
+                    $clusterRows = [];
+                    foreach ($sorted as $rec) {
+                        $isKeeperRec = $rec->id === $keeper->id;
+                        $resultsCount = DB::getSchemaBuilder()->hasTable('results') ? DB::table('results')->where('student_id', $rec->student_id)->count() : 0;
+                        $attendanceCount = DB::getSchemaBuilder()->hasTable('attendances') ? DB::table('attendances')->where('student_id', $rec->student_id)->count() : 0;
+                        $feesCount = DB::getSchemaBuilder()->hasTable('fees') ? DB::table('fees')->where('student_id', $rec->student_id)->count() : 0;
+
+                        $clusterRows[] = [
+                            $rec->student->name ?? 'Unknown',
+                            (string) $rec->student_id,
+                            (string) $rec->id,
+                            $rec->admission_number ?? 'NULL',
+                            $rec->schoolClass->name ?? ($rec->class_id ? "ID {$rec->class_id}" : 'Unassigned'),
+                            (string) $resultsCount,
+                            (string) $attendanceCount,
+                            (string) $feesCount,
+                            $rec->guardian_name ?? ($rec->parent_id ? "Parent #{$rec->parent_id}" : 'None'),
+                            (string) $this->calculateKeeperScore($rec),
+                            $isKeeperRec ? 'RETAIN (KEEPER)' : 'MERGE & DEACTIVATE',
+                        ];
+                    }
+
+                    $this->table(
+                        ['Name', 'User ID', 'Details ID', 'Adm No', 'Class', 'Results', 'Attendance', 'Fees', 'Guardian', 'Score', 'Decision'],
+                        $clusterRows
+                    );
+
+                    foreach ($duplicates as $dup) {
+                        $auditMappings[] = [
+                            'Student Name' => $studentName,
+                            'Duplicate User ID' => $dup->student_id,
+                            'Duplicate Adm' => $dup->admission_number ?? 'NULL',
+                            'Retained User ID' => $keeper->student_id,
+                            'Retained Adm' => $keeper->admission_number ?? 'NULL',
+                            'Action' => 'Reassign records & deactive duplicate',
+                        ];
+                    }
 
                     if ($isDryRun) {
                         $totalMerged += $duplicates->count();
@@ -88,11 +152,19 @@ class MergeDuplicateStudents extends Command
                         continue;
                     }
 
-                    DB::transaction(function () use ($keeper, $duplicates, &$totalMerged, &$totalReassigned) {
+                    DB::transaction(function () use ($keeper, $duplicates, &$totalMerged, &$totalReassigned, &$affectedClassIds) {
+                        if ($keeper->class_id) {
+                            $affectedClassIds[(int) $keeper->class_id] = true;
+                        }
+
                         foreach ($duplicates as $dup) {
                             /** @var StudentDetails $dup */
                             $dupStudentId = $dup->student_id;
                             $keeperStudentId = $keeper->student_id;
+
+                            if ($dup->class_id) {
+                                $affectedClassIds[(int) $dup->class_id] = true;
+                            }
 
                             // 1. Inherit missing or better details from duplicate to keeper
                             if ($this->isAutoGeneratedAdm($keeper->admission_number) && ! $this->isAutoGeneratedAdm($dup->admission_number) && ! empty($dup->admission_number)) {
@@ -125,7 +197,11 @@ class MergeDuplicateStudents extends Command
                                 $totalReassigned += $this->reassignStudentRelations($dupStudentId, $keeperStudentId);
                             }
 
-                            // 3. Delete duplicate student_details and user
+                            // Clear admission number on duplicate to prevent unique constraint conflict
+                            $dup->admission_number = null;
+                            $dup->save();
+
+                            // 3. Soft-delete duplicate student_details and delete duplicate user
                             $dup->delete();
                             if ($dupStudentId && $dupStudentId !== $keeperStudentId) {
                                 User::where('id', $dupStudentId)->delete();
@@ -140,11 +216,23 @@ class MergeDuplicateStudents extends Command
             }
 
             if (! $isDryRun) {
-                app(StudentCacheService::class)->invalidateInstitution($institution->id);
+                $cache = app(StudentCacheService::class);
+                foreach (array_keys($affectedClassIds) as $cId) {
+                    $cache->invalidateClass($institution->id, $cId);
+                }
+                $cache->invalidateInstitution($institution->id);
             }
         }
 
         $this->newLine();
+        if (! empty($auditMappings)) {
+            $this->info('Proposed Duplicate -> Retained Mapping Summary:');
+            $this->table(
+                ['Student Name', 'Duplicate User ID', 'Duplicate Adm', 'Retained User ID', 'Retained Adm', 'Action'],
+                $auditMappings
+            );
+        }
+
         if ($isDryRun) {
             $this->info("Dry run complete: {$totalMerged} duplicate student record(s) would be merged.");
         } else {
@@ -162,55 +250,80 @@ class MergeDuplicateStudents extends Command
      */
     private function clusterDuplicateRecords(Collection $records): array
     {
-        $humanAdmissions = $records
-            ->map(fn ($r) => trim((string) $r->admission_number))
-            ->filter(fn ($adm) => ! empty($adm) && ! $this->isAutoGeneratedAdm($adm))
-            ->unique();
-
-        if ($humanAdmissions->count() <= 1) {
-            // All records share at most one distinct human admission number (or all are blank/auto-generated)
-            return [$records];
-        }
-
-        // Multiple distinct human admission numbers: partition by admission number
-        /** @var array<string, Collection<int, StudentDetails>> $clusters */
+        /** @var array<int, Collection<int, StudentDetails>> $clusters */
         $clusters = [];
-        $unassignedAdm = [];
 
-        foreach ($records as $r) {
-            $adm = trim((string) $r->admission_number);
-            if (! empty($adm) && ! $this->isAutoGeneratedAdm($adm)) {
-                $clusters[$adm] = ($clusters[$adm] ?? collect())->push($r);
-            } else {
-                $unassignedAdm[] = $r;
-            }
-        }
+        foreach ($records as $record) {
+            $placed = false;
 
-        // Attach unassigned/auto-generated records to the cluster matching parent or class
-        foreach ($unassignedAdm as $unassigned) {
-            $matchedClusterKey = null;
             foreach ($clusters as $key => $cluster) {
-                if ($unassigned->parent_id && $cluster->contains('parent_id', $unassigned->parent_id)) {
-                    $matchedClusterKey = $key;
-                    break;
-                }
-                if ($unassigned->class_id && $cluster->contains('class_id', $unassigned->class_id)) {
-                    $matchedClusterKey = $key;
+                if ($this->shouldBelongToCluster($record, $cluster)) {
+                    $clusters[$key]->push($record);
+                    $placed = true;
                     break;
                 }
             }
 
-            if ($matchedClusterKey !== null) {
-                $clusters[$matchedClusterKey]->push($unassigned);
-            } else {
-                $firstKey = array_key_first($clusters);
-                if ($firstKey !== null) {
-                    $clusters[$firstKey]->push($unassigned);
-                }
+            if (! $placed) {
+                $clusters[] = collect([$record]);
             }
         }
 
-        return array_values($clusters);
+        return $clusters;
+    }
+
+    /**
+     * @param  Collection<int, StudentDetails>  $cluster
+     */
+    private function shouldBelongToCluster(StudentDetails $candidate, Collection $cluster): bool
+    {
+        $matcher = app(ParentMatchingService::class);
+        $candPhone = $candidate->guardian_phone ? $matcher->normalizePhone($candidate->guardian_phone) : null;
+
+        foreach ($cluster as $member) {
+            // 1. If explicit dates of birth are present and different, they are different people
+            if ($candidate->date_of_birth && $member->date_of_birth && $candidate->date_of_birth !== $member->date_of_birth) {
+                return false;
+            }
+
+            // 2. If explicit guardian phones are present and different, different people
+            $memPhone = $member->guardian_phone ? $matcher->normalizePhone($member->guardian_phone) : null;
+            if ($candPhone && $memPhone && $candPhone !== $memPhone) {
+                return false;
+            }
+
+            // 3. If explicit classes are present and differ, and both have different parents/phones, different people
+            if ($candidate->class_id && $member->class_id && (int) $candidate->class_id !== (int) $member->class_id && ($candPhone || $memPhone)) {
+                return false;
+            }
+
+            // Shared parent link
+            if ($candidate->parent_id && $member->parent_id && (int) $candidate->parent_id === (int) $member->parent_id) {
+                return true;
+            }
+
+            // Shared guardian phone
+            if ($candPhone && $memPhone && $candPhone === $memPhone) {
+                return true;
+            }
+
+            // Shared guardian name
+            if ($candidate->guardian_name && $member->guardian_name && strcasecmp(trim($candidate->guardian_name), trim($member->guardian_name)) === 0) {
+                return true;
+            }
+
+            // Created within same day / 24 hours of each other (e.g. repeated bulk upload passes)
+            if ($candidate->created_at && $member->created_at && abs($candidate->created_at->diffInHours($member->created_at)) <= 24) {
+                return true;
+            }
+
+            // Same or unassigned class with no conflicting identity data
+            if (empty($candidate->class_id) || empty($member->class_id) || (int) $candidate->class_id === (int) $member->class_id) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isAutoGeneratedAdm(?string $adm): bool
@@ -339,6 +452,23 @@ class MergeDuplicateStudents extends Command
             DB::table('zkteco_attendance_logs')
                 ->where('pin', (string) $fromStudentId)
                 ->update(['pin' => (string) $toStudentId]);
+        }
+
+        // Report Cards
+        if (DB::getSchemaBuilder()->hasTable('report_cards')) {
+            $existingReportCardTerms = DB::table('report_cards')
+                ->where('student_id', $toStudentId)
+                ->pluck('term')
+                ->all();
+
+            DB::table('report_cards')
+                ->where('student_id', $fromStudentId)
+                ->whereIn('term', $existingReportCardTerms)
+                ->delete();
+
+            $reassigned += DB::table('report_cards')
+                ->where('student_id', $fromStudentId)
+                ->update(['student_id' => $toStudentId]);
         }
 
         return $reassigned;

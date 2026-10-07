@@ -60,6 +60,17 @@ new #[Title('Upload Student Records')] class extends Component
     /** @var array<string|int, array<string, string>> */
     public array $rosterErrors = [];
 
+    /** @var array<int, int> */
+    public array $selectedEnrolledStudents = [];
+
+    public bool $selectAllEnrolled = false;
+
+    public ?int $studentToDeleteId = null;
+
+    public ?string $studentToDeleteName = null;
+
+    public ?int $rowToDeleteIndex = null;
+
     public function mount(): void
     {
         abort_unless(auth()->user()->can('create student'), 403);
@@ -197,11 +208,414 @@ new #[Title('Upload Student Records')] class extends Component
         $this->rows = array_merge($this->rows, $newRows);
     }
 
-    public function removeRow(int $index): void
+    public function updatedSelectAllEnrolled(bool $value): void
+    {
+        if ($value) {
+            $this->selectedEnrolledStudents = $this->classRoster->pluck('id')->map(fn ($id) => (int) $id)->all();
+        } else {
+            $this->selectedEnrolledStudents = [];
+        }
+    }
+
+    public function confirmDeleteStudent(int $studentDetailsId): void
+    {
+        $institutionId = currentInstitutionId();
+        $details = StudentDetails::where('id', $studentDetailsId)
+            ->where('institution_id', $institutionId)
+            ->with('student')
+            ->first();
+
+        if (! $details) {
+            Flux::toast(text: 'Student record not found.', variant: 'danger');
+
+            return;
+        }
+
+        $this->studentToDeleteId = $details->id;
+        $this->studentToDeleteName = $details->student?->name ?? 'Student';
+        Flux::modal('confirm-delete-enrolled-student')->show();
+    }
+
+    public function deleteEnrolledStudent(): void
+    {
+        abort_unless(auth()->user()->can('delete student') || auth()->user()->hasRole('SuperAdmin') || auth()->user()->hasRole('Director'), 403);
+
+        $institutionId = currentInstitutionId();
+        if (! $this->studentToDeleteId || ! $institutionId) {
+            Flux::modal('confirm-delete-enrolled-student')->close();
+
+            return;
+        }
+
+        $details = StudentDetails::where('id', $this->studentToDeleteId)
+            ->where('institution_id', $institutionId)
+            ->with('student')
+            ->first();
+
+        if ($details) {
+            $studentUser = $details->student;
+            $name = $studentUser?->name ?? 'Student';
+            $classId = $details->class_id ? (int) $details->class_id : null;
+
+            DB::transaction(function () use ($details, $studentUser) {
+                $details->admission_number = null;
+                $details->save();
+                $details->delete();
+
+                if ($studentUser && ! $studentUser->hasRole(['SuperAdmin', 'Director', 'Teacher', 'Staff'])) {
+                    $studentUser->delete();
+                }
+            });
+
+            app(StudentCacheService::class)->invalidateClass($institutionId, $classId);
+            app(StudentCacheService::class)->invalidateInstitution($institutionId);
+            unset($this->classRoster, $this->classStats);
+
+            Flux::toast(text: "Student '{$name}' deleted from the database.", variant: 'success');
+        }
+
+        $deletedId = $this->studentToDeleteId;
+        $this->studentToDeleteId = null;
+        $this->studentToDeleteName = null;
+        $this->selectedEnrolledStudents = array_values(array_filter($this->selectedEnrolledStudents, fn ($id) => (int) $id !== (int) $deletedId));
+        Flux::modal('confirm-delete-enrolled-student')->close();
+    }
+
+    public function confirmBulkDelete(): void
+    {
+        if (empty($this->selectedEnrolledStudents)) {
+            Flux::toast(text: 'No students selected for deletion.', variant: 'warning');
+
+            return;
+        }
+
+        Flux::modal('confirm-bulk-delete-enrolled-students')->show();
+    }
+
+    public function bulkDeleteEnrolledStudents(): void
+    {
+        abort_unless(auth()->user()->can('delete student') || auth()->user()->hasRole('SuperAdmin') || auth()->user()->hasRole('Director'), 403);
+
+        $institutionId = currentInstitutionId();
+        if (empty($this->selectedEnrolledStudents) || ! $institutionId) {
+            Flux::modal('confirm-bulk-delete-enrolled-students')->close();
+
+            return;
+        }
+
+        $students = StudentDetails::whereIn('id', $this->selectedEnrolledStudents)
+            ->where('institution_id', $institutionId)
+            ->with('student')
+            ->get();
+
+        $count = $students->count();
+        $affectedClassIds = [];
+
+        DB::transaction(function () use ($students, &$affectedClassIds) {
+            foreach ($students as $details) {
+                if ($details->class_id) {
+                    $affectedClassIds[(int) $details->class_id] = true;
+                }
+
+                $studentUser = $details->student;
+                $details->admission_number = null;
+                $details->save();
+                $details->delete();
+
+                if ($studentUser && ! $studentUser->hasRole(['SuperAdmin', 'Director', 'Teacher', 'Staff'])) {
+                    $studentUser->delete();
+                }
+            }
+        });
+
+        $cache = app(StudentCacheService::class);
+        foreach (array_keys($affectedClassIds) as $cId) {
+            $cache->invalidateClass($institutionId, $cId);
+        }
+        $cache->invalidateInstitution($institutionId);
+        unset($this->classRoster, $this->classStats);
+
+        $this->selectedEnrolledStudents = [];
+        $this->selectAllEnrolled = false;
+        Flux::modal('confirm-bulk-delete-enrolled-students')->close();
+
+        Flux::toast(text: "{$count} student(s) successfully deleted from the database.", variant: 'success');
+    }
+
+    #[Computed]
+    public function duplicateGroupsInRoster(): array
+    {
+        if (! $this->selectedClassId) {
+            return [];
+        }
+
+        $all = $this->classRoster;
+        $grouped = $all->filter(fn ($d) => ! empty(trim((string) ($d->student?->name ?? ''))))
+            ->groupBy(fn ($d) => preg_replace('/\s+/', ' ', strtolower(trim((string) ($d->student?->name ?? '')))))
+            ->filter(fn ($g) => $g->count() > 1);
+
+        $result = [];
+        foreach ($grouped as $normName => $records) {
+            $sorted = $records->sortBy('id')->values();
+            $keeper = $sorted->first();
+            $dups = $sorted->slice(1);
+            $result[] = [
+                'name' => $keeper->student?->name ?? 'Student',
+                'keeper_id' => $keeper->id,
+                'keeper_adm' => $keeper->admission_number ?? 'None',
+                'duplicate_count' => $dups->count(),
+                'duplicate_adms' => $dups->pluck('admission_number')->filter()->join(', '),
+                'duplicate_ids' => $dups->pluck('id')->all(),
+            ];
+        }
+
+        return $result;
+    }
+
+    #[Computed]
+    public function totalDuplicatesInRoster(): int
+    {
+        $groups = $this->duplicateGroupsInRoster;
+        $total = 0;
+        foreach ($groups as $g) {
+            $total += $g['duplicate_count'];
+        }
+
+        return $total;
+    }
+
+    public function confirmMergeClassDuplicates(): void
+    {
+        if ($this->totalDuplicatesInRoster === 0) {
+            Flux::toast(text: 'No duplicate students found in this class.', variant: 'info');
+
+            return;
+        }
+
+        Flux::modal('confirm-merge-class-duplicates')->show();
+    }
+
+    public function mergeClassDuplicates(): void
+    {
+        abort_unless(auth()->user()->can('delete student') || auth()->user()->hasRole('SuperAdmin') || auth()->user()->hasRole('Director'), 403);
+
+        $institutionId = currentInstitutionId();
+        if (! $institutionId || ! $this->selectedClassId) {
+            Flux::modal('confirm-merge-class-duplicates')->close();
+
+            return;
+        }
+
+        $all = StudentDetails::where('institution_id', $institutionId)
+            ->where('class_id', $this->selectedClassId)
+            ->with(['student'])
+            ->get();
+
+        $grouped = $all->filter(fn ($d) => ! empty(trim((string) ($d->student?->name ?? ''))))
+            ->groupBy(fn ($d) => preg_replace('/\s+/', ' ', strtolower(trim((string) ($d->student?->name ?? '')))))
+            ->filter(fn ($g) => $g->count() > 1);
+
+        $totalMerged = 0;
+
+        DB::transaction(function () use ($grouped, &$totalMerged) {
+            foreach ($grouped as $records) {
+                $sorted = $records->sortBy('id')->values();
+                $keeper = $sorted->first();
+                $duplicates = $sorted->slice(1);
+
+                foreach ($duplicates as $dup) {
+                    $dupStudentId = $dup->student_id;
+                    $keeperStudentId = $keeper->student_id;
+
+                    // Inherit missing details
+                    if (empty($keeper->gender) && ! empty($dup->gender)) {
+                        $keeper->gender = $dup->gender;
+                    }
+                    if (empty($keeper->parent_id) && ! empty($dup->parent_id)) {
+                        $keeper->parent_id = $dup->parent_id;
+                    }
+                    if (empty($keeper->guardian_name) && ! empty($dup->guardian_name)) {
+                        $keeper->guardian_name = $dup->guardian_name;
+                    }
+                    if (empty($keeper->guardian_phone) && ! empty($dup->guardian_phone)) {
+                        $keeper->guardian_phone = $dup->guardian_phone;
+                    }
+
+                    // Reassign relations if tables exist
+                    if ($dupStudentId && $keeperStudentId && $dupStudentId !== $keeperStudentId) {
+                        foreach (['results', 'attendances', 'fees'] as $tbl) {
+                            if (DB::getSchemaBuilder()->hasTable($tbl)) {
+                                DB::table($tbl)->where('student_id', $dupStudentId)->update(['student_id' => $keeperStudentId]);
+                            }
+                        }
+                    }
+
+                    // Clear admission number to prevent conflict
+                    $dup->admission_number = null;
+                    $dup->save();
+                    $dup->delete();
+
+                    if ($dupStudentId && $dupStudentId !== $keeperStudentId) {
+                        $dupUser = User::where('id', $dupStudentId)->first();
+                        if ($dupUser && ! $dupUser->hasRole(['SuperAdmin', 'Director', 'Teacher', 'Staff'])) {
+                            $dupUser->delete();
+                        }
+                    }
+
+                    $totalMerged++;
+                }
+
+                $keeper->save();
+            }
+        });
+
+        $cache = app(StudentCacheService::class);
+        $cache->invalidateClass($institutionId, (int) $this->selectedClassId);
+        $cache->invalidateInstitution($institutionId);
+        unset($this->classRoster, $this->classStats);
+
+        Flux::modal('confirm-merge-class-duplicates')->close();
+        Flux::toast(text: "Successfully merged {$totalMerged} duplicate student record(s) in this class.", variant: 'success');
+    }
+
+    public function removeRow(int $index, bool $checkDb = true): void
+    {
+        if (! isset($this->rows[$index])) {
+            return;
+        }
+
+        $row = $this->rows[$index];
+        $name = trim($row['name'] ?? '');
+        $adm = trim($row['admission_number'] ?? '');
+
+        if ($checkDb && ($name !== '' || $adm !== '')) {
+            $institutionId = currentInstitutionId();
+            if ($institutionId) {
+                $existing = null;
+                if ($adm !== '') {
+                    $existing = StudentDetails::where('institution_id', $institutionId)
+                        ->where('admission_number', $adm)
+                        ->with('student')
+                        ->first();
+                }
+                if (! $existing && $name !== '') {
+                    $normName = preg_replace('/\s+/', ' ', mb_strtolower($name));
+                    $existing = StudentDetails::where('institution_id', $institutionId)
+                        ->whereHas('student', fn ($q) => $q->whereRaw('LOWER(name) = ?', [$normName]))
+                        ->with('student')
+                        ->first();
+                }
+
+                if ($existing) {
+                    $this->studentToDeleteId = $existing->id;
+                    $this->studentToDeleteName = $existing->student?->name ?? $name;
+                    $this->rowToDeleteIndex = $index;
+                    Flux::modal('confirm-delete-row-or-db')->show();
+
+                    return;
+                }
+            }
+        }
+
+        $this->performRemoveRow($index);
+    }
+
+    public function performRemoveRow(int $index): void
     {
         unset($this->rows[$index], $this->rowErrors[$index]);
         $this->rows = array_values($this->rows);
+        if ($this->rows === []) {
+            $this->rows = array_fill(0, 5, $this->blankRow());
+        }
         $this->rowErrors = [];
+        $this->rowToDeleteIndex = null;
+        $this->studentToDeleteId = null;
+        $this->studentToDeleteName = null;
+        Flux::modal('confirm-delete-row-or-db')->close();
+    }
+
+    public function deleteRowStudentFromDb(): void
+    {
+        abort_unless(auth()->user()->can('delete student') || auth()->user()->hasRole('SuperAdmin') || auth()->user()->hasRole('Director'), 403);
+
+        $institutionId = currentInstitutionId();
+        if ($this->studentToDeleteId && $institutionId) {
+            $details = StudentDetails::where('id', $this->studentToDeleteId)
+                ->where('institution_id', $institutionId)
+                ->with('student')
+                ->first();
+
+            if ($details) {
+                $studentUser = $details->student;
+                $name = $studentUser?->name ?? 'Student';
+                $classId = $details->class_id ? (int) $details->class_id : null;
+
+                DB::transaction(function () use ($details, $studentUser) {
+                    $details->admission_number = null;
+                    $details->save();
+                    $details->delete();
+
+                    if ($studentUser && ! $studentUser->hasRole(['SuperAdmin', 'Director', 'Teacher', 'Staff'])) {
+                        $studentUser->delete();
+                    }
+                });
+
+                app(StudentCacheService::class)->invalidateClass($institutionId, $classId);
+                app(StudentCacheService::class)->invalidateInstitution($institutionId);
+                unset($this->classRoster, $this->classStats);
+
+                Flux::toast(text: "Student '{$name}' deleted from the database.", variant: 'success');
+            }
+        }
+
+        if ($this->rowToDeleteIndex !== null) {
+            $this->performRemoveRow($this->rowToDeleteIndex);
+        } else {
+            $this->rowToDeleteIndex = null;
+            $this->studentToDeleteId = null;
+            $this->studentToDeleteName = null;
+            Flux::modal('confirm-delete-row-or-db')->close();
+        }
+    }
+
+    public function removeEmptyRows(): void
+    {
+        $filled = [];
+        foreach ($this->rows as $row) {
+            $hasData = trim($row['name'] ?? '') !== ''
+                || trim($row['admission_number'] ?? '') !== ''
+                || trim($row['student_number'] ?? '') !== ''
+                || trim($row['guardian_name'] ?? '') !== ''
+                || trim($row['guardian_phone'] ?? '') !== '';
+
+            if ($hasData) {
+                $filled[] = $row;
+            }
+        }
+
+        $removedCount = count($this->rows) - count($filled);
+        $this->rows = $filled === [] ? array_fill(0, 5, $this->blankRow()) : array_values($filled);
+        $this->rowErrors = [];
+
+        if ($removedCount > 0) {
+            Flux::toast(text: "Removed {$removedCount} empty row(s).", variant: 'info');
+        } else {
+            Flux::toast(text: 'No empty rows to remove.', variant: 'info');
+        }
+    }
+
+    public function removeRows(int $count = 5): void
+    {
+        if (count($this->rows) <= 5) {
+            $this->removeEmptyRows();
+
+            return;
+        }
+
+        $newCount = max(5, count($this->rows) - $count);
+        $this->rows = array_values(array_slice($this->rows, 0, $newCount));
+        $this->rowErrors = [];
+        Flux::toast(text: "Removed {$count} row(s).", variant: 'info');
     }
 
     public function restoreDraft(array $draftRows): void
@@ -573,6 +987,7 @@ new #[Title('Upload Student Records')] class extends Component
             }
 
             $exists = StudentDetails::withTrashed()
+                ->where('institution_id', $institutionId)
                 ->where('admission_number', $value)
                 ->where('id', '!=', $student->id)
                 ->exists();
@@ -802,7 +1217,7 @@ new #[Title('Upload Student Records')] class extends Component
 
                     $newStudent = app(SaveStudent::class)->create([
                         'name' => $name,
-                        'email' => strtolower(Str::slug($name)).'_'.uniqid().'@students.generated',
+                        'email' => null,
                         'password' => Str::random(16),
                         'admission_number' => $admToUse,
                         'student_number' => $stuNo ?: null,
@@ -1254,6 +1669,14 @@ new #[Title('Upload Student Records')] class extends Component
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
+                        @if ($this->totalDuplicatesInRoster > 0)
+                            <button type="button" wire:click="confirmMergeClassDuplicates"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs font-bold text-amber-800 dark:text-amber-300 shadow-2xs transition-colors cursor-pointer"
+                                title="Merge duplicate student names in this class">
+                                <flux:icon icon="arrow-path" class="size-3.5 text-amber-600 dark:text-amber-400" />
+                                <span>Merge {{ $this->totalDuplicatesInRoster }} Duplicate(s)</span>
+                            </button>
+                        @endif
                         <button type="button" wire:click="$toggle('showEnrolledRoster')"
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-2xs transition-colors cursor-pointer">
                             <span>{{ $showEnrolledRoster ? 'Hide Roster' : 'Show Roster' }}</span>
@@ -1271,22 +1694,52 @@ new #[Title('Upload Student Records')] class extends Component
                             <span class="text-xs text-zinc-500">Showing {{ $this->classRoster->count() }} enrolled student(s)</span>
                         </div>
 
+                        {{-- Bulk Delete Action Toolbar --}}
+                        @if (count($selectedEnrolledStudents) > 0)
+                            <div class="mb-3 px-3.5 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-3 text-xs">
+                                <span class="font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                                    <flux:icon icon="check-circle" class="size-4 text-rose-600" />
+                                    <span>{{ count($selectedEnrolledStudents) }} student(s) selected</span>
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <flux:button wire:click="$set('selectedEnrolledStudents', [])" size="xs" variant="subtle">
+                                        Deselect All
+                                    </flux:button>
+                                    <flux:button wire:click="confirmBulkDelete" size="xs" variant="danger" icon="trash">
+                                        Delete Selected ({{ count($selectedEnrolledStudents) }}) from Database
+                                    </flux:button>
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="overflow-auto max-h-72 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs">
                             <table class="w-full text-left text-xs border-collapse">
                                 <thead class="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-bold uppercase sticky top-0 shadow-2xs z-10">
                                     <tr class="divide-x divide-zinc-200 dark:divide-zinc-700">
-                                        <th class="py-2.5 px-3 w-12 text-center text-zinc-400">#</th>
+                                        <th class="py-2.5 px-2 w-8 text-center">
+                                            <input type="checkbox" wire:model.live="selectAllEnrolled"
+                                                class="rounded border-zinc-300 text-rose-600 focus:ring-rose-500 size-3.5 cursor-pointer"
+                                                title="Select all enrolled students" />
+                                        </th>
+                                        <th class="py-2.5 px-2 w-10 text-center text-zinc-400">#</th>
                                         <th class="py-2.5 px-3 min-w-[180px]">Student Name</th>
                                         <th class="py-2.5 px-3 min-w-[140px]">Admission No</th>
                                         <th class="py-2.5 px-3 min-w-[120px]">Student ID</th>
                                         <th class="py-2.5 px-3 min-w-[100px]">Gender</th>
                                         <th class="py-2.5 px-3 min-w-[170px]">Parent / Guardian</th>
                                         <th class="py-2.5 px-3 min-w-[140px]">Guardian Phone</th>
+                                        <th class="py-2.5 px-2 w-10 text-center text-zinc-400" title="Delete student from database">
+                                            <flux:icon icon="trash" class="size-3.5 mx-auto text-zinc-400" />
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800 text-zinc-600 dark:text-zinc-400">
                                     @forelse ($this->classRoster as $idx => $student)
                                         <tr wire:key="enrolled-student-{{ $student->id }}" class="divide-x divide-zinc-100 dark:divide-zinc-800 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 {{ $student->admission_number === $stats['latest_admission'] ? 'bg-amber-50/50 dark:bg-amber-950/20' : '' }}">
+                                            <td class="py-2 px-2 text-center">
+                                                <input type="checkbox" wire:model.live="selectedEnrolledStudents" value="{{ $student->id }}"
+                                                    class="rounded border-zinc-300 text-rose-600 focus:ring-rose-500 size-3.5 cursor-pointer" />
+                                            </td>
                                             <td class="py-2 px-2 text-center font-mono text-zinc-400">{{ $idx + 1 }}</td>
 
                                             {{-- Student Name --}}
@@ -1344,10 +1797,19 @@ new #[Title('Upload Student Records')] class extends Component
                                                     placeholder="Phone (07...)"
                                                     class="w-full bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/60 focus:bg-white dark:focus:bg-zinc-800 border-0 focus:ring-1 focus:ring-sky-500 rounded px-3 py-2 text-xs font-mono text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-300 transition-colors" />
                                             </td>
+
+                                            {{-- Delete Action --}}
+                                            <td class="p-1 text-center">
+                                                <button type="button" wire:click="confirmDeleteStudent({{ $student->id }})"
+                                                    title="Delete {{ $student->student?->name ?? 'student' }} from database"
+                                                    class="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer">
+                                                    <flux:icon icon="trash" class="size-3.5" />
+                                                </button>
+                                            </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="7" class="py-4 px-4 text-center text-zinc-500">No matching enrolled students found.</td>
+                                            <td colspan="9" class="py-4 px-4 text-center text-zinc-500">No matching enrolled students found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -1381,6 +1843,20 @@ new #[Title('Upload Student Records')] class extends Component
                         {{ $showExtraColumns ? 'Hide Optional Fields' : '+ Show Student ID & Status' }}
                     </button>
                     <span class="text-zinc-300 dark:text-zinc-700">&bull;</span>
+                    <button type="button" wire:click="removeEmptyRows"
+                        class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Remove all empty rows from table">
+                        <flux:icon icon="trash" class="size-3.5" />
+                        Clear Empty Rows
+                    </button>
+                    <span class="text-zinc-300 dark:text-zinc-700">&bull;</span>
+                    <button type="button" wire:click="removeRows(5)"
+                        class="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Remove last 5 rows">
+                        <flux:icon icon="minus" class="size-3.5" />
+                        Remove 5 Rows
+                    </button>
+                    <span class="text-zinc-300 dark:text-zinc-700">&bull;</span>
                     <button type="button" wire:click="addRows(5)"
                         class="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">
                         <flux:icon icon="plus" class="size-3.5" />
@@ -1396,7 +1872,7 @@ new #[Title('Upload Student Records')] class extends Component
                         <tr class="divide-x divide-zinc-200 dark:divide-zinc-700">
                             <th class="py-2.5 px-2 w-12 text-center text-zinc-400">#</th>
                             <th class="py-2.5 px-3 min-w-[200px]">Student Full Name <span class="text-rose-500">*</span></th>
-                            <th class="py-2.5 px-3 w-36">Admission No</th>
+                            <th class="py-2.5 px-3 w-36">Admission No <span class="text-rose-500">*</span></th>
                             @if ($showExtraColumns)
                                 <th class="py-2.5 px-3 w-32">Student ID</th>
                             @endif
@@ -1409,7 +1885,9 @@ new #[Title('Upload Student Records')] class extends Component
                             @if ($showExtraColumns)
                                 <th class="py-2.5 px-3 w-28">Status</th>
                             @endif
-                            <th class="py-2.5 px-2 w-10 text-center"></th>
+                            <th class="py-2.5 px-2 w-10 text-center text-zinc-400" title="Remove or delete row">
+                                <flux:icon icon="trash" class="size-3.5 mx-auto text-zinc-400" />
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -1493,8 +1971,8 @@ new #[Title('Upload Student Records')] class extends Component
                                 @endif
                                 <td class="p-0 text-center">
                                     <button type="button" wire:click="removeRow({{ $index }})"
-                                        title="Remove row" class="p-2 text-zinc-300 hover:text-rose-500 transition-colors">
-                                        <flux:icon icon="x-mark" class="size-4" />
+                                        title="Remove or delete row" class="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer">
+                                        <flux:icon icon="trash" class="size-3.5" />
                                     </button>
                                 </td>
                             </tr>
@@ -1505,13 +1983,19 @@ new #[Title('Upload Student Records')] class extends Component
 
             {{-- Table Bottom Bar with Actions --}}
             <div class="border-t border-zinc-200/80 dark:border-zinc-800 px-5 py-4 bg-zinc-50/50 dark:bg-zinc-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-500">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
                     <button type="button" wire:click="addRows(5)"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold transition-colors shadow-2xs">
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 font-semibold transition-colors shadow-2xs cursor-pointer">
                         <flux:icon icon="plus" class="size-3.5 text-zinc-500" />
                         Add 5 More Rows
                     </button>
-                    <span>Empty rows are automatically ignored. Logins and passwords are created automatically.</span>
+                    <button type="button" wire:click="removeEmptyRows"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 text-zinc-700 dark:text-zinc-200 font-semibold transition-colors shadow-2xs cursor-pointer"
+                        title="Remove all empty rows">
+                        <flux:icon icon="trash" class="size-3.5 text-zinc-400" />
+                        Clear Empty Rows
+                    </button>
+                    <span class="text-zinc-400 ml-1">Empty rows are automatically ignored. Logins and passwords are created automatically.</span>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -1742,6 +2226,167 @@ new #[Title('Upload Student Records')] class extends Component
                 <flux:button variant="primary" wire:click="confirmAndSaveImport" wire:loading.attr="disabled" icon="check" class="w-full sm:w-auto font-bold shadow-sm">
                     <span wire:loading.remove wire:target="confirmAndSaveImport">Confirm &amp; Enroll Students</span>
                     <span wire:loading wire:target="confirmAndSaveImport">Saving Students...</span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Delete Single Enrolled Student Modal --}}
+    <flux:modal name="confirm-delete-enrolled-student" class="max-w-md">
+        <div class="space-y-5">
+            <div class="flex items-start gap-4">
+                <div class="size-11 rounded-2xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-800">
+                    <flux:icon icon="trash" class="size-6 text-rose-600 dark:text-rose-400" />
+                </div>
+                <div>
+                    <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Delete Student from Database</flux:heading>
+                    <flux:subheading class="mt-1 text-zinc-600 dark:text-zinc-300 text-sm">
+                        Are you sure you want to permanently delete <strong class="text-zinc-900 dark:text-white">{{ $studentToDeleteName }}</strong> from the school database?
+                    </flux:subheading>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                <p class="font-semibold flex items-center gap-1.5">
+                    <flux:icon icon="exclamation-circle" class="size-4 text-rose-600" />
+                    <span>This permanently deletes this student's enrollment, profile, and login account.</span>
+                </p>
+                <p class="text-rose-700 dark:text-rose-400">Their admission number will be freed and their class headcount updated.</p>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <flux:button variant="filled" wire:click="$modal('confirm-delete-enrolled-student').close()" class="w-full sm:w-auto font-medium">
+                    Cancel
+                </flux:button>
+                <flux:button variant="danger" wire:click="deleteEnrolledStudent" wire:loading.attr="disabled" icon="trash" class="w-full sm:w-auto font-bold shadow-sm">
+                    <span wire:loading.remove wire:target="deleteEnrolledStudent">Delete from Database</span>
+                    <span wire:loading wire:target="deleteEnrolledStudent">Deleting...</span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Bulk Delete Enrolled Students Modal --}}
+    <flux:modal name="confirm-bulk-delete-enrolled-students" class="max-w-md">
+        <div class="space-y-5">
+            <div class="flex items-start gap-4">
+                <div class="size-11 rounded-2xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-800">
+                    <flux:icon icon="trash" class="size-6 text-rose-600 dark:text-rose-400" />
+                </div>
+                <div>
+                    <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Delete {{ count($selectedEnrolledStudents) }} Students</flux:heading>
+                    <flux:subheading class="mt-1 text-zinc-600 dark:text-zinc-300 text-sm">
+                        Are you sure you want to permanently delete all <strong class="text-zinc-900 dark:text-white">{{ count($selectedEnrolledStudents) }}</strong> selected students from the database?
+                    </flux:subheading>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                <p class="font-semibold flex items-center gap-1.5">
+                    <flux:icon icon="exclamation-circle" class="size-4 text-rose-600" />
+                    <span>Warning: This action will permanently remove all selected students and their logins.</span>
+                </p>
+                <p class="text-rose-700 dark:text-rose-400">Their admission numbers will be freed and all related headcount caches updated.</p>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <flux:button variant="filled" wire:click="$modal('confirm-bulk-delete-enrolled-students').close()" class="w-full sm:w-auto font-medium">
+                    Cancel
+                </flux:button>
+                <flux:button variant="danger" wire:click="bulkDeleteEnrolledStudents" wire:loading.attr="disabled" icon="trash" class="w-full sm:w-auto font-bold shadow-sm">
+                    <span wire:loading.remove wire:target="bulkDeleteEnrolledStudents">Delete {{ count($selectedEnrolledStudents) }} from Database</span>
+                    <span wire:loading wire:target="bulkDeleteEnrolledStudents">Deleting...</span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Delete Row vs Database Modal --}}
+    <flux:modal name="confirm-delete-row-or-db" class="max-w-md">
+        <div class="space-y-5">
+            <div class="flex items-start gap-4">
+                <div class="size-11 rounded-2xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
+                    <flux:icon icon="exclamation-triangle" class="size-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                    <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Student Found in Database</flux:heading>
+                    <flux:subheading class="mt-1 text-zinc-600 dark:text-zinc-300 text-sm">
+                        <strong class="text-zinc-900 dark:text-white">{{ $studentToDeleteName }}</strong> already exists in the school database.
+                    </flux:subheading>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-600 dark:text-zinc-300 space-y-1">
+                <p class="font-semibold text-zinc-900 dark:text-white">Choose how to remove this entry:</p>
+                <p>&bull; <strong>Delete from Database:</strong> Permanently removes this student, their enrollment, and login from the database.</p>
+                <p>&bull; <strong>Remove Row Only:</strong> Clears this row from the entry table without touching the existing database record.</p>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <flux:button variant="filled" wire:click="$modal('confirm-delete-row-or-db').close()" class="w-full sm:w-auto font-medium">
+                    Cancel
+                </flux:button>
+                <flux:button variant="subtle" wire:click="performRemoveRow({{ $rowToDeleteIndex ?? 0 }})" class="w-full sm:w-auto font-semibold">
+                    Remove Row Only
+                </flux:button>
+                <flux:button variant="danger" wire:click="deleteRowStudentFromDb" wire:loading.attr="disabled" icon="trash" class="w-full sm:w-auto font-bold shadow-sm">
+                    <span wire:loading.remove wire:target="deleteRowStudentFromDb">Delete from Database</span>
+                    <span wire:loading wire:target="deleteRowStudentFromDb">Deleting...</span>
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Merge Class Duplicates Modal --}}
+    <flux:modal name="confirm-merge-class-duplicates" class="max-w-lg">
+        <div class="space-y-5">
+            <div class="flex items-start gap-4">
+                <div class="size-11 rounded-2xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
+                    <flux:icon icon="arrow-path" class="size-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                    <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Merge Duplicate Students in {{ $this->selectedClass?->name ?? 'Class' }}</flux:heading>
+                    <flux:subheading class="mt-1 text-zinc-600 dark:text-zinc-300 text-sm">
+                        Found <strong class="text-zinc-900 dark:text-white">{{ $this->totalDuplicatesInRoster }} duplicate record(s)</strong> across {{ count($this->duplicateGroupsInRoster) }} student name(s).
+                    </flux:subheading>
+                </div>
+            </div>
+
+            <div class="max-h-56 overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40 text-xs">
+                @foreach ($this->duplicateGroupsInRoster as $group)
+                    <div class="p-3 space-y-1">
+                        <div class="flex items-center justify-between font-bold text-zinc-900 dark:text-white">
+                            <span>{{ $group['name'] }}</span>
+                            <span class="text-amber-700 dark:text-amber-300 font-mono text-[11px] bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-full">
+                                {{ $group['duplicate_count'] }} duplicate(s) to remove
+                            </span>
+                        </div>
+                        <p class="text-zinc-600 dark:text-zinc-400">
+                            <strong>Keep:</strong> Adm <span class="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{{ $group['keeper_adm'] }}</span>
+                        </p>
+                        @if ($group['duplicate_adms'])
+                            <p class="text-zinc-500 font-mono text-[11px]">
+                                <strong>Remove:</strong> {{ $group['duplicate_adms'] }}
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                <p class="font-semibold">What happens during consolidation:</p>
+                <p>&bull; The earliest/primary student account is preserved with its admission number.</p>
+                <p>&bull; All academic results, attendances, fee balances, and guardian data are reassigned to the retained student.</p>
+                <p>&bull; Redundant duplicate accounts and admission numbers are permanently cleared.</p>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <flux:button variant="filled" wire:click="$modal('confirm-merge-class-duplicates').close()" class="w-full sm:w-auto font-medium">
+                    Cancel
+                </flux:button>
+                <flux:button variant="danger" wire:click="mergeClassDuplicates" wire:loading.attr="disabled" icon="arrow-path" class="w-full sm:w-auto font-bold shadow-sm">
+                    <span wire:loading.remove wire:target="mergeClassDuplicates">Merge & Remove Duplicates</span>
+                    <span wire:loading wire:target="mergeClassDuplicates">Merging...</span>
                 </flux:button>
             </div>
         </div>
