@@ -2,6 +2,8 @@
 
 use App\Models\Devices;
 use App\Models\User;
+use App\Services\AdmissionNumberPatternService;
+use App\Services\ParentMatchingService;
 use App\Services\StudentCacheService;
 use App\Services\ZKTecoUserSyncService;
 use Flux\Flux;
@@ -22,6 +24,11 @@ new #[Title('Upload Student Records')] class extends Component
     use WithFileUploads;
 
     public $file = null;
+
+    /** @var array<string, string|int> Admin decisions for ambiguous name-only parents */
+    public array $ambiguousDecisions = [];
+
+    public bool $hasAutoNumbered = false;
 
     /** @var array<int, array<string, string>> Grid rows keyed by ImportStudents::COLUMNS. */
     public array $rows = [];
@@ -244,7 +251,57 @@ new #[Title('Upload Student Records')] class extends Component
         Flux::toast(text: 'Session draft discarded.', variant: 'info');
     }
 
-    public function save(): void
+    public function autoFillAdmissionNumbers(): void
+    {
+        $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            return;
+        }
+
+        $filled = $this->filledRows();
+        if (empty($filled)) {
+            Flux::toast(text: 'Fill in at least one student name before auto-numbering.', variant: 'warning');
+
+            return;
+        }
+
+        $this->rows = app(AdmissionNumberPatternService::class)->suggestForRows($institutionId, $this->rows, fillBlanksOnly: true);
+        $this->hasAutoNumbered = true;
+        Flux::toast(text: 'Sequential admission numbers assigned to empty rows.', variant: 'success');
+    }
+
+    public function openImportPreview(): void
+    {
+        abort_unless(auth()->user()->can('create student'), 403);
+
+        $institutionId = currentInstitutionId();
+        abort_unless($institutionId, 422, 'No institution selected.');
+
+        if ($this->filledRows() === []) {
+            Flux::toast(text: 'Nothing to import yet - fill in at least one student name.', variant: 'warning');
+
+            return;
+        }
+
+        // Initialize ambiguous parent decisions if not set
+        $analysis = $this->previewAnalysis;
+        foreach ($analysis['parent_analysis']['ambiguous_matches'] as $key => $amb) {
+            if (! isset($this->ambiguousDecisions[$key])) {
+                $firstCandidateId = $amb['candidate_parents'][0]['id'] ?? 'create_new';
+                $this->ambiguousDecisions[$key] = $firstCandidateId;
+            }
+        }
+
+        Flux::modal('preview-bulk-import')->show();
+    }
+
+    public function confirmAndSaveImport(): void
+    {
+        Flux::modal('preview-bulk-import')->close();
+        $this->save($this->ambiguousDecisions);
+    }
+
+    public function save(?array $decisions = null): void
     {
         abort_unless(auth()->user()->can('create student'), 403);
 
@@ -257,7 +314,9 @@ new #[Title('Upload Student Records')] class extends Component
             return;
         }
 
-        $result = app(ImportStudents::class)->import($this->rows, $institutionId);
+        $parentDecisions = $decisions ?? $this->ambiguousDecisions;
+
+        $result = app(ImportStudents::class)->import($this->rows, $institutionId, $parentDecisions);
 
         $this->created = $result['created'];
         $this->rowErrors = $result['errors'];
@@ -284,6 +343,81 @@ new #[Title('Upload Student Records')] class extends Component
         }
 
         Flux::toast(text: $result['created'].' saved'.$biometricSummary.', '.count($result['errors']).' row(s) need attention below.', variant: $result['created'] > 0 ? 'warning' : 'danger');
+    }
+
+    #[Computed]
+    public function admissionPattern(): array
+    {
+        $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            return [
+                'status' => 'none',
+                'predominant_pattern' => null,
+                'total_records' => 0,
+                'detected_patterns' => [],
+            ];
+        }
+
+        return app(AdmissionNumberPatternService::class)->detectPattern($institutionId);
+    }
+
+    #[Computed]
+    public function previewAnalysis(): array
+    {
+        $institutionId = currentInstitutionId();
+        if (! $institutionId) {
+            return [
+                'pattern' => null,
+                'parent_analysis' => [
+                    'matched_existing' => [],
+                    'new_parents' => [],
+                    'ambiguous_matches' => [],
+                    'total_existing_reused' => 0,
+                    'total_new_parents' => 0,
+                ],
+                'duplicate_admissions' => [],
+                'conflict_admissions' => [],
+                'rows_count' => 0,
+            ];
+        }
+
+        $filled = $this->filledRows();
+        $pattern = app(AdmissionNumberPatternService::class)->detectPattern($institutionId);
+        $parentAnalysis = app(ParentMatchingService::class)->analyzeBatch($institutionId, $filled);
+
+        // Check admission duplicates within batch and existing in DB
+        $seenAdmissions = [];
+        $batchDuplicates = [];
+        $dbConflicts = [];
+
+        foreach ($filled as $i => $row) {
+            $adm = trim((string) ($row['admission_number'] ?? ''));
+            if ($adm === '') {
+                continue;
+            }
+
+            if (isset($seenAdmissions[$adm])) {
+                $batchDuplicates[$adm] = ($batchDuplicates[$adm] ?? 1) + 1;
+            } else {
+                $seenAdmissions[$adm] = $i;
+            }
+
+            $existsInDb = StudentDetails::where('institution_id', $institutionId)
+                ->where('admission_number', $adm)
+                ->exists();
+
+            if ($existsInDb) {
+                $dbConflicts[] = $adm;
+            }
+        }
+
+        return [
+            'pattern' => $pattern,
+            'parent_analysis' => $parentAnalysis,
+            'duplicate_admissions' => array_keys($batchDuplicates),
+            'conflict_admissions' => array_unique($dbConflicts),
+            'rows_count' => count($filled),
+        ];
     }
 
     #[Computed]
@@ -942,6 +1076,10 @@ new #[Title('Upload Student Records')] class extends Component
                         </span>
                     </label>
                 @endif
+                <flux:button wire:click="openImportPreview" icon="eye" variant="filled"
+                    class="font-semibold shadow-2xs">
+                    Preview &amp; Audit
+                </flux:button>
                 <flux:button wire:click="save" wire:loading.attr="disabled" icon="check" variant="primary"
                     class="font-semibold shadow-sm px-6">
                     <span wire:loading.remove wire:target="save">Save All Students</span>
@@ -982,7 +1120,7 @@ new #[Title('Upload Student Records')] class extends Component
             </div>
 
             {{-- Live Class Headcount & Next Admission Helper --}}
-            @if ($this->selectedClass || $this->classStats['total'] > 0)
+            @if ($this->selectedClass || $this->classStats['total'] > 0 || ! empty($this->admissionPattern['predominant_pattern']))
                 @php $stats = $this->classStats; @endphp
                 <div wire:loading.class="opacity-60" wire:target="onClassSelectChange, switchClass" class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs transition-opacity">
                     <div class="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-700 shadow-2xs">
@@ -996,15 +1134,22 @@ new #[Title('Upload Student Records')] class extends Component
                     </div>
                     @if ($stats['school_latest_admission'] !== 'None')
                         <div class="px-2.5 py-1.5 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/40 font-semibold text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800 font-mono shadow-2xs"
-                            title="Highest admission number across all classes in this school">
-                            School Last Adm: <strong class="ml-0.5">{{ $stats['school_latest_admission'] }}</strong>
+                            title="Highest valid admission number detected in this school">
+                            School Highest Adm: <strong class="ml-0.5">{{ $stats['school_latest_admission'] }}</strong>
                         </div>
                     @endif
-                    @if ($stats['latest_admission'] !== 'None' && $stats['latest_admission'] !== $stats['school_latest_admission'])
-                        <div class="px-2.5 py-1.5 rounded-lg bg-amber-50/90 dark:bg-amber-950/40 font-semibold text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800 font-mono shadow-2xs"
-                            title="Highest admission number recorded in this specific class">
-                            Class Last Adm: <strong class="ml-0.5">{{ $stats['latest_admission'] }}</strong>
+                    @if (! empty($this->admissionPattern['predominant_pattern']))
+                        @php $pred = $this->admissionPattern['predominant_pattern']; @endphp
+                        <div class="px-2.5 py-1.5 rounded-lg bg-sky-50/90 dark:bg-sky-950/40 font-semibold text-sky-800 dark:text-sky-300 border border-sky-200/70 dark:border-sky-800 font-mono shadow-2xs"
+                            title="Next suggested admission number based on school sequence pattern">
+                            Next Suggested: <strong class="ml-0.5">{{ $pred['next_admission'] }}</strong>
                         </div>
+                        <button type="button" wire:click="autoFillAdmissionNumbers"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                            title="Auto-fill empty admission numbers with the next sequence">
+                            <flux:icon icon="sparkles" class="size-3.5" />
+                            Auto-Number Empty
+                        </button>
                     @endif
                 </div>
             @endif
@@ -1423,6 +1568,180 @@ new #[Title('Upload Student Records')] class extends Component
                 </flux:button>
                 <flux:button variant="primary" wire:click="saveAndSwitchClass" icon="check" class="w-full sm:w-auto font-bold shadow-sm">
                     Save & Switch
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    {{-- Pre-Flight Import Inspection Modal --}}
+    <flux:modal name="preview-bulk-import" class="max-w-4xl">
+        @php
+            $analysis = $this->previewAnalysis;
+            $patternInfo = $analysis['pattern'];
+            $predPattern = $patternInfo['predominant_pattern'] ?? null;
+            $parentAnalysis = $analysis['parent_analysis'];
+            $hasDuplicates = ! empty($analysis['duplicate_admissions']);
+            $hasConflicts = ! empty($analysis['conflict_admissions']);
+        @endphp
+
+        <div class="space-y-6">
+            {{-- Header --}}
+            <div class="flex items-start justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="size-11 rounded-2xl bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center shrink-0 border border-sky-200 dark:border-sky-800">
+                        <flux:icon icon="document-magnifying-glass" class="size-6 text-sky-600 dark:text-sky-400" />
+                    </div>
+                    <div>
+                        <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">
+                            Pre-Flight Import Inspection
+                        </flux:heading>
+                        <flux:subheading class="text-xs text-zinc-500 mt-0.5">
+                            Verifying {{ $analysis['rows_count'] }} student record(s) for admission sequence integrity and parent deduplication.
+                        </flux:subheading>
+                    </div>
+                </div>
+            </div>
+
+            {{-- SECTION 1: Admission Numbers Audit --}}
+            <div class="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/50 p-4 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <flux:icon icon="identification" class="size-4 text-zinc-500" />
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">Admission Number Sequence</h4>
+                    </div>
+                    @if ($predPattern)
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-mono text-zinc-600 dark:text-zinc-300">
+                                Pattern: <strong>{{ $predPattern['template'] }}</strong>
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-mono">
+                                Next: <strong>{{ $predPattern['next_admission'] }}</strong>
+                            </span>
+                        </div>
+                    @endif
+                </div>
+
+                @if ($hasDuplicates || $hasConflicts)
+                    <div class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+                        @if ($hasDuplicates)
+                            <p class="font-semibold flex items-center gap-1.5">
+                                <flux:icon icon="exclamation-circle" class="size-3.5 text-rose-600" />
+                                Duplicate numbers inside this batch: {{ implode(', ', $analysis['duplicate_admissions']) }}
+                            </p>
+                        @endif
+                        @if ($hasConflicts)
+                            <p class="font-semibold flex items-center gap-1.5">
+                                <flux:icon icon="exclamation-circle" class="size-3.5 text-rose-600" />
+                                Conflicts with existing students in database: {{ implode(', ', $analysis['conflict_admissions']) }}
+                            </p>
+                        @endif
+                        <p class="text-[11px] text-rose-600 dark:text-rose-400">Please review and edit these admission numbers before confirming import.</p>
+                    </div>
+                @else
+                    <div class="text-xs text-zinc-500 flex items-center gap-2">
+                        <flux:icon icon="check-circle" class="size-4 text-emerald-500" />
+                        <span>All specified admission numbers are valid and non-colliding.</span>
+                        <button type="button" wire:click="autoFillAdmissionNumbers"
+                            class="ml-auto text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 underline cursor-pointer">
+                            Auto-fill blank numbers
+                        </button>
+                    </div>
+                @endif
+            </div>
+
+            {{-- SECTION 2: Parent / Guardian Deduplication & Linking Audit --}}
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <flux:icon icon="user-group" class="size-4 text-zinc-500" />
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">Parent / Guardian Deduplication</h4>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
+                            {{ $parentAnalysis['total_existing_reused'] }} Existing Reused
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
+                            {{ $parentAnalysis['total_new_parents'] }} New to Create
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Option A Ambiguities Prompt --}}
+                @if (! empty($parentAnalysis['ambiguous_matches']))
+                    <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 space-y-3">
+                        <div class="flex items-start gap-2.5">
+                            <flux:icon icon="exclamation-triangle" class="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div>
+                                <h5 class="text-xs font-bold text-amber-900 dark:text-amber-200">Guardian Name Matches Found (No Phone Provided)</h5>
+                                <p class="text-[11px] text-amber-700 dark:text-amber-300">
+                                    The following guardians have matching names with existing parents in this school, but no phone number was given. Please confirm whether to link them or create separate parent accounts:
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            @foreach ($parentAnalysis['ambiguous_matches'] as $key => $amb)
+                                <div class="p-3 rounded-lg bg-white dark:bg-zinc-800 border border-amber-200 dark:border-amber-800/80 text-xs space-y-2">
+                                    <div class="flex items-center justify-between font-semibold text-zinc-800 dark:text-zinc-200">
+                                        <span>Guardian: <strong>{{ $amb['guardian_name'] }}</strong></span>
+                                        <span class="text-zinc-500">Child(ren): {{ implode(', ', $amb['children']) }}</span>
+                                    </div>
+                                    <div class="space-y-1.5 pl-2">
+                                        @foreach ($amb['candidate_parents'] as $cand)
+                                            <label class="flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
+                                                <input type="radio" wire:model.live="ambiguousDecisions.{{ $key }}" value="{{ $cand['id'] }}"
+                                                    class="text-sky-600 focus:ring-sky-500 size-3.5">
+                                                <span>Link to existing parent: <strong>{{ $cand['name'] }}</strong> (ID #{{ $cand['id'] }}{{ $cand['phone'] ? ', Phone: '.$cand['phone'] : '' }}, {{ $cand['child_count'] }} existing child)</span>
+                                            </label>
+                                        @endforeach
+                                        <label class="flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
+                                            <input type="radio" wire:model.live="ambiguousDecisions.{{ $key }}" value="create_new"
+                                                class="text-sky-600 focus:ring-sky-500 size-3.5">
+                                            <span>Create as a distinct new parent account</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Sibling Groupings and Existing Links --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto">
+                    @foreach ($parentAnalysis['matched_existing'] as $m)
+                        <div class="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
+                            <div class="flex items-center justify-between font-bold text-emerald-900 dark:text-emerald-200">
+                                <span>{{ $m['parent_name'] }} (Reused #{{ $m['parent_id'] }})</span>
+                                <span class="text-[10px] font-mono">{{ $m['parent_phone'] ?? 'Email Match' }}</span>
+                            </div>
+                            <p class="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
+                                Linking to: <strong>{{ implode(', ', $m['children']) }}</strong>
+                            </p>
+                        </div>
+                    @endforeach
+
+                    @foreach ($parentAnalysis['new_parents'] as $np)
+                        <div class="p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 text-xs">
+                            <div class="flex items-center justify-between font-bold text-blue-900 dark:text-blue-200">
+                                <span>{{ $np['parent_name'] }} (New Parent)</span>
+                                <span class="text-[10px] font-mono">{{ $np['parent_phone'] ?? 'No Phone' }}</span>
+                            </div>
+                            <p class="text-[11px] text-blue-700 dark:text-blue-400 mt-1">
+                                Shared by {{ count($np['children']) }} student(s): <strong>{{ implode(', ', $np['children']) }}</strong>
+                            </p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Modal Action Buttons --}}
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                <flux:button variant="filled" wire:click="$modal('preview-bulk-import').close()" class="w-full sm:w-auto font-medium">
+                    Cancel &amp; Continue Editing
+                </flux:button>
+                <flux:button variant="primary" wire:click="confirmAndSaveImport" wire:loading.attr="disabled" icon="check" class="w-full sm:w-auto font-bold shadow-sm">
+                    <span wire:loading.remove wire:target="confirmAndSaveImport">Confirm &amp; Enroll Students</span>
+                    <span wire:loading wire:target="confirmAndSaveImport">Saving Students...</span>
                 </flux:button>
             </div>
         </div>

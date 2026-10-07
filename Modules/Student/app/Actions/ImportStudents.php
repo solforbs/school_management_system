@@ -3,6 +3,7 @@
 namespace Modules\Student\Actions;
 
 use App\Models\User;
+use App\Services\ParentMatchingService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -48,7 +49,10 @@ class ImportStudents
     /** @var string[] Placeholder values the export writes for blanks. */
     private const BLANKS = ['', 'n/a', 'na', 'not listed', 'unassigned', 'unspecified', 'unknown', 'none'];
 
-    public function __construct(private readonly SaveStudent $saveStudent) {}
+    public function __construct(
+        private readonly SaveStudent $saveStudent,
+        private readonly ParentMatchingService $parentMatcher,
+    ) {}
 
     /**
      * Read an uploaded xlsx/csv into grid rows keyed by COLUMNS.
@@ -94,7 +98,15 @@ class ImportStudents
      * @param  array<int, array<string, string>>  $rows
      * @return array{created: int, created_ids: array<int, int>, errors: array<int, string>}
      */
-    public function import(array $rows, int $institutionId): array
+    /**
+     * Enrol every filled row, reporting per-row failures without letting
+     * one bad line abort the rest of the file.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @param  array<string, string|int>  $parentDecisions
+     * @return array{created: int, created_ids: array<int, int>, errors: array<int, string>}
+     */
+    public function import(array $rows, int $institutionId, array $parentDecisions = []): array
     {
         $classes = SchoolClass::where('institution_id', $institutionId)->get();
 
@@ -103,6 +115,7 @@ class ImportStudents
         $errors = [];
         $seenAdmissionNumbers = [];
         $seenStudentNumbers = [];
+        $intraBatchParents = [];
 
         foreach ($rows as $index => $row) {
             $row = array_map(fn ($value) => trim((string) $value), $row);
@@ -171,6 +184,22 @@ class ImportStudents
             $status = strtolower($row['enrollment_status']) ?: 'active';
             $admissionNumber = $row['admission_number'] !== '' ? $row['admission_number'] : null;
 
+            $hasGuardian = ! empty($row['guardian_name']) || ! empty($row['guardian_phone']);
+            $parent = null;
+            if ($hasGuardian) {
+                $parent = $this->parentMatcher->resolveParentForBatch(
+                    $institutionId,
+                    [
+                        'guardian_name' => $row['guardian_name'],
+                        'guardian_phone' => $row['guardian_phone'],
+                        'parent_name' => $row['guardian_name'],
+                        'parent_phone' => $row['guardian_phone'],
+                    ],
+                    $intraBatchParents,
+                    $parentDecisions
+                );
+            }
+
             try {
                 $student = $this->saveStudent->create([
                     'name' => $row['name'],
@@ -180,6 +209,7 @@ class ImportStudents
                     'student_number' => $row['student_number'] ?: null,
                     'class_id' => $classId,
                     'gender' => in_array(strtolower($row['gender']), ['male', 'female', 'other'], true) ? strtolower($row['gender']) : null,
+                    'parent_id' => $parent?->id,
                     'guardian_name' => $row['guardian_name'] ?: null,
                     'guardian_phone' => $row['guardian_phone'] ?: null,
                     'parent_name' => $row['guardian_name'] ?: null,

@@ -117,18 +117,39 @@ class StudentCacheService
     }
 
     /**
-     * Get the latest admission number recorded for the institution.
+     * Get the latest admission number recorded for the institution using pattern detection.
      */
     public function getSchoolLatestAdmission(int $institutionId): string
     {
         $cacheKey = "inst_{$institutionId}_latest_adm";
 
         return Cache::remember($cacheKey, self::STATS_TTL, function () use ($institutionId) {
+            $patternInfo = app(AdmissionNumberPatternService::class)->detectPattern($institutionId);
+            $pred = $patternInfo['predominant_pattern'];
+
+            if ($pred && ! empty($pred['highest_admission']) && $pred['highest_admission'] !== 'None') {
+                return $pred['highest_admission'];
+            }
+
             return StudentDetails::where('institution_id', $institutionId)
                 ->whereNotNull('admission_number')
                 ->where('admission_number', '!=', '')
                 ->latest('id')
                 ->value('admission_number') ?? 'None';
+        });
+    }
+
+    /**
+     * Get cached admission number pattern information for an institution.
+     *
+     * @return array<string, mixed>
+     */
+    public function getAdmissionPattern(int $institutionId): array
+    {
+        $cacheKey = "inst_{$institutionId}_adm_pattern";
+
+        return Cache::remember($cacheKey, self::STATS_TTL, function () use ($institutionId) {
+            return app(AdmissionNumberPatternService::class)->detectPattern($institutionId);
         });
     }
 
@@ -185,6 +206,7 @@ class StudentCacheService
 
         Cache::forget("inst_{$institutionId}_student_count");
         Cache::forget("inst_{$institutionId}_latest_adm");
+        Cache::forget("inst_{$institutionId}_adm_pattern");
         Cache::forget("inst_{$institutionId}_all_stats");
         Cache::forget("inst_{$institutionId}_all_roster");
     }
@@ -198,6 +220,7 @@ class StudentCacheService
         Cache::forget("inst_{$institutionId}_classes_tenant");
         Cache::forget("inst_{$institutionId}_student_count");
         Cache::forget("inst_{$institutionId}_latest_adm");
+        Cache::forget("inst_{$institutionId}_adm_pattern");
         Cache::forget("inst_{$institutionId}_all_stats");
         Cache::forget("inst_{$institutionId}_all_roster");
     }

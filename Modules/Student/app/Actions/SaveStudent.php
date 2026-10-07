@@ -5,6 +5,7 @@ namespace Modules\Student\Actions;
 use App\Models\Devices;
 use App\Models\User;
 use App\Services\ImageCompressionService;
+use App\Services\ParentMatchingService;
 use App\Services\ProfilePhotoResolver;
 use App\Services\ZKTecoUserSyncService;
 use Illuminate\Http\UploadedFile;
@@ -346,8 +347,11 @@ class SaveStudent
             return null;
         }
 
-        $phone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
-        $email = ! empty($data['parent_email']) ? trim((string) $data['parent_email']) : null;
+        $matcher = app(ParentMatchingService::class);
+        $rawPhone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
+        $phone = $matcher->normalizePhone($rawPhone);
+        $email = $matcher->normalizeEmail(! empty($data['parent_email']) ? trim((string) $data['parent_email']) : null);
+        $normName = $matcher->normalizeName(! empty($data['parent_name']) ? trim((string) $data['parent_name']) : null);
 
         // Check if an existing parent account already matches this phone
         if ($phone) {
@@ -372,9 +376,9 @@ class SaveStudent
         }
 
         // Check if an existing parent account in this school matches by name
-        if (! empty($data['parent_name'])) {
+        if ($normName) {
             $existingParentByName = User::role('Parent')
-                ->where('name', trim((string) $data['parent_name']))
+                ->whereRaw('LOWER(name) = ?', [$normName])
                 ->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
                 ->first();
 
