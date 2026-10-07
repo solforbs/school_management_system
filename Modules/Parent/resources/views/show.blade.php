@@ -2,7 +2,7 @@
     $initials = method_exists($parent, 'initials') ? $parent->initials() : strtoupper(substr($parent->name, 0, 2));
     $phone = $parent->parent?->parent_phone ?? '';
     $occupation = $parent->parent?->parent_occupation ?? 'Guardian';
-    $uniqueChildren = $parent->children->unique(fn($c) => $c->student_id ?? $c->admission_number ?? $c->id);
+    $uniqueChildren = $parent->children->unique(fn($c) => strtolower(trim((string) ($c->student?->name ?? ''))) ?: ($c->student_id ?? $c->id));
     $linkedCount = $uniqueChildren->count();
 @endphp
 

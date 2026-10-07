@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
+use Modules\Student\Actions\ImportStudents;
 use Modules\Student\Actions\SaveStudent;
 use Modules\Student\Models\StudentDetails;
 
@@ -114,4 +115,101 @@ it('merges duplicate student accounts in the same class and retains the real adm
     // Duplicate user was purged
     $users = User::role('Student')->where('name', 'Amina Hassan')->get();
     expect($users)->toHaveCount(1);
+});
+
+it('merges duplicate students created across unassigned and assigned classes with parent link', function () {
+    [, $institution, $class] = setupStudentMergeTestInstitution();
+
+    $parentUser = User::create([
+        'name' => 'Abdinoor Dabi',
+        'email' => 'abdinoor@test.com',
+        'password' => bcrypt('password123'),
+    ]);
+    $parentUser->assignRole('Parent');
+
+    // Duplicate 1: Created with name only and no class (unassigned)
+    $s1 = User::create(['name' => 'Sudheys Abdinoor', 'email' => 's1@test.com', 'password' => bcrypt('password')]);
+    $s1->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $s1->id,
+        'institution_id' => $institution->id,
+        'class_id' => null,
+        'is_active' => true,
+    ]);
+
+    // Duplicate 2: Created with parent link but no admission number
+    $s2 = User::create(['name' => 'Sudheys Abdinoor', 'email' => 's2@test.com', 'password' => bcrypt('password')]);
+    $s2->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $s2->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'parent_id' => $parentUser->id,
+        'is_active' => true,
+    ]);
+
+    // Duplicate 3: Created with admission number FAHAN-015-2025
+    $s3 = User::create(['name' => 'Sudheys Abdinoor', 'email' => 's3@test.com', 'password' => bcrypt('password')]);
+    $s3->assignRole('Student');
+    StudentDetails::create([
+        'student_id' => $s3->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'FAHAN-015-2025',
+        'is_active' => true,
+    ]);
+
+    // Run merge command
+    Artisan::call('students:merge-duplicates', ['--institution' => $institution->id]);
+
+    $remaining = StudentDetails::where('institution_id', $institution->id)
+        ->whereHas('student', fn ($q) => $q->where('name', 'Sudheys Abdinoor'))
+        ->get();
+
+    expect($remaining)->toHaveCount(1);
+
+    $keeper = $remaining->first();
+    expect($keeper->admission_number)->toBe('FAHAN-015-2025')
+        ->and((int) $keeper->class_id)->toBe($class->id)
+        ->and($keeper->parent_id)->toBe($parentUser->id);
+});
+
+it('enriches existing student during subsequent bulk uploads instead of creating duplicate records', function () {
+    [, $institution, $class] = setupStudentMergeTestInstitution();
+    $importer = app(ImportStudents::class);
+
+    // 1. First upload: Names alone
+    $result1 = $importer->import([
+        ['name' => 'Sundus Abdinoor', 'admission_number' => '', 'student_number' => '', 'gender' => '', 'guardian_name' => '', 'guardian_phone' => '', 'class_name' => $class->name, 'enrollment_status' => 'active'],
+    ], $institution->id);
+
+    expect($result1['created'])->toBe(1);
+    expect(StudentDetails::where('institution_id', $institution->id)->count())->toBe(1);
+
+    $originalStudent = StudentDetails::where('institution_id', $institution->id)->first();
+    expect($originalStudent->admission_number)->toBeNull()
+        ->and($originalStudent->parent_id)->toBeNull();
+
+    // 2. Second upload: Same student with guardian added
+    $result2 = $importer->import([
+        ['name' => 'Sundus Abdinoor', 'admission_number' => '', 'student_number' => '', 'gender' => 'female', 'guardian_name' => 'Abdinoor Dabi', 'guardian_phone' => '0722971610', 'class_name' => $class->name, 'enrollment_status' => 'active'],
+    ], $institution->id);
+
+    expect($result2['created'])->toBe(1)
+        ->and(StudentDetails::where('institution_id', $institution->id)->count())->toBe(1); // STILL 1!
+
+    $originalStudent->refresh();
+    expect($originalStudent->parent_id)->not->toBeNull()
+        ->and($originalStudent->gender)->toBe('female');
+
+    // 3. Third upload: Same student with admission number added
+    $result3 = $importer->import([
+        ['name' => 'Sundus Abdinoor', 'admission_number' => 'FAHAN-016-2025', 'student_number' => '', 'gender' => 'female', 'guardian_name' => 'Abdinoor Dabi', 'guardian_phone' => '0722971610', 'class_name' => $class->name, 'enrollment_status' => 'active'],
+    ], $institution->id);
+
+    expect($result3['created'])->toBe(1)
+        ->and(StudentDetails::where('institution_id', $institution->id)->count())->toBe(1); // STILL 1!
+
+    $originalStudent->refresh();
+    expect($originalStudent->admission_number)->toBe('FAHAN-016-2025');
 });

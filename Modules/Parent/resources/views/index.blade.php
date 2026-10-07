@@ -294,9 +294,12 @@
 
                                     {{-- Linked Students Column --}}
                                     <td class="py-4 px-5">
-                                        @if($parent->children->isNotEmpty())
+                                        @php
+                                            $uniqueChildren = $parent->children->unique(fn($c) => strtolower(trim((string) ($c->student?->name ?? ''))) ?: ($c->student_id ?? $c->id));
+                                        @endphp
+                                        @if($uniqueChildren->isNotEmpty())
                                             <div class="flex flex-wrap gap-1.5">
-                                                @foreach($parent->children as $child)
+                                                @foreach($uniqueChildren as $child)
                                                     @if($child->student)
                                                         <a href="{{ route('student.show', $child->student->id) }}" 
                                                             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold transition border border-zinc-200/60"

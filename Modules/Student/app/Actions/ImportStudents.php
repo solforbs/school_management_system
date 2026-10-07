@@ -117,6 +117,12 @@ class ImportStudents
         $seenStudentNumbers = [];
         $intraBatchParents = [];
 
+        $existingStudentIdsBeforeBatch = StudentDetails::where('institution_id', $institutionId)
+            ->pluck('id')
+            ->flip()
+            ->all();
+        $enrichedInThisBatch = [];
+
         foreach ($rows as $index => $row) {
             $row = array_map(fn ($value) => trim((string) $value), $row);
 
@@ -198,6 +204,57 @@ class ImportStudents
                     $intraBatchParents,
                     $parentDecisions
                 );
+            }
+
+            // Check if this student already existed in the institution before this import started
+            $normRowName = strtolower(trim($row['name']));
+            $existingStudentDetails = null;
+
+            if (! empty($existingStudentIdsBeforeBatch)) {
+                $candidates = StudentDetails::where('institution_id', $institutionId)
+                    ->whereIn('id', array_keys($existingStudentIdsBeforeBatch))
+                    ->whereNotIn('id', $enrichedInThisBatch)
+                    ->whereHas('student', fn ($sq) => $sq->whereRaw('LOWER(TRIM(name)) = ?', [$normRowName]))
+                    ->when($classId, fn ($q) => $q->where(fn ($sub) => $sub->where('class_id', $classId)->orWhereNull('class_id')))
+                    ->get();
+
+                $existingStudentDetails = $candidates->first(function ($cand) use ($admissionNumber) {
+                    return empty($cand->admission_number) || $cand->admission_number === $admissionNumber;
+                });
+            }
+
+            if ($existingStudentDetails) {
+                // Enrich existing student record instead of creating duplicate
+                if ($admissionNumber && empty($existingStudentDetails->admission_number)) {
+                    $existingStudentDetails->admission_number = $admissionNumber;
+                }
+                if ($classId && empty($existingStudentDetails->class_id)) {
+                    $existingStudentDetails->class_id = $classId;
+                }
+                if (! empty($row['student_number']) && empty($existingStudentDetails->student_number)) {
+                    $existingStudentDetails->student_number = $row['student_number'];
+                }
+                if ($parent && empty($existingStudentDetails->parent_id)) {
+                    $existingStudentDetails->parent_id = $parent->id;
+                }
+                if (! empty($row['guardian_name']) && empty($existingStudentDetails->guardian_name)) {
+                    $existingStudentDetails->guardian_name = $row['guardian_name'];
+                }
+                if (! empty($row['guardian_phone']) && empty($existingStudentDetails->guardian_phone)) {
+                    $existingStudentDetails->guardian_phone = $row['guardian_phone'];
+                }
+                if (! empty($row['gender']) && empty($existingStudentDetails->gender)) {
+                    $existingStudentDetails->gender = in_array(strtolower($row['gender']), ['male', 'female', 'other'], true) ? strtolower($row['gender']) : null;
+                }
+                $existingStudentDetails->save();
+
+                $enrichedInThisBatch[] = $existingStudentDetails->id;
+                $created++;
+                if ($existingStudentDetails->student_id) {
+                    $createdIds[] = $existingStudentDetails->student_id;
+                }
+
+                continue;
             }
 
             try {

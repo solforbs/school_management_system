@@ -201,7 +201,7 @@ new #[Title('Parent Management')] class extends Component
                 <div class="block sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
                     @foreach($parents as $parent)
                         @php
-                            $uniqueChildren = $parent->children->unique(fn($c) => $c->student_id ?? $c->admission_number ?? $c->id);
+                            $uniqueChildren = $parent->children->unique(fn($c) => strtolower(trim((string) ($c->student?->name ?? ''))) ?: ($c->student_id ?? $c->id));
                             $studentNames = $uniqueChildren->map(fn($c) => $c->student?->name)->filter()->join(', ');
                             $hasStudents = $uniqueChildren->isNotEmpty();
                             $initials = strtoupper(substr($parent->name, 0, 2));
@@ -307,7 +307,7 @@ new #[Title('Parent Management')] class extends Component
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                             @foreach($parents as $parent)
                                 @php
-                                    $uniqueChildren = $parent->children->unique(fn($c) => $c->student_id ?? $c->admission_number ?? $c->id);
+                                    $uniqueChildren = $parent->children->unique(fn($c) => strtolower(trim((string) ($c->student?->name ?? ''))) ?: ($c->student_id ?? $c->id));
                                     $studentNames = $uniqueChildren->map(fn($c) => $c->student?->name)->filter()->join(', ');
                                     $hasStudents = $uniqueChildren->isNotEmpty();
                                     $initials = strtoupper(substr($parent->name, 0, 2));
