@@ -5,6 +5,7 @@ namespace Modules\Student\Models;
 use App\Concerns\TetherSyncable;
 use App\Models\User;
 use App\Services\StudentCacheService;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,8 @@ use Modules\Institution\Models\Institution;
  * @property string|null $guardian_name
  * @property string|null $guardian_phone
  * @property string|null $guardian_email
+ * @property int|null $class_id
+ * @property string|null $gender
  * @property int|null $parent_id
  * @property-read User|null $student
  * @property-read Institution|null $institution
@@ -31,6 +34,7 @@ use Modules\Institution\Models\Institution;
  */
 class StudentDetails extends Model
 {
+    /** @use HasFactory<Factory<self>> */
     use HasFactory, SoftDeletes, TetherSyncable;
 
     /**
@@ -89,16 +93,25 @@ class StudentDetails extends Model
         });
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_id');
     }
 
+    /**
+     * @return BelongsTo<SchoolClass, $this>
+     */
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 
+    /**
+     * @return BelongsTo<Institution, $this>
+     */
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);

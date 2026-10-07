@@ -169,8 +169,7 @@ class ImportStudents
             }
 
             $status = strtolower($row['enrollment_status']) ?: 'active';
-            $admissionNumber = $row['admission_number'] ?: $this->generateUniqueAdmissionNumber($seenAdmissionNumbers);
-            $seenAdmissionNumbers[$admissionNumber] = $index;
+            $admissionNumber = $row['admission_number'] !== '' ? $row['admission_number'] : null;
 
             try {
                 $student = $this->saveStudent->create([
@@ -219,20 +218,6 @@ class ImportStudents
     }
 
     /**
-     * Generate an admission number that doesn't collide with existing records or current batch.
-     *
-     * @param  array<string, int>  $seen
-     */
-    private function generateUniqueAdmissionNumber(array $seen): string
-    {
-        do {
-            $adm = strtoupper('ADM-'.now()->year.'-'.Str::random(6));
-        } while (isset($seen[$adm]) || StudentDetails::where('admission_number', $adm)->exists());
-
-        return $adm;
-    }
-
-    /**
      * Match each header cell to a known column; an unrecognisable header
      * row falls back to the export's column order.
      *
@@ -263,9 +248,10 @@ class ImportStudents
      * Uploaded sheets carry no email, but every student needs a login;
      * derive one from the name/admission number and keep it unique.
      */
-    private function uniqueEmail(string $name, string $admissionNumber): string
+    private function uniqueEmail(string $name, ?string $admissionNumber = null): string
     {
-        $base = Str::slug($admissionNumber !== '' ? $admissionNumber : $name, '.') ?: 'student';
+        $baseSeed = (! empty($admissionNumber)) ? $admissionNumber : $name;
+        $base = Str::slug($baseSeed, '.') ?: 'student';
         $email = $base.'@students.generated';
         $suffix = 1;
 

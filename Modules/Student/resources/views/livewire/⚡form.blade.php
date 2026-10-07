@@ -403,7 +403,7 @@ new #[Title('Student Form')] class extends Component
                         <flux:input type="email" name="email" label="Student Email (Optional)" value="{{ old('email') }}" placeholder="Auto-generated if left blank (e.g. adm@students.generated)" autocomplete="new-password" />
                         <flux:input type="password" name="password" label="Temporary Password (Optional)" placeholder="Auto-generated if left blank" autocomplete="new-password" />
                         
-                        <flux:input type="text" name="admission_number" label="Admission Number (Optional)" value="{{ old('admission_number') }}" placeholder="Auto-generated if left blank (e.g. ADM-2026-XXXX)" />
+                        <flux:input type="text" name="admission_number" label="Admission Number (Optional)" value="{{ old('admission_number') }}" placeholder="e.g. 1042, ADM/2026/01" />
                         <flux:input type="text" name="student_number" label="Student Number / ID (Optional)" value="{{ old('student_number') }}" placeholder="e.g. STU-8492" />
                         
                         <input type="hidden" name="class_id" value="">

@@ -160,7 +160,7 @@ class SaveStudent
 
             $admissionNumber = ! empty($data['admission_number'])
                 ? trim((string) $data['admission_number'])
-                : $this->generateUniqueAdmissionNumber();
+                : null;
 
             $email = ! empty($data['email'])
                 ? trim((string) $data['email'])
@@ -222,9 +222,10 @@ class SaveStudent
     /**
      * Synthesize a clean, unique student login email when none is provided.
      */
-    public function uniqueEmail(string $name, string $admissionNumber): string
+    public function uniqueEmail(string $name, ?string $admissionNumber = null): string
     {
-        $base = Str::slug($admissionNumber !== '' ? $admissionNumber : $name, '.') ?: 'student';
+        $baseSeed = (! empty($admissionNumber)) ? $admissionNumber : $name;
+        $base = Str::slug($baseSeed, '.') ?: 'student';
         $email = $base.'@students.generated';
         $suffix = 1;
 

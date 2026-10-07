@@ -600,10 +600,6 @@ new #[Title('Upload Student Records')] class extends Component
             }
 
             // Check admission number uniqueness
-            if (! $isNew && $adm === '') {
-                $this->rosterErrors[$key]['admission_number'] = 'Admission number cannot be empty.';
-            }
-
             if ($adm !== '') {
                 if (isset($seenAdmissions[$adm])) {
                     $this->rosterErrors[$key]['admission_number'] = "Duplicate admission number '{$adm}' in this form.";
@@ -668,13 +664,7 @@ new #[Title('Upload Student Records')] class extends Component
                         continue;
                     }
 
-                    $generatedAdm = $adm !== '';
-                    $admToUse = $adm;
-                    if (! $generatedAdm) {
-                        do {
-                            $admToUse = strtoupper('ADM-'.now()->year.'-'.Str::random(6));
-                        } while (StudentDetails::withTrashed()->where('admission_number', $admToUse)->exists());
-                    }
+                    $admToUse = $adm !== '' ? $adm : null;
 
                     $newStudent = app(SaveStudent::class)->create([
                         'name' => $name,
