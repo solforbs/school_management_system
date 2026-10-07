@@ -354,8 +354,15 @@ class SaveStudent
         $normName = $matcher->normalizeName(! empty($data['parent_name']) ? trim((string) $data['parent_name']) : null);
 
         // Check if an existing parent account already matches this phone
-        if ($phone) {
-            $existingParentDetails = ParentDetails::where('parent_phone', $phone)->first();
+        if ($phone || $rawPhone) {
+            $existingParentDetails = ParentDetails::where(function ($q) use ($phone, $rawPhone) {
+                if ($phone) {
+                    $q->where('parent_phone', $phone);
+                }
+                if ($rawPhone && $rawPhone !== $phone) {
+                    $q->orWhere('parent_phone', $rawPhone);
+                }
+            })->first();
             if ($existingParentDetails && $existingParentDetails->parent) {
                 if (! empty($data['parent_name'])) {
                     $existingParentDetails->parent->update(['name' => $data['parent_name']]);
@@ -401,7 +408,7 @@ class SaveStudent
             // The school enrolling the student owns the parent account it
             // creates alongside them.
             'institution_id' => $institutionId,
-            'parent_phone' => $phone,
+            'parent_phone' => $phone ?: $rawPhone,
             'parent_occupation' => $data['parent_occupation'] ?? null,
         ]);
 
@@ -426,12 +433,21 @@ class SaveStudent
             return;
         }
 
-        $phone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
-        $email = ! empty($data['parent_email']) ? trim((string) $data['parent_email']) : null;
+        $matcher = app(ParentMatchingService::class);
+        $rawPhone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
+        $phone = $rawPhone ? $matcher->normalizePhone($rawPhone) : null;
+        $email = ! empty($data['parent_email']) ? $matcher->normalizeEmail(trim((string) $data['parent_email'])) : null;
 
         // 1. If phone matches an existing parent in parent_details, link to that parent directly
-        if ($phone) {
-            $existingDetails = ParentDetails::where('parent_phone', $phone)->first();
+        if ($phone || $rawPhone) {
+            $existingDetails = ParentDetails::where(function ($q) use ($phone, $rawPhone) {
+                if ($phone) {
+                    $q->where('parent_phone', $phone);
+                }
+                if ($rawPhone && $rawPhone !== $phone) {
+                    $q->orWhere('parent_phone', $rawPhone);
+                }
+            })->first();
             if ($existingDetails && $existingDetails->parent) {
                 $oldParentId = $studentDetails->parent_id;
 

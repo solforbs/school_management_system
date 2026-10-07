@@ -2,7 +2,9 @@
 
 use App\Models\User;
 use App\Services\AdmissionNumberPatternService;
+use App\Services\StudentCacheService;
 use Database\Seeders\PermissionSeeder;
+use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 use Modules\Student\Models\StudentDetails;
 
@@ -181,4 +183,64 @@ it('auto-fills sequential admission numbers for empty rows while preserving exis
     expect($suggested[0]['admission_number'])->toBe('FAHAN-015-2025')
         ->and($suggested[1]['admission_number'])->toBe('CUSTOM-99')
         ->and($suggested[2]['admission_number'])->toBe('FAHAN-016-2025');
+});
+
+it('findHighestAdmission picks 021 as highest when 017 to 021 are present regardless of list order', function () {
+    $service = app(AdmissionNumberPatternService::class);
+
+    $list = [
+        'Fahan-015-2025',
+        'Fahan-016-2025',
+        'Fahan-017-2025',
+        'Fahan-018-2025',
+        'Fahan-019-2025',
+        'Fahan-020-2025',
+        'Fahan-021-2025',
+    ];
+
+    expect($service->findHighestAdmission($list))->toBe('Fahan-021-2025');
+
+    // Even if list is shuffled or 017 is at the end
+    $shuffled = [
+        'Fahan-021-2025',
+        'Fahan-015-2025',
+        'Fahan-020-2025',
+        'Fahan-016-2025',
+        'Fahan-017-2025',
+    ];
+    expect($service->findHighestAdmission($shuffled))->toBe('Fahan-021-2025');
+});
+
+it('calculates class stats latest admission using numeric sequence instead of latest database id', function () {
+    [, $institution] = createTestSchoolForPattern('Class Sequence School');
+    $class = SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Grade 2',
+        'level' => 'Primary',
+    ]);
+
+    // Create Fahan-021-2025 first (ID 1)
+    $s1 = User::factory()->create();
+    StudentDetails::create([
+        'student_id' => $s1->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'Fahan-021-2025',
+        'is_active' => true,
+    ]);
+
+    // Create Fahan-017-2025 afterwards (ID 2 - higher database ID)
+    $s2 = User::factory()->create();
+    StudentDetails::create([
+        'student_id' => $s2->id,
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'admission_number' => 'Fahan-017-2025',
+        'is_active' => true,
+    ]);
+
+    $stats = app(StudentCacheService::class)->getClassStats($institution->id, $class->id);
+
+    // Must be Fahan-021-2025, NOT Fahan-017-2025
+    expect($stats['latest_admission'])->toBe('Fahan-021-2025');
 });

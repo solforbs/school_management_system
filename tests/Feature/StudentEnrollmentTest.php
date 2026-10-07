@@ -73,7 +73,7 @@ test('a student can be enrolled with only name, auto-generating email, password,
     expect($details)->not->toBeNull()
         ->and($details->institution_id)->toBe($institution->id)
         ->and((int) $details->class_id)->toBe($class->id)
-        ->and($details->admission_number)->toStartWith('ADM-');
+        ->and($details->admission_number)->toBeNull();
 });
 
 test('a student enrolled via bulk or minimal form can be edited later to add medical and guardian details', function () {

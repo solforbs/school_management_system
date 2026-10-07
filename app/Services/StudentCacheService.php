@@ -36,12 +36,15 @@ class StudentCacheService
                 ")
                 ->first();
 
-            $latestAdmission = StudentDetails::where('institution_id', $institutionId)
+            $classAdmissions = DB::table('student_details')
+                ->where('institution_id', $institutionId)
                 ->where('class_id', $classId)
                 ->whereNotNull('admission_number')
                 ->where('admission_number', '!=', '')
-                ->latest('id')
-                ->value('admission_number') ?? 'None';
+                ->whereNull('deleted_at')
+                ->pluck('admission_number');
+
+            $latestAdmission = app(AdmissionNumberPatternService::class)->findHighestAdmission($classAdmissions) ?? 'None';
 
             $schoolLatest = $this->getSchoolLatestAdmission($institutionId);
 
@@ -131,11 +134,14 @@ class StudentCacheService
                 return $pred['highest_admission'];
             }
 
-            return StudentDetails::where('institution_id', $institutionId)
+            $allAdmissions = DB::table('student_details')
+                ->where('institution_id', $institutionId)
                 ->whereNotNull('admission_number')
                 ->where('admission_number', '!=', '')
-                ->latest('id')
-                ->value('admission_number') ?? 'None';
+                ->whereNull('deleted_at')
+                ->pluck('admission_number');
+
+            return app(AdmissionNumberPatternService::class)->findHighestAdmission($allAdmissions) ?? 'None';
         });
     }
 

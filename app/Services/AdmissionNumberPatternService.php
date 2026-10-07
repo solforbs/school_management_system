@@ -65,8 +65,86 @@ class AdmissionNumberPatternService
     }
 
     /**
+     * Find the highest admission number from a collection/list of admission numbers.
+     * Accurately determines the highest numeric sequence (e.g. Fahan-021-2025 > Fahan-017-2025).
+     *
+     * @param  iterable<mixed>  $admissionNumbers
+     */
+    public function findHighestAdmission(iterable $admissionNumbers): ?string
+    {
+        $valid = [];
+        foreach ($admissionNumbers as $adm) {
+            if ($adm !== null && trim((string) $adm) !== '') {
+                $valid[] = trim((string) $adm);
+            }
+        }
+
+        if (empty($valid)) {
+            return null;
+        }
+
+        /** @var array<string, array{highest_number: int, highest_admission: string, count: int, year: int|null}> $groups */
+        $groups = [];
+        $unparsed = [];
+
+        foreach ($valid as $adm) {
+            $parsed = $this->parseAdmissionNumber($adm);
+            if (! $parsed) {
+                $unparsed[] = $adm;
+
+                continue;
+            }
+
+            $tmpl = $parsed['template'];
+            if (! isset($groups[$tmpl])) {
+                $year = null;
+                if (preg_match('/(?:19|20)\d{2}/', $tmpl, $ym)) {
+                    $year = (int) $ym[0];
+                }
+
+                $groups[$tmpl] = [
+                    'highest_number' => $parsed['number'],
+                    'highest_admission' => $adm,
+                    'count' => 0,
+                    'year' => $year,
+                ];
+            }
+
+            $groups[$tmpl]['count']++;
+            if ($parsed['number'] >= $groups[$tmpl]['highest_number']) {
+                $groups[$tmpl]['highest_number'] = $parsed['number'];
+                $groups[$tmpl]['highest_admission'] = $adm;
+            }
+        }
+
+        if (! empty($groups)) {
+            // Sort groups: highest year first, then highest count, then highest number
+            uasort($groups, function ($a, $b) {
+                if ($a['year'] !== null && $b['year'] !== null && $a['year'] !== $b['year']) {
+                    return $b['year'] <=> $a['year'];
+                }
+
+                if ($a['count'] !== $b['count']) {
+                    return $b['count'] <=> $a['count'];
+                }
+
+                return $b['highest_number'] <=> $a['highest_number'];
+            });
+
+            $topGroup = reset($groups);
+
+            return $topGroup['highest_admission'];
+        }
+
+        // If none could be parsed with regex, perform natural descending sort
+        usort($unparsed, fn ($a, $b) => strnatcasecmp($b, $a));
+
+        return $unparsed[0] ?? null;
+    }
+
+    /**
      * Detect the school's predominant admission number pattern, highest number used, and next suggested number.
-     * Strictly isolated to the given institution.
+     * Strictly isolated to the given institution (and optionally scoped to a class).
      *
      * @return array{
      *     status: 'consistent'|'inconsistent'|'none',
@@ -93,14 +171,19 @@ class AdmissionNumberPatternService
      *     }>
      * }
      */
-    public function detectPattern(int $institutionId): array
+    public function detectPattern(int $institutionId, ?int $classId = null): array
     {
-        $admissions = DB::table('student_details')
+        $query = DB::table('student_details')
             ->where('institution_id', $institutionId)
             ->whereNotNull('admission_number')
             ->where('admission_number', '!=', '')
-            ->whereNull('deleted_at')
-            ->pluck('admission_number');
+            ->whereNull('deleted_at');
+
+        if ($classId) {
+            $query->where('class_id', $classId);
+        }
+
+        $admissions = $query->pluck('admission_number');
 
         if ($admissions->isEmpty()) {
             $defaultYear = now()->year;
