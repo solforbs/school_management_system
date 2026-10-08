@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\AnalyticsService;
 use App\Services\StudentCacheService;
 use Database\Seeders\PermissionSeeder;
 use Illuminate\Support\Collection;
@@ -292,4 +293,66 @@ it('links siblings enrolled across separate import batches and single forms to t
     foreach ($students as $stu) {
         expect($stu->parent_id)->toBe($parent->id);
     }
+});
+
+it('counts distinct registered parents accurately on dashboard stats without inflating for multi-child families', function () {
+    [$director, $institution, $class] = setupParentTestInstitution();
+    $importer = app(ImportStudents::class);
+    $analytics = app(AnalyticsService::class);
+
+    // Enroll 3 siblings linked to 1 parent and 2 siblings linked to another parent (total 5 students, 2 parents)
+    $importer->import([
+        [
+            'name' => 'Sibling A1',
+            'admission_number' => 'SIB-01',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'Ali Farah',
+            'guardian_phone' => '0711000001',
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling A2',
+            'admission_number' => 'SIB-02',
+            'gender' => 'female',
+            'class' => $class->name,
+            'guardian_name' => 'Ali Farah',
+            'guardian_phone' => '0711000001',
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling A3',
+            'admission_number' => 'SIB-03',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'Ali Farah',
+            'guardian_phone' => '0711000001',
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling B1',
+            'admission_number' => 'SIB-04',
+            'gender' => 'female',
+            'class' => $class->name,
+            'guardian_name' => 'Khadija Abdi',
+            'guardian_phone' => '0722000002',
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling B2',
+            'admission_number' => 'SIB-05',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'Khadija Abdi',
+            'guardian_phone' => '0722000002',
+            'enrollment_status' => 'active',
+        ],
+    ], $institution->id);
+
+    // Registered parents count must be 2, not 5 (the number of students)!
+    expect($institution->registeredParentsCount())->toBe(2);
+
+    $stats = $analytics->institutionStats($director);
+    expect($stats['parents_count'])->toBe(2)
+        ->and($stats['students_count'])->toBe(5);
 });

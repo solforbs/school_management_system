@@ -405,7 +405,7 @@ class AnalyticsService
             'male_students_count' => (int) ($genderCounts->male ?? 0),
             'female_students_count' => (int) ($genderCounts->female ?? 0),
             'active_students_count' => $activeStudentsCount,
-            'parents_count' => $institution?->parents()->count() ?? 0,
+            'parents_count' => $institution?->registeredParentsCount() ?? 0,
             'devices_count' => $devices->count(),
             'devices_online_count' => $devices->filter(fn (Devices $device) => $device->zktecoDevice?->isOnline())->count(),
             'attendance_today_count' => $presentToday,

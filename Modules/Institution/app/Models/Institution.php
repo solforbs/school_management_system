@@ -485,7 +485,20 @@ class Institution extends Model
             'parent_id'             // Local key on student_details (student_details.parent_id)
         )->whereHas('roles', function ($query) {
             $query->where('name', 'Parent'); // Only get users with Parent role
-        });
+        })->distinct();
+    }
+
+    /**
+     * Get the count of unique registered parents belonging to or having children in this institution.
+     */
+    public function registeredParentsCount(): int
+    {
+        return User::role('Parent')
+            ->where(function ($query) {
+                $query->whereHas('parent', fn ($q) => $q->where('institution_id', $this->id))
+                    ->orWhereHas('children', fn ($q) => $q->where('institution_id', $this->id));
+            })
+            ->count();
     }
 
     public function fees()
