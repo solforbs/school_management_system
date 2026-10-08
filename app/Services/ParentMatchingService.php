@@ -313,18 +313,26 @@ class ParentMatchingService
         }
         if ($normName && isset($intraBatchCache['name:'.$normName])) {
             $cachedParent = $intraBatchCache['name:'.$normName];
-            // If the cached parent doesn't have phone registered yet and this row provides it, enrich it
-            if ($normPhone) {
-                $details = ParentDetails::firstOrNew(['parent_id' => $cachedParent->id]);
-                if (empty($details->parent_phone)) {
-                    $details->parent_phone = $normPhone;
-                    $details->institution_id ??= $institutionId;
-                    $details->save();
-                    $this->cacheResolvedParent($intraBatchCache, $cachedParent, $normPhone, $normEmail, $normName);
-                }
-            }
+            $cachedPhone = $this->normalizePhone($cachedParent->parent?->parent_phone);
+            $cachedEmail = $this->normalizeEmail($cachedParent->email);
 
-            return $cachedParent;
+            $phoneConflict = $normPhone && $cachedPhone && $normPhone !== $cachedPhone;
+            $emailConflict = $normEmail && $cachedEmail && ! str_ends_with($cachedEmail, '@parents.generated') && $normEmail !== $cachedEmail;
+
+            if (! $phoneConflict && ! $emailConflict) {
+                // If the cached parent doesn't have phone registered yet and this row provides it, enrich it
+                if ($normPhone && empty($cachedPhone)) {
+                    $details = ParentDetails::firstOrNew(['parent_id' => $cachedParent->id]);
+                    if (empty($details->parent_phone)) {
+                        $details->parent_phone = $normPhone;
+                        $details->institution_id ??= $institutionId;
+                        $details->save();
+                        $this->cacheResolvedParent($intraBatchCache, $cachedParent, $normPhone, $normEmail, $normName);
+                    }
+                }
+
+                return $cachedParent;
+            }
         }
 
         // 3. Check admin decision for ambiguous name match
@@ -410,17 +418,31 @@ class ParentMatchingService
 
         // 6. Check existing parent in DB by normalized name within this institution
         if ($normName) {
-            $existingParentByName = User::role('Parent')
+            $existingParentsByName = User::role('Parent')
                 ->whereRaw('LOWER(TRIM(name)) = ?', [$normName])
                 ->where(function ($q) use ($institutionId) {
                     $q->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
                         ->orWhereHas('children', fn ($cq) => $cq->where('institution_id', $institutionId));
                 })
-                ->first();
+                ->with('parent')
+                ->get();
 
-            if ($existingParentByName) {
+            foreach ($existingParentsByName as $existingParentByName) {
+                $existingPhone = $this->normalizePhone($existingParentByName->parent?->parent_phone);
+                $existingEmail = $this->normalizeEmail($existingParentByName->email);
+
+                // If both have phone and they differ, this is not a match (different parents with same name)
+                if ($normPhone && $existingPhone && $normPhone !== $existingPhone) {
+                    continue;
+                }
+
+                // If both have email and they differ, this is not a match
+                if ($normEmail && $existingEmail && ! str_ends_with($existingEmail, '@parents.generated') && $normEmail !== $existingEmail) {
+                    continue;
+                }
+
                 // If parent has no phone recorded and this row has one, enrich parent_details
-                if ($normPhone) {
+                if ($normPhone && empty($existingPhone)) {
                     $details = ParentDetails::firstOrNew(['parent_id' => $existingParentByName->id]);
                     $details->institution_id ??= $institutionId;
                     if (empty($details->parent_phone)) {
