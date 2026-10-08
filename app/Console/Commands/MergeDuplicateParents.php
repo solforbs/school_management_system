@@ -13,18 +13,32 @@ class MergeDuplicateParents extends Command
 {
     protected $signature = 'parents:merge-duplicates 
                             {--institution= : Limit merging to a specific institution ID}
-                            {--dry-run : Simulate the merge without making changes to the database}';
+                            {--dry-run : Simulate the merge without making changes to the database}
+                            {--fuzzy : Match parent names with minor transliteration/spelling variations (e.g. Sheikh/Sheik, Ayaan/Ayan)}
+                            {--into= : Primary keeper parent ID for explicit manual merge}
+                            {--from= : Comma-separated duplicate parent IDs to merge into the keeper}';
 
-    protected $description = 'Merge duplicate parent accounts sharing the same name or phone within an institution and reassign children.';
+    protected $description = 'Merge duplicate parent accounts sharing the same name, spelling variants, or explicit IDs within an institution and reassign children.';
 
     public function handle(): int
     {
-        $institutionId = $this->option('institution');
         $isDryRun = (bool) $this->option('dry-run');
+        $isFuzzy = (bool) $this->option('fuzzy');
+        $intoId = $this->option('into');
+        $fromIds = $this->option('from');
 
         if ($isDryRun) {
             $this->warn('Running in DRY-RUN mode. No changes will be committed to the database.');
         }
+
+        // 1. Explicit targeted merge
+        if ($intoId && $fromIds) {
+            $fromArray = array_filter(array_map('trim', explode(',', (string) $fromIds)));
+
+            return $this->handleExplicitMerge((int) $intoId, $fromArray, $isDryRun);
+        }
+
+        $institutionId = $this->option('institution');
 
         $institutions = Institution::query()
             ->when($institutionId, fn ($q, $id) => $q->where('id', $id))
@@ -51,9 +65,11 @@ class MergeDuplicateParents extends Command
                 ->with(['parent', 'children'])
                 ->get();
 
-            // Group by normalized name
-            $groupedByName = $parentUsers->groupBy(function (User $user) {
-                return strtolower(trim($user->name));
+            // Group by normalized name (or phonetic/fuzzy transliteration if requested)
+            $groupedByName = $parentUsers->groupBy(function (User $user) use ($isFuzzy) {
+                return $isFuzzy
+                    ? $this->phoneticNormalize($user->name)
+                    : strtolower(trim($user->name));
             });
 
             foreach ($groupedByName as $name => $users) {
@@ -146,5 +162,94 @@ class MergeDuplicateParents extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Perform an explicit merge of duplicate parents into a designated keeper parent.
+     *
+     * @param  array<int, string|int>  $fromIds
+     */
+    private function handleExplicitMerge(int $intoId, array $fromIds, bool $isDryRun): int
+    {
+        $keeper = User::role('Parent')->with(['parent', 'children'])->find($intoId);
+        if (! $keeper) {
+            $this->error("Keeper parent with ID #{$intoId} not found.");
+
+            return self::FAILURE;
+        }
+
+        $duplicates = User::role('Parent')->with(['parent', 'children'])
+            ->whereIn('id', array_map('intval', $fromIds))
+            ->where('id', '!=', $intoId)
+            ->get();
+
+        if ($duplicates->isEmpty()) {
+            $this->error('No duplicate parents found matching IDs: '.implode(', ', $fromIds));
+
+            return self::FAILURE;
+        }
+
+        $this->info("Explicitly merging into Keeper '{$keeper->name}' (ID #{$keeper->id}): duplicates [{$duplicates->pluck('id')->join(', ')}]");
+
+        $totalReassigned = 0;
+        $totalMerged = 0;
+
+        if ($isDryRun) {
+            $dupChildrenCount = StudentDetails::whereIn('parent_id', $duplicates->pluck('id'))->count();
+            $this->info("Dry run: {$duplicates->count()} duplicate parent(s) would be merged and {$dupChildrenCount} student(s) reassigned.");
+
+            return self::SUCCESS;
+        }
+
+        DB::transaction(function () use ($keeper, $duplicates, &$totalMerged, &$totalReassigned) {
+            $keeperDetails = ParentDetails::firstOrNew(['parent_id' => $keeper->id]);
+            foreach ($duplicates as $dup) {
+                if (empty($keeperDetails->parent_phone) && ! empty($dup->parent->parent_phone)) {
+                    $keeperDetails->parent_phone = $dup->parent->parent_phone;
+                }
+                if (empty($keeperDetails->parent_occupation) && ! empty($dup->parent->parent_occupation)) {
+                    $keeperDetails->parent_occupation = $dup->parent->parent_occupation;
+                }
+
+                $reassigned = StudentDetails::where('parent_id', $dup->id)
+                    ->update(['parent_id' => $keeper->id]);
+                $totalReassigned += $reassigned;
+
+                ParentDetails::where('parent_id', $dup->id)->delete();
+                $dup->delete();
+                $totalMerged++;
+            }
+            $keeperDetails->save();
+        });
+
+        $this->info("Successfully merged {$totalMerged} duplicate parent(s) and reassigned {$totalReassigned} student(s) to {$keeper->name} (ID #{$keeper->id}).");
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Phonetic and transliteration normalization for names.
+     * Collapses double vowels/consonants and standardizes common variations (e.g. Sheikh/Sheik, Ayaan/Ayan).
+     */
+    public function phoneticNormalize(?string $name): string
+    {
+        if ($name === null) {
+            return '';
+        }
+
+        $normalized = strtolower(trim($name));
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+
+        // Standardize common Arabic/Somali spelling variants before collapsing
+        $normalized = str_replace(
+            ['sheikh', 'shiek', 'abdirizak', 'abdirazaq', 'abdirisaq', 'yussuf', 'axmed', 'ahmad', 'salaat'],
+            ['sheik', 'sheik', 'abdizak', 'abdizak', 'abdizak', 'yusuf', 'ahmed', 'ahmed', 'salat'],
+            $normalized
+        );
+
+        // Collapse repeated characters: aa -> a, ll -> l, ee -> e, ii -> i, oo -> o, uu -> u
+        $normalized = preg_replace('/(.)\\1+/', '$1', $normalized) ?? $normalized;
+
+        return $normalized;
     }
 }
