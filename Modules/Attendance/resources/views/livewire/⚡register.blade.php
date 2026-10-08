@@ -482,10 +482,9 @@ new #[Title('Class Attendance Register')] class extends Component
                     this.statuses[id] = null;
                 });
             },
-            async toggleNotified(id) {
-                const nextVal = !Boolean(this.notified[id]);
-                this.notified[id] = nextVal;
-                await $wire.toggleParentNotified(id);
+            toggleNotified(id) {
+                if (this.readOnly) return;
+                this.notified[id] = !Boolean(this.notified[id]);
             },
             get presentCount() {
                 return Object.values(this.statuses).filter(s => s === 'present').length;
@@ -768,34 +767,32 @@ new #[Title('Class Attendance Register')] class extends Component
                         @endphp
 
                         {{-- Two-column split register on desktop, single column on small screens --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-200/80 dark:divide-zinc-800">
+                        <div class="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-zinc-200/80 dark:divide-zinc-800">
 
                             {{-- Left Column (Learners 1 to N/2) --}}
                             <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                                 {{-- Header --}}
-                                <div class="grid grid-cols-12 px-3 sm:px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
-                                    <span class="col-span-1 text-center font-mono">#</span>
-                                    <span class="col-span-7">Name</span>
-                                    <span class="col-span-2 text-center flex items-center justify-center">
-                                        <span class="hidden sm:inline">Present</span>
-                                        <flux:icon icon="check" class="size-3.5 sm:hidden text-blue-600 stroke-[3]" />
+                                <div class="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
+                                    <span class="w-6 text-center font-mono shrink-0">#</span>
+                                    <span class="flex-1 min-w-0">Name</span>
+                                    <span class="w-14 sm:w-16 text-center shrink-0 flex items-center justify-center">
+                                        <span>Present</span>
                                     </span>
-                                    <span class="col-span-2 text-center flex items-center justify-center">
-                                        <span class="hidden sm:inline">Absent</span>
-                                        <flux:icon icon="x-mark" class="size-3.5 sm:hidden text-rose-500 stroke-[3]" />
+                                    <span class="w-14 sm:w-16 text-center shrink-0 flex items-center justify-center">
+                                        <span>Absent</span>
                                     </span>
                                 </div>
 
                                 @foreach ($col1 as $student)
                                     @php $sId = (int) $student['student_id']; @endphp
-                                    <div class="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
+                                    <div class="flex items-center gap-2 px-3 sm:px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
                                         {{-- Number --}}
-                                        <span class="col-span-1 text-xs text-zinc-400 font-mono text-center">
+                                        <span class="w-6 text-xs text-zinc-400 font-mono text-center shrink-0">
                                             {{ $student['index'] }}
                                         </span>
 
                                         {{-- Student Name & Indicators --}}
-                                        <div class="col-span-7 pr-1 sm:pr-2 min-w-0">
+                                        <div class="flex-1 min-w-0 pr-1 sm:pr-2">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <span class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate">
                                                     {{ $student['name'] }}
@@ -810,11 +807,11 @@ new #[Title('Class Attendance Register')] class extends Component
                                         </div>
 
                                         {{-- Instant Present Checkbox / Tick --}}
-                                        <div class="col-span-2 flex justify-center">
+                                        <div class="w-14 sm:w-16 flex justify-center shrink-0">
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'present')"
                                                 :class="statuses[{{ $sId }}] === 'present' ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-blue-400 bg-white dark:bg-zinc-800'"
-                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
+                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} present">
                                                 <span x-show="statuses[{{ $sId }}] === 'present'" x-cloak>
                                                     <flux:icon icon="check" class="size-4 stroke-[3]" />
@@ -823,11 +820,11 @@ new #[Title('Class Attendance Register')] class extends Component
                                         </div>
 
                                         {{-- Instant Absent Checkbox / Tick --}}
-                                        <div class="col-span-2 flex justify-center">
+                                        <div class="w-14 sm:w-16 flex justify-center shrink-0">
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'absent')"
                                                 :class="statuses[{{ $sId }}] === 'absent' ? 'bg-rose-500 border-rose-500 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-rose-400 bg-white dark:bg-zinc-800'"
-                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
+                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} absent">
                                                 <span x-show="statuses[{{ $sId }}] === 'absent'" x-cloak>
                                                     <flux:icon icon="x-mark" class="size-4 stroke-[3]" />
@@ -841,29 +838,27 @@ new #[Title('Class Attendance Register')] class extends Component
                             {{-- Right Column (Learners N/2 + 1 to N) --}}
                             <div class="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                                 {{-- Header --}}
-                                <div class="grid grid-cols-12 px-3 sm:px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
-                                    <span class="col-span-1 text-center font-mono">#</span>
-                                    <span class="col-span-7">Name</span>
-                                    <span class="col-span-2 text-center flex items-center justify-center">
-                                        <span class="hidden sm:inline">Present</span>
-                                        <flux:icon icon="check" class="size-3.5 sm:hidden text-blue-600 stroke-[3]" />
+                                <div class="hidden md:flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-zinc-50/70 dark:bg-zinc-800/40 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-200/60 dark:border-zinc-800">
+                                    <span class="w-6 text-center font-mono shrink-0">#</span>
+                                    <span class="flex-1 min-w-0">Name</span>
+                                    <span class="w-14 sm:w-16 text-center shrink-0 flex items-center justify-center">
+                                        <span>Present</span>
                                     </span>
-                                    <span class="col-span-2 text-center flex items-center justify-center">
-                                        <span class="hidden sm:inline">Absent</span>
-                                        <flux:icon icon="x-mark" class="size-3.5 sm:hidden text-rose-500 stroke-[3]" />
+                                    <span class="w-14 sm:w-16 text-center shrink-0 flex items-center justify-center">
+                                        <span>Absent</span>
                                     </span>
                                 </div>
 
                                 @foreach ($col2 as $student)
                                     @php $sId = (int) $student['student_id']; @endphp
-                                    <div class="grid grid-cols-12 items-center px-3 sm:px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
+                                    <div class="flex items-center gap-2 px-3 sm:px-4 py-2.5 hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition">
                                         {{-- Number --}}
-                                        <span class="col-span-1 text-xs text-zinc-400 font-mono text-center">
+                                        <span class="w-6 text-xs text-zinc-400 font-mono text-center shrink-0">
                                             {{ $student['index'] }}
                                         </span>
 
                                         {{-- Student Name & Indicators --}}
-                                        <div class="col-span-7 pr-1 sm:pr-2 min-w-0">
+                                        <div class="flex-1 min-w-0 pr-1 sm:pr-2">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <span class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate">
                                                     {{ $student['name'] }}
@@ -878,11 +873,11 @@ new #[Title('Class Attendance Register')] class extends Component
                                         </div>
 
                                         {{-- Instant Present Checkbox / Tick --}}
-                                        <div class="col-span-2 flex justify-center">
+                                        <div class="w-14 sm:w-16 flex justify-center shrink-0">
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'present')"
                                                 :class="statuses[{{ $sId }}] === 'present' ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-blue-400 bg-white dark:bg-zinc-800'"
-                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
+                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} present">
                                                 <span x-show="statuses[{{ $sId }}] === 'present'" x-cloak>
                                                     <flux:icon icon="check" class="size-4 stroke-[3]" />
@@ -891,11 +886,11 @@ new #[Title('Class Attendance Register')] class extends Component
                                         </div>
 
                                         {{-- Instant Absent Checkbox / Tick --}}
-                                        <div class="col-span-2 flex justify-center">
+                                        <div class="w-14 sm:w-16 flex justify-center shrink-0">
                                             <button type="button"
                                                 @click="setStatus({{ $sId }}, 'absent')"
                                                 :class="statuses[{{ $sId }}] === 'absent' ? 'bg-rose-500 border-rose-500 text-white shadow-xs' : 'border-zinc-300 dark:border-zinc-600 hover:border-rose-400 bg-white dark:bg-zinc-800'"
-                                                class="size-7 sm:size-6 rounded-lg sm:rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
+                                                class="size-6 rounded-md flex items-center justify-center transition border cursor-pointer select-none active:scale-95"
                                                 aria-label="Mark {{ $student['name'] }} absent">
                                                 <span x-show="statuses[{{ $sId }}] === 'absent'" x-cloak>
                                                     <flux:icon icon="x-mark" class="size-4 stroke-[3]" />
@@ -913,11 +908,11 @@ new #[Title('Class Attendance Register')] class extends Component
                 <div class="lg:col-span-4 space-y-4">
 
                     {{-- Absent Today Card --}}
-                    <div class="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 p-5 shadow-xs space-y-4">
-                        <div class="flex items-center justify-between">
+                    <div class="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 shadow-xs overflow-hidden">
+                        <div class="flex items-center justify-between px-5 py-3.5 bg-rose-50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/40">
                             <h3 class="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
                                 <span>Absent today</span>
-                                <span class="text-xs px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800"
+                                <span class="text-xs px-2 py-0.5 rounded-full bg-white text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 font-bold border border-rose-200 dark:border-rose-800"
                                     x-text="absentCount">
                                     {{ $this->absentCount }}
                                 </span>
@@ -930,66 +925,64 @@ new #[Title('Class Attendance Register')] class extends Component
                         </div>
 
                         {{-- Dynamic Absentee Rows --}}
-                        <div x-show="absentCount > 0" class="divide-y divide-zinc-100 dark:divide-zinc-800 space-y-2">
+                        <div x-show="absentCount > 0" class="divide-y divide-zinc-100 dark:divide-zinc-800 px-5">
                             @foreach ($students as $absentee)
                                 @php
                                     $aId = (int) $absentee['student_id'];
                                     $hasPhone = !empty($absentee['parent_phone']);
                                 @endphp
-                                <div x-show="statuses[{{ $aId }}] === 'absent'" x-cloak class="pt-2.5 pb-1 flex items-center justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                                            {{ $absentee['name'] }}
-                                        </p>
-                                        <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                                            <span class="font-mono">#{{ $absentee['admission_number'] }}</span>
-                                            @if($hasPhone)
-                                                <span>•</span>
-                                                <span class="text-zinc-500 font-mono text-[10px]">{{ $absentee['parent_phone'] }}</span>
-                                            @endif
+                                <div x-show="statuses[{{ $aId }}] === 'absent'" x-cloak class="py-3 space-y-2">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                                                {{ $absentee['name'] }}
+                                            </p>
+                                            <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                                                <span class="font-mono">#{{ $absentee['admission_number'] }}</span>
+                                                @if($hasPhone)
+                                                    <span>•</span>
+                                                    <span class="text-zinc-500 font-mono text-[10px]">{{ $absentee['parent_phone'] }}</span>
+                                                @endif
+                                            </div>
                                         </div>
+
+                                        {{-- Parent notified toggle (persisted on Save) --}}
+                                        <label class="flex items-center gap-2 shrink-0 cursor-pointer select-none">
+                                            <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Parent notified</span>
+                                            <button type="button" role="switch"
+                                                :aria-checked="Boolean(notified[{{ $aId }}])"
+                                                aria-label="Parent notified for {{ $absentee['name'] }}"
+                                                @if ($this->canRecord) @click="toggleNotified({{ $aId }})" @else disabled @endif
+                                                :class="notified[{{ $aId }}] ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'"
+                                                class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                                                <span :class="notified[{{ $aId }}] ? 'translate-x-4' : 'translate-x-0.5'"
+                                                    class="inline-block size-4 rounded-full bg-white shadow transition-transform"></span>
+                                            </button>
+                                        </label>
                                     </div>
 
-                                    {{-- Notify Action Button with Direct Fallbacks and Confirmation Modal --}}
-                                    <div class="flex items-center gap-1.5 shrink-0">
-                                        <template x-if="notified[{{ $aId }}]">
-                                            <div class="flex items-center gap-1">
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                                    <flux:icon icon="check" class="size-3 stroke-[3]" />
-                                                    <span>Notified</span>
-                                                </span>
-                                                <button type="button"
-                                                    @click="toggleNotified({{ $aId }})"
-                                                    title="Click to reset / mark unnotified"
-                                                    class="size-6 rounded-full text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center transition cursor-pointer">
-                                                    <flux:icon icon="x-mark" class="size-3" />
-                                                </button>
-                                            </div>
-                                        </template>
-                                        <template x-if="!notified[{{ $aId }}]">
-                                            <div class="flex items-center gap-1">
-                                                @if($hasPhone)
-                                                    <a href="tel:{{ $absentee['parent_phone'] }}" title="Call parent: {{ $absentee['parent_phone'] }}"
-                                                        class="size-7 rounded-lg text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition">
-                                                        <flux:icon icon="phone" class="size-3.5" />
-                                                    </a>
-                                                @endif
-                                                @if(!empty($absentee['parent_email']))
-                                                    <a href="mailto:{{ $absentee['parent_email'] }}?subject={{ rawurlencode('Absence Notice: '.$absentee['name']) }}" title="Email parent: {{ $absentee['parent_email'] }}"
-                                                        class="size-7 rounded-lg text-zinc-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition">
-                                                        <flux:icon icon="envelope" class="size-3.5" />
-                                                    </a>
-                                                @endif
-                                                @if ($this->canRecord)
-                                                <button type="button"
-                                                    @click="openNotifyModal({{ json_encode($absentee) }})"
-                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800 transition cursor-pointer">
-                                                    <flux:icon icon="chat-bubble-left-ellipsis" class="size-3.5" />
-                                                    <span>Notify</span>
-                                                </button>
-                                                @endif
-                                            </div>
-                                        </template>
+                                    {{-- Contact actions while parent has not been notified --}}
+                                    <div x-show="!notified[{{ $aId }}]" class="flex items-center gap-1.5">
+                                        @if($hasPhone)
+                                            <a href="tel:{{ $absentee['parent_phone'] }}" title="Call parent: {{ $absentee['parent_phone'] }}"
+                                                class="size-7 rounded-lg text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition">
+                                                <flux:icon icon="phone" class="size-3.5" />
+                                            </a>
+                                        @endif
+                                        @if(!empty($absentee['parent_email']))
+                                            <a href="mailto:{{ $absentee['parent_email'] }}?subject={{ rawurlencode('Absence Notice: '.$absentee['name']) }}" title="Email parent: {{ $absentee['parent_email'] }}"
+                                                class="size-7 rounded-lg text-zinc-500 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center transition">
+                                                <flux:icon icon="envelope" class="size-3.5" />
+                                            </a>
+                                        @endif
+                                        @if ($this->canRecord)
+                                        <button type="button"
+                                            @click="openNotifyModal({{ json_encode($absentee) }})"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/80 dark:border-blue-800 transition cursor-pointer">
+                                            <flux:icon icon="chat-bubble-left-ellipsis" class="size-3.5" />
+                                            <span>Notify by SMS</span>
+                                        </button>
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach
