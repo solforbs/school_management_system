@@ -25,6 +25,14 @@ class ParentMatchingService
             return null;
         }
 
+        // If multiple numbers are separated by / , ; or words like 'or', 'and', take the first phone candidate
+        if (preg_match('/^([^\/,\;]+)/', $raw, $matches)) {
+            $raw = trim($matches[1]);
+        }
+
+        // Remove notes in parentheses e.g. "0712345678 (Father)"
+        $raw = preg_replace('/\s*\(.*?\)/', '', $raw) ?? $raw;
+
         // Remove whitespace, hyphens, periods, parentheses
         $cleaned = preg_replace('/[\s\-\(\)\.]/', '', $raw);
         if ($cleaned === null || $cleaned === '') {
@@ -128,9 +136,11 @@ class ParentMatchingService
             }
         }
 
-        // 2. Group upload rows by unique guardian key
+        // 2. Group upload rows by unique guardian key (connecting siblings across name & phone)
         /** @var array<string, array{name: string, phone: ?string, email: ?string, rows: array<int, int>, children: array<int, string>}> $guardianGroups */
         $guardianGroups = [];
+        /** @var array<string, string> $nameToGroupKey */
+        $nameToGroupKey = [];
 
         foreach ($rows as $rowIndex => $row) {
             $studentName = trim((string) ($row['name'] ?? ''));
@@ -150,13 +160,19 @@ class ParentMatchingService
                 continue; // Student has no guardian specified
             }
 
-            // Derive grouping key: Phone takes precedence, then email, then name
+            // Derive grouping key with cross-key sibling linking
             if ($normPhone) {
                 $groupKey = 'phone:'.$normPhone;
             } elseif ($normEmail) {
                 $groupKey = 'email:'.$normEmail;
+            } elseif ($normName && isset($nameToGroupKey[$normName])) {
+                $groupKey = $nameToGroupKey[$normName];
             } else {
                 $groupKey = 'name:'.$normName;
+            }
+
+            if ($normName && ! isset($nameToGroupKey[$normName])) {
+                $nameToGroupKey[$normName] = $groupKey;
             }
 
             if (! isset($guardianGroups[$groupKey])) {
@@ -167,6 +183,11 @@ class ParentMatchingService
                     'rows' => [],
                     'children' => [],
                 ];
+            } else {
+                // Enrich group if phone was previously missing
+                if (! $guardianGroups[$groupKey]['phone'] && $normPhone) {
+                    $guardianGroups[$groupKey]['phone'] = $normPhone;
+                }
             }
 
             $guardianGroups[$groupKey]['rows'][] = $rowIndex;
@@ -247,6 +268,223 @@ class ParentMatchingService
     }
 
     /**
+     * Resolve or create a parent user.
+     * Unified logic for single student enrollment, updates, spreadsheet import, and in-place roster editing.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, User>  $intraBatchCache  Optional in-memory cache for batch processing
+     * @param  array<string, string|int>  $adminDecisions  Optional manual decisions
+     */
+    public function resolveParent(
+        int $institutionId,
+        array $data,
+        array &$intraBatchCache = [],
+        array $adminDecisions = []
+    ): ?User {
+        // 1. Explicit parent_id provided (e.g. chosen from dropdown)
+        if (! empty($data['parent_id'])) {
+            $parent = User::whereKey($data['parent_id'])->first();
+            if ($parent instanceof User && $parent->hasRole('Parent')) {
+                $this->cacheResolvedParent($intraBatchCache, $parent);
+
+                return $parent;
+            }
+        }
+
+        $rawName = trim((string) ($data['guardian_name'] ?? $data['parent_name'] ?? ''));
+        $rawPhone = trim((string) ($data['guardian_phone'] ?? $data['parent_phone'] ?? ''));
+        $rawEmail = trim((string) ($data['guardian_email'] ?? $data['parent_email'] ?? ''));
+        $occupation = $data['parent_occupation'] ?? null;
+
+        $normPhone = $this->normalizePhone($rawPhone);
+        $normEmail = $this->normalizeEmail($rawEmail);
+        $normName = $this->normalizeName($rawName);
+
+        if (! $normName && ! $normPhone && ! $normEmail) {
+            return null;
+        }
+
+        // 2. Check intra-batch cache across phone, email, and name keys
+        if ($normPhone && isset($intraBatchCache['phone:'.$normPhone])) {
+            return $intraBatchCache['phone:'.$normPhone];
+        }
+        if ($normEmail && isset($intraBatchCache['email:'.$normEmail])) {
+            return $intraBatchCache['email:'.$normEmail];
+        }
+        if ($normName && isset($intraBatchCache['name:'.$normName])) {
+            $cachedParent = $intraBatchCache['name:'.$normName];
+            // If the cached parent doesn't have phone registered yet and this row provides it, enrich it
+            if ($normPhone) {
+                $details = ParentDetails::firstOrNew(['parent_id' => $cachedParent->id]);
+                if (empty($details->parent_phone)) {
+                    $details->parent_phone = $normPhone;
+                    $details->institution_id ??= $institutionId;
+                    $details->save();
+                    $this->cacheResolvedParent($intraBatchCache, $cachedParent, $normPhone, $normEmail, $normName);
+                }
+            }
+
+            return $cachedParent;
+        }
+
+        // 3. Check admin decision for ambiguous name match
+        $primaryKey = $normPhone ? 'phone:'.$normPhone : ($normEmail ? 'email:'.$normEmail : 'name:'.$normName);
+        if (isset($adminDecisions[$primaryKey])) {
+            $decision = $adminDecisions[$primaryKey];
+            if ($decision !== 'create_new' && is_numeric($decision)) {
+                $parentUser = User::role('Parent')->find((int) $decision);
+                if ($parentUser) {
+                    $this->cacheResolvedParent($intraBatchCache, $parentUser, $normPhone, $normEmail, $normName);
+
+                    return $parentUser;
+                }
+            }
+        }
+
+        // 4. Check existing parent in DB by phone within this institution (or linked children here)
+        if ($normPhone || $rawPhone) {
+            $existingParentDetails = ParentDetails::where(function ($q) use ($normPhone, $rawPhone) {
+                if ($normPhone) {
+                    $q->where('parent_phone', $normPhone);
+                }
+                if ($rawPhone && $rawPhone !== $normPhone) {
+                    $q->orWhere('parent_phone', $rawPhone);
+                }
+            })
+                ->where(function ($q) use ($institutionId) {
+                    $q->where('institution_id', $institutionId)
+                        ->orWhereHas('parent.children', fn ($cq) => $cq->where('institution_id', $institutionId));
+                })
+                ->first();
+
+            // Fallback: check phone globally if institution was unassigned on legacy records
+            if (! $existingParentDetails) {
+                $existingParentDetails = ParentDetails::where(function ($q) use ($normPhone, $rawPhone) {
+                    if ($normPhone) {
+                        $q->where('parent_phone', $normPhone);
+                    }
+                    if ($rawPhone && $rawPhone !== $normPhone) {
+                        $q->orWhere('parent_phone', $rawPhone);
+                    }
+                })->whereNull('institution_id')->first();
+            }
+
+            if ($existingParentDetails && $existingParentDetails->parent) {
+                $parent = $existingParentDetails->parent;
+                if ($rawName !== '' && ($parent->name === 'Parent' || empty($parent->name))) {
+                    $parent->update(['name' => $rawName]);
+                }
+                if ($occupation && empty($existingParentDetails->parent_occupation)) {
+                    $existingParentDetails->update(['parent_occupation' => $occupation]);
+                }
+                if (empty($existingParentDetails->institution_id)) {
+                    $existingParentDetails->update(['institution_id' => $institutionId]);
+                }
+                $this->cacheResolvedParent($intraBatchCache, $parent, $normPhone, $normEmail, $normName);
+
+                return $parent;
+            }
+        }
+
+        // 5. Check existing parent in DB by email
+        if ($normEmail && ! str_ends_with($normEmail, '@parents.generated')) {
+            $existingParent = User::role('Parent')
+                ->where('email', $normEmail)
+                ->where(function ($q) use ($institutionId) {
+                    $q->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
+                        ->orWhereHas('children', fn ($cq) => $cq->where('institution_id', $institutionId));
+                })
+                ->first();
+
+            if (! $existingParent) {
+                // If unique real email exists anywhere, reuse it
+                $existingParent = User::role('Parent')->where('email', $normEmail)->first();
+            }
+
+            if ($existingParent) {
+                $this->cacheResolvedParent($intraBatchCache, $existingParent, $normPhone, $normEmail, $normName);
+
+                return $existingParent;
+            }
+        }
+
+        // 6. Check existing parent in DB by normalized name within this institution
+        if ($normName) {
+            $existingParentByName = User::role('Parent')
+                ->whereRaw('LOWER(TRIM(name)) = ?', [$normName])
+                ->where(function ($q) use ($institutionId) {
+                    $q->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
+                        ->orWhereHas('children', fn ($cq) => $cq->where('institution_id', $institutionId));
+                })
+                ->first();
+
+            if ($existingParentByName) {
+                // If parent has no phone recorded and this row has one, enrich parent_details
+                if ($normPhone) {
+                    $details = ParentDetails::firstOrNew(['parent_id' => $existingParentByName->id]);
+                    $details->institution_id ??= $institutionId;
+                    if (empty($details->parent_phone)) {
+                        $details->parent_phone = $normPhone;
+                        $details->save();
+                    }
+                }
+                $this->cacheResolvedParent($intraBatchCache, $existingParentByName, $normPhone, $normEmail, $normName);
+
+                return $existingParentByName;
+            }
+        }
+
+        // 7. Otherwise, create ONE new parent user for this family
+        $parentEmail = ($normEmail && ! str_ends_with($normEmail, '@parents.generated'))
+            ? $normEmail
+            : 'parent_'.uniqid().'_'.Str::random(4).'@parents.generated';
+
+        $parent = User::create([
+            'name' => $rawName ?: 'Parent',
+            'email' => $parentEmail,
+            'password' => Hash::make($normPhone ?? 'password123'),
+        ]);
+        $parent->syncRoles('Parent');
+
+        ParentDetails::create([
+            'parent_id' => $parent->id,
+            'institution_id' => $institutionId,
+            'parent_phone' => $normPhone ?: ($rawPhone ?: null),
+            'parent_occupation' => $occupation,
+        ]);
+
+        $this->cacheResolvedParent($intraBatchCache, $parent, $normPhone, $normEmail, $normName);
+
+        return $parent;
+    }
+
+    /**
+     * Cache resolved parent across all its identifier keys so siblings in the same batch
+     * match regardless of whether they provide phone, email, or just guardian name.
+     *
+     * @param  array<string, User>  $cache
+     */
+    public function cacheResolvedParent(array &$cache, User $parent, ?string $normPhone = null, ?string $normEmail = null, ?string $normName = null): void
+    {
+        $cache['id:'.$parent->id] = $parent;
+
+        $phone = $normPhone ?: $this->normalizePhone($parent->parent?->parent_phone);
+        if ($phone) {
+            $cache['phone:'.$phone] = $parent;
+        }
+
+        $email = $normEmail ?: $this->normalizeEmail($parent->email);
+        if ($email && ! str_ends_with($email, '@parents.generated')) {
+            $cache['email:'.$email] = $parent;
+        }
+
+        $name = $normName ?: $this->normalizeName($parent->name);
+        if ($name) {
+            $cache['name:'.$name] = $parent;
+        }
+    }
+
+    /**
      * Resolve or create a parent user for a student row, reusing intra-batch parents across siblings.
      *
      * @param  array<string, mixed>  $data
@@ -259,88 +497,6 @@ class ParentMatchingService
         array &$intraBatchCache,
         array $adminDecisions = []
     ): ?User {
-        $name = trim((string) ($data['guardian_name'] ?? $data['parent_name'] ?? ''));
-        $rawPhone = trim((string) ($data['guardian_phone'] ?? $data['parent_phone'] ?? ''));
-        $rawEmail = trim((string) ($data['guardian_email'] ?? $data['parent_email'] ?? ''));
-
-        $normPhone = $this->normalizePhone($rawPhone);
-        $normEmail = $this->normalizeEmail($rawEmail);
-        $normName = $this->normalizeName($name);
-
-        if (! $normName && ! $normPhone && ! $normEmail) {
-            return null;
-        }
-
-        // 1. Determine batch key
-        if ($normPhone) {
-            $groupKey = 'phone:'.$normPhone;
-        } elseif ($normEmail) {
-            $groupKey = 'email:'.$normEmail;
-        } else {
-            $groupKey = 'name:'.$normName;
-        }
-
-        // 2. If already resolved in this batch (sibling in earlier row), reuse immediately!
-        if (isset($intraBatchCache[$groupKey])) {
-            return $intraBatchCache[$groupKey];
-        }
-
-        // 3. Check admin decision for ambiguous name match
-        if (isset($adminDecisions[$groupKey])) {
-            $decision = $adminDecisions[$groupKey];
-            if ($decision !== 'create_new' && is_numeric($decision)) {
-                $parentUser = User::role('Parent')->find((int) $decision);
-                if ($parentUser) {
-                    $intraBatchCache[$groupKey] = $parentUser;
-
-                    return $parentUser;
-                }
-            }
-        }
-
-        // 4. Check existing parent in DB by phone
-        if ($normPhone) {
-            $existingParentDetails = ParentDetails::where('parent_phone', $normPhone)->first();
-            if ($existingParentDetails && $existingParentDetails->parent) {
-                $parent = $existingParentDetails->parent;
-                if ($name !== '' && $parent->name === 'Parent') {
-                    $parent->update(['name' => $name]);
-                }
-                $intraBatchCache[$groupKey] = $parent;
-
-                return $parent;
-            }
-        }
-
-        // 5. Check existing parent in DB by email
-        if ($normEmail) {
-            $existingParent = User::role('Parent')->where('email', $normEmail)->first();
-            if ($existingParent) {
-                $intraBatchCache[$groupKey] = $existingParent;
-
-                return $existingParent;
-            }
-        }
-
-        // 6. Otherwise create ONE new parent for this group
-        $parentEmail = $normEmail ?: 'parent_'.uniqid().'_'.Str::random(4).'@parents.generated';
-
-        $parent = User::create([
-            'name' => $name ?: 'Parent',
-            'email' => $parentEmail,
-            'password' => Hash::make($normPhone ?? 'password123'),
-        ]);
-        $parent->syncRoles('Parent');
-
-        ParentDetails::create([
-            'parent_id' => $parent->id,
-            'institution_id' => $institutionId,
-            'parent_phone' => $normPhone,
-            'parent_occupation' => $data['parent_occupation'] ?? null,
-        ]);
-
-        $intraBatchCache[$groupKey] = $parent;
-
-        return $parent;
+        return $this->resolveParent($institutionId, $data, $intraBatchCache, $adminDecisions);
     }
 }

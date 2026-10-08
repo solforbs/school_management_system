@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Modules\Classes\Models\SchoolClass;
 use Modules\Institution\Models\Institution;
 use Modules\Parent\Models\ParentDetails;
+use Modules\Student\Actions\ImportStudents;
 use Modules\Student\Actions\SaveStudent;
 use Modules\Student\Models\StudentDetails;
 
@@ -157,4 +158,138 @@ it('merges existing duplicate parents using parents:merge-duplicates command', f
     // Both students should now point to the surviving parent
     $updatedStudents = StudentDetails::whereIn('student_id', [$student1->id, $student2->id])->get();
     expect($updatedStudents->pluck('parent_id')->unique()->all())->toBe([$survivingParent->id]);
+});
+
+it('links 5 siblings to a single parent account in bulk import when sharing guardian name', function () {
+    [, $institution, $class] = setupParentTestInstitution();
+    $importer = app(ImportStudents::class);
+
+    $rows = [
+        [
+            'name' => 'Sibling One',
+            'admission_number' => 'SIB-001',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'Fatuma Mohamed',
+            'guardian_phone' => '0711223344',
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling Two',
+            'admission_number' => 'SIB-002',
+            'gender' => 'female',
+            'class' => $class->name,
+            'guardian_name' => 'Fatuma Mohamed',
+            'guardian_phone' => '', // phone omitted in row 2
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling Three',
+            'admission_number' => 'SIB-003',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'fatuma mohamed', // lowercase variant
+            'guardian_phone' => '0711223344',
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling Four',
+            'admission_number' => 'SIB-004',
+            'gender' => 'female',
+            'class' => $class->name,
+            'guardian_name' => 'Fatuma Mohamed',
+            'guardian_phone' => '0711 223 344 / 0722000000', // compound phone format
+            'enrollment_status' => 'active',
+        ],
+        [
+            'name' => 'Sibling Five',
+            'admission_number' => 'SIB-005',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'Fatuma Mohamed',
+            'guardian_phone' => '', // phone omitted
+            'enrollment_status' => 'active',
+        ],
+    ];
+
+    $result = $importer->import($rows, $institution->id);
+
+    expect($result['errors'])->toBeEmpty()
+        ->and($result['created'])->toBe(5);
+
+    // Verify exactly ONE parent account was created for all 5 siblings
+    $parents = User::role('Parent')
+        ->whereRaw('LOWER(TRIM(name)) = ?', ['fatuma mohamed'])
+        ->get();
+
+    expect($parents)->toHaveCount(1);
+
+    $parent = $parents->first();
+    $details = StudentDetails::where('institution_id', $institution->id)
+        ->whereIn('admission_number', ['SIB-001', 'SIB-002', 'SIB-003', 'SIB-004', 'SIB-005'])
+        ->get();
+
+    expect($details)->toHaveCount(5);
+    foreach ($details as $detail) {
+        expect($detail->parent_id)->toBe($parent->id);
+    }
+});
+
+it('links siblings enrolled across separate import batches and single forms to the same parent', function () {
+    [, $institution, $class] = setupParentTestInstitution();
+    $importer = app(ImportStudents::class);
+    $saver = app(SaveStudent::class);
+
+    // Batch 1: Upload first student
+    $importer->import([
+        [
+            'name' => 'First Child',
+            'admission_number' => 'CROSS-001',
+            'gender' => 'male',
+            'class' => $class->name,
+            'guardian_name' => 'Hassan Omar',
+            'guardian_phone' => '',
+            'enrollment_status' => 'active',
+        ],
+    ], $institution->id);
+
+    // Batch 2: Upload second student days later in another batch
+    $importer->import([
+        [
+            'name' => 'Second Child',
+            'admission_number' => 'CROSS-002',
+            'gender' => 'female',
+            'class' => $class->name,
+            'guardian_name' => 'Hassan Omar',
+            'guardian_phone' => '',
+            'enrollment_status' => 'active',
+        ],
+    ], $institution->id);
+
+    // Batch 3: Single student form creation
+    $student3 = $saver->create([
+        'name' => 'Third Child',
+        'admission_number' => 'CROSS-003',
+        'gender' => 'male',
+        'class_id' => $class->id,
+        'parent_name' => 'Hassan Omar',
+        'guardian_name' => 'Hassan Omar',
+    ], $institution->id);
+
+    // Verify all 3 point to the exact same parent user
+    $parents = User::role('Parent')
+        ->whereRaw('LOWER(TRIM(name)) = ?', ['hassan omar'])
+        ->get();
+
+    expect($parents)->toHaveCount(1);
+
+    $parent = $parents->first();
+    $students = StudentDetails::where('institution_id', $institution->id)
+        ->whereIn('admission_number', ['CROSS-001', 'CROSS-002', 'CROSS-003'])
+        ->get();
+
+    expect($students)->toHaveCount(3);
+    foreach ($students as $stu) {
+        expect($stu->parent_id)->toBe($parent->id);
+    }
 });

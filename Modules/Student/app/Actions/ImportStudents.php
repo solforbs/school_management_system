@@ -124,6 +124,7 @@ class ImportStudents
         $enrichedInThisBatch = [];
 
         foreach ($rows as $index => $row) {
+            $row = array_merge(array_fill_keys(self::COLUMNS, ''), $row);
             $row = array_map(fn ($value) => trim((string) $value), $row);
 
             // Skip rows that have no name, admission number, or student ID (even if class or status is pre-selected)
@@ -144,12 +145,13 @@ class ImportStudents
             }
 
             $classId = null;
+            $className = trim((string) ($row['class_name'] ?? ($row['class'] ?? '')));
 
-            if ($row['class_name'] !== '') {
-                $class = $classes->first(fn ($c) => strcasecmp($c->name, $row['class_name']) === 0);
+            if ($className !== '') {
+                $class = $classes->first(fn ($c) => strcasecmp($c->name, $className) === 0);
 
                 if (! $class) {
-                    $errors[$index] = "Class \"{$row['class_name']}\" was not found in your institution.";
+                    $errors[$index] = "Class \"{$className}\" was not found in your institution.";
 
                     continue;
                 }
@@ -193,32 +195,33 @@ class ImportStudents
             $seenAdmissionNumbers[$row['admission_number']] = $index;
 
             // Check student number duplicates if provided
-            if ($row['student_number'] !== '') {
-                if (isset($seenStudentNumbers[$row['student_number']])) {
-                    $firstRowNumber = $seenStudentNumbers[$row['student_number']] + 1;
-                    $errors[$index] = "Student number \"{$row['student_number']}\" is duplicated in row {$firstRowNumber}.";
+            $studentNumber = trim((string) ($row['student_number'] ?? ''));
+            if ($studentNumber !== '') {
+                if (isset($seenStudentNumbers[$studentNumber])) {
+                    $firstRowNumber = $seenStudentNumbers[$studentNumber] + 1;
+                    $errors[$index] = "Student number \"{$studentNumber}\" is duplicated in row {$firstRowNumber}.";
 
                     continue;
                 }
 
                 $existingStuNo = StudentDetails::where('institution_id', $institutionId)
-                    ->where('student_number', $row['student_number'])
+                    ->where('student_number', $studentNumber)
                     ->with('student')
                     ->first();
 
                 if ($existingStuNo) {
                     $existingName = preg_replace('/\s+/', ' ', strtolower(trim((string) ($existingStuNo->student->name ?? ''))));
                     if ($existingName !== $normRowName) {
-                        $errors[$index] = "Student number \"{$row['student_number']}\" is already registered to an existing student in the system.";
+                        $errors[$index] = "Student number \"{$studentNumber}\" is already registered to an existing student in the system.";
 
                         continue;
                     }
                 }
 
-                $seenStudentNumbers[$row['student_number']] = $index;
+                $seenStudentNumbers[$studentNumber] = $index;
             }
 
-            $status = strtolower($row['enrollment_status']) ?: 'active';
+            $status = strtolower(trim((string) ($row['enrollment_status'] ?? ''))) ?: 'active';
             $admissionNumber = $row['admission_number'];
 
             $hasGuardian = ! empty($row['guardian_name']) || ! empty($row['guardian_phone']);

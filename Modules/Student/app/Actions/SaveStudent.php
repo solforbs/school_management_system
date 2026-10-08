@@ -507,84 +507,7 @@ class SaveStudent
      */
     private function resolveParentForCreate(array $data, int $institutionId): ?User
     {
-        if (! empty($data['parent_id'])) {
-            $parent = User::whereKey($data['parent_id'])->first();
-            // Safety check - validation in createRules() should prevent this, but be defensive
-            abort_unless($parent instanceof User && $parent->hasRole('Parent'), 403, 'Invalid parent account.');
-
-            return $parent;
-        }
-
-        if (empty($data['parent_name']) && empty($data['parent_email']) && empty($data['parent_phone'])) {
-            return null;
-        }
-
-        $matcher = app(ParentMatchingService::class);
-        $rawPhone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
-        $phone = $matcher->normalizePhone($rawPhone);
-        $email = $matcher->normalizeEmail(! empty($data['parent_email']) ? trim((string) $data['parent_email']) : null);
-        $normName = $matcher->normalizeName(! empty($data['parent_name']) ? trim((string) $data['parent_name']) : null);
-
-        // Check if an existing parent account already matches this phone
-        if ($phone || $rawPhone) {
-            $existingParentDetails = ParentDetails::where(function ($q) use ($phone, $rawPhone) {
-                if ($phone) {
-                    $q->where('parent_phone', $phone);
-                }
-                if ($rawPhone && $rawPhone !== $phone) {
-                    $q->orWhere('parent_phone', $rawPhone);
-                }
-            })->first();
-            if ($existingParentDetails && $existingParentDetails->parent) {
-                if (! empty($data['parent_name'])) {
-                    $existingParentDetails->parent->update(['name' => $data['parent_name']]);
-                }
-                if (! empty($data['parent_occupation'])) {
-                    $existingParentDetails->update(['parent_occupation' => $data['parent_occupation']]);
-                }
-
-                return $existingParentDetails->parent;
-            }
-        }
-
-        if ($email) {
-            $existingParent = User::role('Parent')->where('email', $email)->first();
-            if ($existingParent) {
-                return $existingParent;
-            }
-        }
-
-        // Check if an existing parent account in this school matches by name
-        if ($normName) {
-            $existingParentByName = User::role('Parent')
-                ->whereRaw('LOWER(name) = ?', [$normName])
-                ->whereHas('parent', fn ($pq) => $pq->where('institution_id', $institutionId))
-                ->first();
-
-            if ($existingParentByName) {
-                return $existingParentByName;
-            }
-        }
-
-        $parentEmail = $email ?: 'parent_'.uniqid().'_'.Str::random(4).'@parents.generated';
-
-        $parent = User::create([
-            'name' => $data['parent_name'] ?? 'Parent',
-            'email' => $parentEmail,
-            'password' => Hash::make($phone ?? 'password123'),
-        ]);
-        $parent->syncRoles('Parent');
-
-        ParentDetails::create([
-            'parent_id' => $parent->id,
-            // The school enrolling the student owns the parent account it
-            // creates alongside them.
-            'institution_id' => $institutionId,
-            'parent_phone' => $phone ?: $rawPhone,
-            'parent_occupation' => $data['parent_occupation'] ?? null,
-        ]);
-
-        return $parent;
+        return app(ParentMatchingService::class)->resolveParent($institutionId, $data);
     }
 
     /**
@@ -598,133 +521,32 @@ class SaveStudent
             // Nothing filled in means the student is no longer linked to a
             // parent; the parent account itself is left alone.
             if ($studentDetails->parent_id) {
+                $oldParentId = $studentDetails->parent_id;
                 $studentDetails->parent_id = null;
                 $studentDetails->save();
+                $this->cleanupOrphanedDummyParent($oldParentId);
             }
 
             return;
         }
 
-        $matcher = app(ParentMatchingService::class);
-        $rawPhone = ! empty($data['parent_phone']) ? trim((string) $data['parent_phone']) : null;
-        $phone = $rawPhone ? $matcher->normalizePhone($rawPhone) : null;
-        $email = ! empty($data['parent_email']) ? $matcher->normalizeEmail(trim((string) $data['parent_email'])) : null;
-
-        // 1. If phone matches an existing parent in parent_details, link to that parent directly
-        if ($phone || $rawPhone) {
-            $existingDetails = ParentDetails::where(function ($q) use ($phone, $rawPhone) {
-                if ($phone) {
-                    $q->where('parent_phone', $phone);
-                }
-                if ($rawPhone !== $phone) {
-                    $q->orWhere('parent_phone', $rawPhone);
-                }
-            })->first();
-            if ($existingDetails && $existingDetails->parent) {
-                $oldParentId = $studentDetails->parent_id;
-
-                $studentDetails->parent_id = $existingDetails->parent_id;
-                $studentDetails->save();
-
-                if (! empty($data['parent_name'])) {
-                    $existingDetails->parent->update(['name' => $data['parent_name']]);
-                }
-                if (! empty($data['parent_occupation'])) {
-                    $existingDetails->update(['parent_occupation' => $data['parent_occupation']]);
-                }
-
-                // If previous parent was an orphaned generated dummy parent, clean it up
-                if ($oldParentId && $oldParentId !== $existingDetails->parent_id) {
-                    $this->cleanupOrphanedDummyParent($oldParentId);
-                }
-
-                return;
-            }
-        }
-
-        // 2. If email matches an existing parent in users, link to that parent
-        if ($email) {
-            $existingParent = User::role('Parent')->where('email', $email)->first();
-            if ($existingParent) {
-                $oldParentId = $studentDetails->parent_id;
-
-                $studentDetails->parent_id = $existingParent->id;
-                $studentDetails->save();
-
-                if (! empty($data['parent_name'])) {
-                    $existingParent->update(['name' => $data['parent_name']]);
-                }
-
-                $details = ParentDetails::firstOrNew(['parent_id' => $existingParent->id]);
-                if ($phone) {
-                    $details->parent_phone = $phone;
-                }
-                if (! empty($data['parent_occupation'])) {
-                    $details->parent_occupation = $data['parent_occupation'];
-                }
-                $details->institution_id ??= $studentDetails->institution_id;
-                $details->save();
-
-                if ($oldParentId && $oldParentId !== $existingParent->id) {
-                    $this->cleanupOrphanedDummyParent($oldParentId);
-                }
-
-                return;
-            }
-        }
-
-        // 3. If phone and email are not provided, match existing parent by name within this institution
-        if (! $phone && ! $email && ! empty($data['parent_name'])) {
-            $existingParentByName = User::role('Parent')
-                ->where('name', trim((string) $data['parent_name']))
-                ->whereHas('parent', fn ($pq) => $pq->where('institution_id', $studentDetails->institution_id))
-                ->first();
-
-            if ($existingParentByName) {
-                $oldParentId = $studentDetails->parent_id;
-
-                $studentDetails->parent_id = $existingParentByName->id;
-                $studentDetails->save();
-
-                if ($oldParentId && $oldParentId !== $existingParentByName->id) {
-                    $this->cleanupOrphanedDummyParent($oldParentId);
-                }
-
-                return;
-            }
-        }
-
-        // 4. Otherwise update current parent or create a new one
-        $parent = $studentDetails->parent_id ? User::find($studentDetails->parent_id) : null;
-
+        $parent = app(ParentMatchingService::class)->resolveParent((int) $studentDetails->institution_id, $data);
         if ($parent) {
-            $parentUpdates = [];
-            if (! empty($data['parent_name'])) {
-                $parentUpdates['name'] = $data['parent_name'];
-            }
-            if ($email) {
-                $parentUpdates['email'] = $email;
-            }
-            if (! empty($parentUpdates)) {
-                $parent->update($parentUpdates);
-            }
-        } else {
-            $parent = User::create([
-                'name' => $data['parent_name'] ?? 'Parent',
-                'email' => $email ?: 'parent_'.uniqid().'_'.Str::random(4).'@parents.generated',
-                'password' => Hash::make($phone ?? 'password123'),
-            ]);
-            $parent->syncRoles('Parent');
+            $oldParentId = $studentDetails->parent_id;
 
-            $studentDetails->parent_id = $parent->id;
-            $studentDetails->save();
+            if ($studentDetails->parent_id !== $parent->id) {
+                $studentDetails->parent_id = $parent->id;
+                $studentDetails->save();
+
+                if ($oldParentId) {
+                    $this->cleanupOrphanedDummyParent($oldParentId);
+                }
+            }
+
+            if (! empty($data['parent_name']) && $parent->name !== $data['parent_name'] && $data['parent_name'] !== 'Parent') {
+                $parent->update(['name' => $data['parent_name']]);
+            }
         }
-
-        $details = ParentDetails::firstOrNew(['parent_id' => $parent->id]);
-        $details->parent_phone = $phone;
-        $details->parent_occupation = $data['parent_occupation'] ?? null;
-        $details->institution_id ??= $studentDetails->institution_id;
-        $details->save();
     }
 
     private function cleanupOrphanedDummyParent(int $parentId): void
