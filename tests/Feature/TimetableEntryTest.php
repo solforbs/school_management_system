@@ -207,3 +207,101 @@ test('a director can completely clear a class timetable via livewire', function 
 
     expect(TimetableEntry::where('class_id', $class->id)->count())->toBe(0);
 });
+
+test('a user can view the printable noticeboard timetable with identical weekly grid UI', function () {
+    [$director, $institution, $class, $subject] = makeTimetableEntrySchool();
+
+    $teacher = User::factory()->create(['name' => 'Mr. Kamau']);
+    $teacher->assignRole('Teacher');
+
+    TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class->id,
+        'teacher_id' => $teacher->id,
+        'subject' => 'Mathematics',
+        'day_of_week' => 'Monday',
+        'start_time' => '08:00',
+        'end_time' => '08:40',
+        'room' => 'Lab 2',
+        'notes' => '[Double Lesson Part 1/2]',
+    ]);
+
+    $response = $this->actingAs($director)->get(route('timetable.print', ['class_id' => $class->id]));
+
+    $response->assertOk()
+        ->assertViewIs('timetable::print')
+        ->assertSee($institution->name)
+        ->assertSee($class->name)
+        ->assertSee('Mathematics')
+        ->assertSee('Mr. Kamau')
+        ->assertSee('Lab 2')
+        ->assertSee('NOTICE BOARD COPY')
+        ->assertSee('Class Teacher')
+        ->assertSee('Principal / Headteacher Stamp');
+});
+
+test('csv import merges target class schedule without affecting other classes and preserves notes', function () {
+    [$director, $institution, $class1] = makeTimetableEntrySchool();
+
+    $class2 = SchoolClass::create([
+        'institution_id' => $institution->id,
+        'name' => 'Form 2 West',
+    ]);
+
+    // Populate Class 2 with entries that must NOT be affected
+    TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class2->id,
+        'subject' => 'History',
+        'day_of_week' => 'Monday',
+        'start_time' => '08:00',
+        'end_time' => '08:45',
+    ]);
+    TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class2->id,
+        'subject' => 'Geography',
+        'day_of_week' => 'Tuesday',
+        'start_time' => '09:00',
+        'end_time' => '09:45',
+    ]);
+
+    // Populate Class 1 with old entries that WILL be replaced
+    TimetableEntry::create([
+        'institution_id' => $institution->id,
+        'class_id' => $class1->id,
+        'subject' => 'Old Subject',
+        'day_of_week' => 'Wednesday',
+        'start_time' => '10:00',
+        'end_time' => '10:45',
+    ]);
+
+    $csvContent = "Day,Start Time,End Time,Subject,Teacher Email,Room,Notes\n".
+        "Monday,08:00,08:40,Physics,,Lab 1,[Double Lesson Part 1/2]\n".
+        "Monday,08:40,09:20,Physics,,Lab 1,[Double Lesson Part 2/2]\n".
+        "Monday,09:20,09:50,Tea Break,,,\n".
+        "Monday,09:50,10:30,Chemistry,,Lab 2,\n";
+
+    $file = UploadedFile::fake()->createWithContent('form1_timetable.csv', $csvContent);
+
+    $response = $this->actingAs($director)->post(route('timetable.import.store'), [
+        'class_id' => $class1->id,
+        'file' => $file,
+    ]);
+
+    $response->assertRedirect(route('timetable.index', ['class_id' => $class1->id]));
+
+    // Class 1 has exactly 3 lessons (Tea Break was skipped as non-teaching break)
+    $class1Entries = TimetableEntry::where('class_id', $class1->id)->get();
+    expect($class1Entries->count())->toBe(3)
+        ->and($class1Entries->pluck('subject')->all())->toContain('Physics', 'Chemistry')
+        ->and($class1Entries->where('subject', 'Physics')->first()->notes)->toBe('[Double Lesson Part 1/2]');
+
+    // Old subject in Class 1 is gone
+    expect(TimetableEntry::where('class_id', $class1->id)->where('subject', 'Old Subject')->exists())->toBeFalse();
+
+    // Class 2 entries remain completely untouched!
+    $class2Entries = TimetableEntry::where('class_id', $class2->id)->get();
+    expect($class2Entries->count())->toBe(2)
+        ->and($class2Entries->pluck('subject')->all())->toBe(['History', 'Geography']);
+});

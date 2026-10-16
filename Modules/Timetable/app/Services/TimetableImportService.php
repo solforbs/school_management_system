@@ -27,7 +27,7 @@ class TimetableImportService
 {
     private const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-    private const SKIP_SUBJECTS = ['BREAK', 'LUNCH', 'SHORT BREAK', 'LUNCH BREAK'];
+    private const SKIP_SUBJECTS = ['BREAK', 'LUNCH', 'SHORT BREAK', 'LUNCH BREAK', 'TEA BREAK', 'TEA', 'MORNING BREAK'];
 
     /**
      * @return array{created: int, skipped: int, errors: array<int, string>, warnings: array<int, string>}
@@ -97,20 +97,24 @@ class TimetableImportService
             }
 
             $teacherId = null;
-            $teacherEmail = isset($columns['teacher_email'])
-                ? trim((string) ($row[$columns['teacher_email']] ?? ''))
-                : '';
+            $teacherIdentifier = isset($columns['teacher'])
+                ? trim((string) ($row[$columns['teacher']] ?? ''))
+                : (isset($columns['teacher_email']) ? trim((string) ($row[$columns['teacher_email']] ?? '')) : '');
 
-            if ($teacherEmail !== '') {
+            if ($teacherIdentifier !== '') {
                 $teacher = User::role('Teacher')
-                    ->where('email', $teacherEmail)
+                    ->where(function ($q) use ($teacherIdentifier) {
+                        $q->where('email', $teacherIdentifier)
+                            ->orWhere('name', $teacherIdentifier)
+                            ->orWhereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($teacherIdentifier))]);
+                    })
                     ->whereHas('teacherUserDetails', fn ($q) => $q->where('institution_id', $class->institution_id))
                     ->first();
 
                 if ($teacher) {
                     $teacherId = $teacher->id;
                 } else {
-                    $warnings[] = "Row {$rowNumber}: no teacher found for '{$teacherEmail}' in this institution - left unassigned.";
+                    $warnings[] = "Row {$rowNumber}: no teacher found for '{$teacherIdentifier}' in this institution - left unassigned.";
                 }
             }
 
@@ -121,6 +125,7 @@ class TimetableImportService
             }
 
             $room = isset($columns['room']) ? trim((string) ($row[$columns['room']] ?? '')) : null;
+            $notes = isset($columns['notes']) ? trim((string) ($row[$columns['notes']] ?? '')) : null;
 
             $toInsert[] = [
                 'institution_id' => $class->institution_id,
@@ -133,7 +138,7 @@ class TimetableImportService
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'room' => $room !== '' ? $room : null,
-                'notes' => null,
+                'notes' => $notes !== '' ? $notes : null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -144,8 +149,40 @@ class TimetableImportService
         }
 
         DB::transaction(function () use ($class, $toInsert) {
-            TimetableEntry::where('class_id', $class->id)->delete();
-            TimetableEntry::insert($toInsert);
+            $existing = TimetableEntry::where('class_id', $class->id)->withCount('lessons')->get();
+            $existingBySlot = $existing->keyBy(fn ($e) => $e->day_of_week.'_'.($e->start_time ? $e->start_time->format('H:i') : ''));
+            $preservedIds = [];
+            $remainingToInsert = [];
+
+            foreach ($toInsert as $row) {
+                $slotKey = $row['day_of_week'].'_'.substr((string) $row['start_time'], 0, 5);
+                $match = $existingBySlot->get($slotKey);
+
+                if ($match && $match->lessons_count > 0) {
+                    $match->update([
+                        'teacher_id' => $row['teacher_id'],
+                        'subject' => $row['subject'],
+                        'subject_id' => $row['subject_id'],
+                        'end_time' => $row['end_time'],
+                        'room' => $row['room'],
+                        'notes' => $row['notes'],
+                    ]);
+                    $preservedIds[] = $match->id;
+                } else {
+                    $remainingToInsert[] = $row;
+                }
+            }
+
+            $staleIds = $existing->pluck('id')->diff($preservedIds)->values()->all();
+            if (! empty($staleIds)) {
+                TimetableEntry::whereIn('id', $staleIds)->whereDoesntHave('lessons')->delete();
+            }
+
+            if (! empty($remainingToInsert)) {
+                foreach (array_chunk($remainingToInsert, 100) as $chunk) {
+                    TimetableEntry::insert($chunk);
+                }
+            }
         });
 
         return ['created' => count($toInsert), 'skipped' => $skipped, 'errors' => $errors, 'warnings' => $warnings];
@@ -205,8 +242,9 @@ class TimetableImportService
                 str_contains($label, 'start') => 'start_time',
                 str_contains($label, 'end') => 'end_time',
                 str_contains($label, 'subject') => 'subject',
-                str_contains($label, 'teacher') => 'teacher_email',
+                str_contains($label, 'teacher') => 'teacher',
                 str_contains($label, 'room') => 'room',
+                str_contains($label, 'note') => 'notes',
                 default => null,
             };
 

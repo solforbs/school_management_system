@@ -1,4 +1,6 @@
 @php
+    $canEdit = $canEdit ?? auth()->user()->can('edit timetable');
+    $canDelete = $canDelete ?? auth()->user()->can('delete timetable');
     $groupedByDay = $entries->groupBy('day_of_week');
 @endphp
 
@@ -39,23 +41,30 @@
                                     </span>
                                 @endif
                                 <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    @can('edit timetable')
+                                    @if ($canEdit)
                                         <a href="{{ route('timetable.edit', $entry->id) }}" wire:navigate.hover class="p-1 rounded text-zinc-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-zinc-800 transition" title="Edit lesson">
                                             <flux:icon icon="pencil-square" class="size-3" />
                                         </a>
-                                    @endcan
-                                    @can('delete timetable')
+                                    @endif
+                                    @if ($canDelete)
                                         <button type="button" wire:click="deleteEntry({{ $entry->id }})" wire:confirm="Remove {{ $entry->subject }} from {{ $day }}?" class="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-white dark:hover:bg-zinc-800 transition" title="Remove lesson">
                                             <flux:icon icon="trash" class="size-3" />
                                         </button>
-                                    @endcan
+                                    @endif
                                 </div>
                             </div>
                         </div>
 
-                        <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="block font-bold text-sm text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                            {{ $entry->subject }}
-                        </a>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <a href="{{ route('timetable.show', $entry->id) }}" wire:navigate.hover class="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                {{ $entry->subject }}
+                            </a>
+                            @if ($entry->isDoubleLesson())
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
+                                    2x Double
+                                </span>
+                            @endif
+                        </div>
 
                         <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mt-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-800/60">
                             <span>{{ $entry->schoolClass?->name ?? $entry->class_name }}</span>

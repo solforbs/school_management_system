@@ -169,6 +169,10 @@ class StudentCacheService
         $cacheKey = "inst_{$institutionId}_classes_".($isAdmin ? 'admin' : 'tenant');
 
         $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return SchoolClass::hydrate($cached);
+        }
+
         if ($cached instanceof Collection) {
             return $cached;
         }
@@ -181,7 +185,7 @@ class StudentCacheService
             ->orderBy('name')
             ->get();
 
-        Cache::put($cacheKey, $classes, self::CLASSES_TTL);
+        Cache::put($cacheKey, $classes->toArray(), self::CLASSES_TTL);
 
         return $classes;
     }

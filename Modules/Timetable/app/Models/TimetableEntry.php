@@ -62,4 +62,19 @@ class TimetableEntry extends Model
     {
         return $this->hasMany(Lesson::class);
     }
+
+    public function isDoubleLesson(): bool
+    {
+        return str_contains((string) $this->notes, '[Double Lesson');
+    }
+
+    public function isDoubleLessonPart1(): bool
+    {
+        return str_contains((string) $this->notes, '[Double Lesson Part 1/2]');
+    }
+
+    public function isDoubleLessonPart2(): bool
+    {
+        return str_contains((string) $this->notes, '[Double Lesson Part 2/2]');
+    }
 }

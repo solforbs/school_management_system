@@ -7,8 +7,8 @@
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Import
                     Timetable</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Upload a CSV or Excel file to bulk import a schedule for a single class.
-                    <br>This replaces that class's existing timetable — other classes are never affected.
+                    Upload a CSV or Excel file to bulk import a weekly schedule for a single class.
+                    <br>Existing slots with recorded student attendance are strictly preserved and updated in-place.
                 </flux:text>
             </div>
 
@@ -75,11 +75,10 @@
                                 <p class="font-semibold mb-2 text-blue-900 dark:text-blue-200">Formatting Instructions:
                                 </p>
                                 <ul class="list-disc list-inside space-y-1.5 mb-4">
-                                    <li><strong>Expected Columns:</strong> Day, Start Time, End Time, Subject, Teacher
-                                        Email (optional), Room (optional).</li>
-                                    <li>A header row is required.</li>
-                                    <li>Rows where the Subject is blank, or exactly "BREAK" or "LUNCH", will be skipped
-                                        automatically.</li>
+                                    <li><strong>Expected Columns:</strong> Day, Start Time, End Time, Subject, Teacher (Name or Email), Room (optional), Notes (optional).</li>
+                                    <li>A header row is required. Column names are flexible and case-insensitive.</li>
+                                    <li><strong>Double Lessons:</strong> Mark consecutive periods with <code>[Double Lesson Part 1/2]</code> and <code>[Double Lesson Part 2/2]</code> in the <em>Notes</em> column.</li>
+                                    <li>Rest breaks (e.g. "TEA BREAK", "LUNCH", "BREAK") will be skipped automatically.</li>
                                 </ul>
                                 <a href="{{ route('timetable.import.template') }}"
                                     class="inline-flex items-center gap-1.5 font-semibold hover:text-blue-600 transition-colors bg-white dark:bg-zinc-900 px-3 py-1.5 rounded-md border border-blue-200/50 dark:border-blue-800/30 shadow-sm">

@@ -55,6 +55,27 @@ class SaveTimetableEntry
     }
 
     /**
+     * Whether the chosen class is already having another lesson at that time.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function classIsDoubleBooked(array $data, ?int $excludeId = null): bool
+    {
+        if (empty($data['class_id'])) {
+            return false;
+        }
+
+        return TimetableEntry::where('class_id', $data['class_id'])
+            ->where('day_of_week', $data['day_of_week'])
+            ->when($excludeId, fn ($query) => $query->whereKeyNot($excludeId))
+            ->where(function ($query) use ($data) {
+                $query->where('start_time', '<', $data['end_time'])
+                    ->where('end_time', '>', $data['start_time']);
+            })
+            ->exists();
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public static function handle(array $data, int $institutionId, ?TimetableEntry $entry = null): TimetableEntry
