@@ -17,7 +17,7 @@
     (function () {
         var target = @js($translateTo);
         var host = window.location.hostname;
-        var domains = ['', '; domain=' + host, '; domain=.' + host.split('.').slice(-2).join('.')];
+        var domains = ['', '; domain=' + host];
 
         domains.forEach(function (domain) {
             document.cookie = target
@@ -100,8 +100,13 @@
 
             if (!scriptRequested) {
                 scriptRequested = true;
+                // Don't rely on the googtrans cookie alone: on real domains it
+                // can be rejected (e.g. multi-part TLDs like .co.ke), so the
+                // language is also applied explicitly once the widget exists.
                 window.googleTranslateElementInit = function () {
-                    mountWidget();
+                    if (mountWidget()) {
+                        applyLanguage();
+                    }
                 };
 
                 var script = document.createElement('script');
