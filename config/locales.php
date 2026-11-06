@@ -5,8 +5,6 @@
  * shammaa/laravel-multilingual locale list (that package does not support
  * Laravel 13 and only does URL-prefix routing, so the locale is resolved
  * per institution by App\Http\Middleware\SetInstitutionLocale instead).
- *
- * @var array{default: string, available: array<string, array{name: string, native: string, rtl?: bool}>}
  */
 return [
     'default' => 'en',
