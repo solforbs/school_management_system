@@ -106,6 +106,10 @@
                         <dd class="text-zinc-900 dark:text-zinc-100">{{ $institution->timezone ?? 'Africa/Nairobi' }}</dd>
                     </div>
                     <div>
+                        <dt class="font-medium text-zinc-500 uppercase tracking-wider text-xs mb-1">Language</dt>
+                        <dd class="text-zinc-900 dark:text-zinc-100">{{ config('locales.available.'.($institution->locale ?? 'en').'.name', 'English') }}</dd>
+                    </div>
+                    <div>
                         <dt class="font-medium text-zinc-500 uppercase tracking-wider text-xs mb-1">Elective Subjects</dt>
                         <dd class="text-zinc-900 dark:text-zinc-100">{{ $institution->elective_subject_count ?? 0 }} or more</dd>
                     </div>

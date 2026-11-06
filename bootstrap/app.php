@@ -4,6 +4,7 @@ use App\Http\Middleware\DenyOnDemoInstitution;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureInstitutionApproved;
 use App\Http\Middleware\EnsureInstitutionHasPaid;
+use App\Http\Middleware\SetInstitutionLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // rest. An unselected <select> then reached the database as '' -
         // fatal against an integer column (e.g. classes.curriculum_id).
         $middleware->append([EnsureAccountIsActive::class, EnsureInstitutionApproved::class, EnsureInstitutionHasPaid::class]);
+        $middleware->web(append: [SetInstitutionLocale::class]);
         $middleware->validateCsrfTokens(except: ['billing/webhook']);
 
         // Sanctum doesn't register this alias itself. The Tether sync

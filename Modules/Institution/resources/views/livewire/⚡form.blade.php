@@ -160,6 +160,19 @@ new #[Title('Institution')] class extends Component
                                 value="{{ old('timezone', $institution->timezone ?? 'Africa/Nairobi') }}" required />
                         </div>
 
+                        @if ($institution->exists)
+                            <div>
+                                <flux:select name="locale" label="Language"
+                                    description="The app loads in this language for everyone in your institution.">
+                                    @foreach (config('locales.available') as $code => $language)
+                                        <flux:select.option value="{{ $code }}" :selected="old('locale', $institution->locale ?? 'en') === $code">
+                                            {{ $language['name'] }} — {{ $language['native'] }}
+                                        </flux:select.option>
+                                    @endforeach
+                                </flux:select>
+                            </div>
+                        @endif
+
                         <div>
                             <flux:input type="number" name="min_electives" label="Minimum Electives"
                                 description="Minimum elective subjects required per student (default 0)."

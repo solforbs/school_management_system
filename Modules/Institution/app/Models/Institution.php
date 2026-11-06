@@ -48,6 +48,7 @@ use Modules\Timetable\Models\TimetableEntry;
  * @property string|null $education_level
  * @property int $min_electives
  * @property int|null $max_electives
+ * @property string $locale
  * @property string $timezone
  * @property bool $is_active
  * @property bool $is_demo
@@ -105,6 +106,7 @@ class Institution extends Model
 
         // Attendance
         'timezone',
+        'locale',
 
         // Status
         'status',
