@@ -25,7 +25,7 @@
                             <flux:text size="sm" class="font-bold text-zinc-900 dark:text-zinc-100 truncate block group-hover:text-blue-600 transition">
                                 {{ currentInstitution()->name }}
                             </flux:text>
-                            <span class="text-[11px] text-zinc-400 font-mono block mt-0.5">Active Campus</span>
+                            <span class="text-[11px] text-zinc-400 font-mono block mt-0.5">{{ __('Active Campus') }}</span>
                         </div>
                         <flux:icon icon="chevron-up-down" class="size-4 text-zinc-400 group-hover:text-zinc-600 shrink-0 ml-1.5" />
                     </a>

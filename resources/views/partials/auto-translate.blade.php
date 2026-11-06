@@ -10,7 +10,21 @@
 @php
     $locale = app()->getLocale();
     $overrides = config('locales.machine_translation_codes', []);
-    $translateTo = array_key_exists($locale, $overrides) ? $overrides[$locale] : $locale;
+    $translateTo = config('locales.machine_translate_pages')
+        ? (array_key_exists($locale, $overrides) ? $overrides[$locale] : $locale)
+        : null;
+
+    // Text already translated by lang/{locale}.json must not be fed to
+    // Google again - it treats it as English and garbles it.
+    $translatedStrings = [];
+
+    if ($translateTo && is_file($jsonPath = lang_path($locale.'.json'))) {
+        $translatedStrings = array_values(array_unique(array_filter(
+            (array) json_decode((string) file_get_contents($jsonPath), true),
+            fn ($value, $key): bool => is_string($value) && $value !== $key,
+            ARRAY_FILTER_USE_BOTH,
+        )));
+    }
 @endphp
 
 <script>
@@ -26,6 +40,7 @@
         });
 
         window.__autoTranslateTarget = target;
+        window.__autoTranslateKnown = new Set(@js($translatedStrings));
 
         // Head scripts only run once per full page load, so the listeners
         // below are registered a single time and survive wire:navigate.
@@ -87,6 +102,28 @@
             root.querySelectorAll('[x-text],[x-html]').forEach(function (el) {
                 el.classList.add('notranslate');
             });
+
+            protectTranslatedText(root);
+        }
+
+        // Skips text the server already rendered from lang/{locale}.json.
+        function protectTranslatedText(root) {
+            var known = window.__autoTranslateKnown;
+
+            if (!known || known.size === 0) {
+                return;
+            }
+
+            var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            var node;
+
+            while ((node = walker.nextNode())) {
+                var text = node.nodeValue.trim();
+
+                if (text && node.parentElement && known.has(text)) {
+                    node.parentElement.classList.add('notranslate');
+                }
+            }
         }
 
         function translatePage() {
