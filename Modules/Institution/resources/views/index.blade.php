@@ -120,11 +120,11 @@
                     </div>
                     <div class="text-2xl font-black text-zinc-900 tracking-tight group-hover:text-blue-600 transition">
                         <span x-data="animatedCounter({{ $totalStudentsCombined }})"
-                            x-text="count.toLocaleString()">{{ number_format($totalStudentsCombined) }}</span> Students
+                            x-text="displayCount">{{ number_format($totalStudentsCombined) }}</span> Students
                     </div>
                     <div class="text-xs text-zinc-500 mt-2 font-medium flex items-center justify-between">
                         <span><strong class="text-zinc-800 font-semibold" x-data="animatedCounter({{ $totalTeachersCombined }})"
-                                x-text="count">{{ $totalTeachersCombined }}</strong> Faculty Members</span>
+                                x-text="displayCount">{{ $totalTeachersCombined }}</strong> Faculty Members</span>
                         <span class="text-blue-600 font-semibold group-hover:underline">View Directory &rarr;</span>
                     </div>
                 </a>
@@ -257,7 +257,7 @@
                                         &rarr;</span>
                                     <span class="text-sm font-black text-zinc-900 mt-0.5 block"
                                         x-data="animatedCounter({{ $studentCount }})"
-                                        x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span>
+                                        x-text="displayCount">{{ number_format($studentCount) }}</span>
                                 </a>
                                 <a href="{{ route('teacher.index') }}"
                                     class="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-center hover:bg-zinc-100 hover:border-zinc-200 transition group/tile"
@@ -267,7 +267,7 @@
                                         &rarr;</span>
                                     <span class="text-sm font-black text-zinc-900 mt-0.5 block"
                                         x-data="animatedCounter({{ $teacherCount }})"
-                                        x-text="count">{{ number_format($teacherCount) }}</span>
+                                        x-text="displayCount">{{ number_format($teacherCount) }}</span>
                                 </a>
                                 <a href="{{ route('classes.index') }}"
                                     class="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-center hover:bg-zinc-100 hover:border-zinc-200 transition group/tile"
@@ -277,7 +277,7 @@
                                         &rarr;</span>
                                     <span class="text-sm font-black text-zinc-900 mt-0.5 block"
                                         x-data="animatedCounter({{ $classCount }})"
-                                        x-text="count">{{ number_format($classCount) }}</span>
+                                        x-text="displayCount">{{ number_format($classCount) }}</span>
                                 </a>
                             @else
                                 <div class="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-center">
@@ -285,21 +285,21 @@
                                         class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Students</span>
                                     <span class="text-sm font-black text-zinc-900 mt-0.5 block"
                                         x-data="animatedCounter({{ $studentCount }})"
-                                        x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span>
+                                        x-text="displayCount">{{ number_format($studentCount) }}</span>
                                 </div>
                                 <div class="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-center">
                                     <span
                                         class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Teachers</span>
                                     <span class="text-sm font-black text-zinc-900 mt-0.5 block"
                                         x-data="animatedCounter({{ $teacherCount }})"
-                                        x-text="count">{{ number_format($teacherCount) }}</span>
+                                        x-text="displayCount">{{ number_format($teacherCount) }}</span>
                                 </div>
                                 <div class="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-center">
                                     <span
                                         class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">Streams</span>
                                     <span class="text-sm font-black text-zinc-900 mt-0.5 block"
                                         x-data="animatedCounter({{ $classCount }})"
-                                        x-text="count">{{ number_format($classCount) }}</span>
+                                        x-text="displayCount">{{ number_format($classCount) }}</span>
                                 </div>
                             @endif
                         </div>
@@ -419,7 +419,7 @@
 
                                 <td class="py-4 px-4 sm:px-5 text-xs font-semibold text-zinc-900 whitespace-nowrap">
                                     <span x-data="animatedCounter({{ $studentCount }})"
-                                        x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span>
+                                        x-text="displayCount">{{ number_format($studentCount) }}</span>
                                     Learners
                                 </td>
 

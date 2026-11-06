@@ -293,10 +293,10 @@ new #[Title('Institutions')] class extends Component
                     </div>
                 </div>
                 <div class="text-2xl font-black text-zinc-900 dark:text-white tracking-tight group-hover:text-blue-600 transition">
-                    <span x-data="animatedCounter({{ $totalStudentsCombined }})" x-text="count.toLocaleString()">{{ number_format($totalStudentsCombined) }}</span> Students
+                    <span x-data="animatedCounter({{ $totalStudentsCombined }})" x-text="displayCount">{{ number_format($totalStudentsCombined) }}</span> Students
                 </div>
                 <div class="text-xs text-zinc-500 mt-2 font-medium flex items-center justify-between">
-                    <span><strong class="text-zinc-800 dark:text-zinc-200 font-semibold" x-data="animatedCounter({{ $totalTeachersCombined }})" x-text="count">{{ $totalTeachersCombined }}</strong> Faculty Members</span>
+                    <span><strong class="text-zinc-800 dark:text-zinc-200 font-semibold" x-data="animatedCounter({{ $totalTeachersCombined }})" x-text="displayCount">{{ $totalTeachersCombined }}</strong> Faculty Members</span>
                     <span class="text-blue-600 font-semibold group-hover:underline">View Directory &rarr;</span>
                 </div>
             </a>
@@ -409,28 +409,28 @@ new #[Title('Institutions')] class extends Component
                             @if ($isCurrent)
                                 <a href="{{ route('student.index') }}" wire:navigate.hover class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-center hover:bg-zinc-100 transition group/tile" title="View Student Directory">
                                     <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400 block group-hover/tile:text-blue-600 transition truncate">Students &rarr;</span>
-                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $studentCount }})" x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span>
+                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $studentCount }})" x-text="displayCount">{{ number_format($studentCount) }}</span>
                                 </a>
                                 <a href="{{ route('teacher.index') }}" wire:navigate.hover class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-center hover:bg-zinc-100 transition group/tile" title="View Faculty List">
                                     <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400 block group-hover/tile:text-purple-600 transition truncate">Teachers &rarr;</span>
-                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $teacherCount }})" x-text="count">{{ number_format($teacherCount) }}</span>
+                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $teacherCount }})" x-text="displayCount">{{ number_format($teacherCount) }}</span>
                                 </a>
                                 <a href="{{ route('classes.index') }}" wire:navigate.hover class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-center hover:bg-zinc-100 transition group/tile" title="View Class Streams">
                                     <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400 block group-hover/tile:text-emerald-600 transition truncate">Streams &rarr;</span>
-                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $classCount }})" x-text="count">{{ number_format($classCount) }}</span>
+                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $classCount }})" x-text="displayCount">{{ number_format($classCount) }}</span>
                                 </a>
                             @else
                                 <div class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-center">
                                     <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400 block truncate">Students</span>
-                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $studentCount }})" x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span>
+                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $studentCount }})" x-text="displayCount">{{ number_format($studentCount) }}</span>
                                 </div>
                                 <div class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-center">
                                     <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400 block truncate">Teachers</span>
-                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $teacherCount }})" x-text="count">{{ number_format($teacherCount) }}</span>
+                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $teacherCount }})" x-text="displayCount">{{ number_format($teacherCount) }}</span>
                                 </div>
                                 <div class="p-2 sm:p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 text-center">
                                     <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-400 block truncate">Streams</span>
-                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $classCount }})" x-text="count">{{ number_format($classCount) }}</span>
+                                    <span class="text-xs sm:text-sm font-black text-zinc-900 dark:text-white mt-0.5 block" x-data="animatedCounter({{ $classCount }})" x-text="displayCount">{{ number_format($classCount) }}</span>
                                 </div>
                             @endif
                         </div>
@@ -537,7 +537,7 @@ new #[Title('Institutions')] class extends Component
                                 </td>
 
                                 <td class="py-4 px-4 sm:px-5 text-xs font-semibold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
-                                    <span x-data="animatedCounter({{ $studentCount }})" x-text="count.toLocaleString()">{{ number_format($studentCount) }}</span> Learners
+                                    <span x-data="animatedCounter({{ $studentCount }})" x-text="displayCount">{{ number_format($studentCount) }}</span> Learners
                                 </td>
 
                                 <td class="py-4 px-4 sm:px-5 whitespace-nowrap">
