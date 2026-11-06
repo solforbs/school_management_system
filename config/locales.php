@@ -11,6 +11,21 @@
 return [
     'default' => 'en',
 
+    /*
+     * Google page-translator language codes where they differ from ours.
+     * null = render untranslated (English, or not supported by Google).
+     */
+    'machine_translation_codes' => [
+        'en' => null,
+        'en-US' => null,
+        'en-GB' => null,
+        'es-MX' => 'es',
+        'pt-BR' => 'pt',
+        'zh' => 'zh-CN',
+        'fil' => 'tl',
+        'br' => null,
+    ],
+
     'available' => [
         // African
         'en' => ['name' => 'English', 'native' => 'English'],

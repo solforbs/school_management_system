@@ -20,4 +20,6 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+@include('partials.auto-translate')
 {{-- Light mode by default --}}
