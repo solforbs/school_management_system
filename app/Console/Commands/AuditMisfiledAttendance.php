@@ -35,11 +35,11 @@ class AuditMisfiledAttendance extends Command
         if ($conflicts->isNotEmpty()) {
             $rows = $conflicts->flatMap(fn (array $conflict) => $conflict['rows']->map(fn (Attendance $row) => [
                 $conflict['date'],
-                $row->student?->name ?? '#'.$row->student_id,
-                $row->schoolClass?->name ?? '#'.$row->school_class_id,
+                $row->student->name ?? '#'.$row->student_id,
+                $row->schoolClass->name ?? '#'.$row->school_class_id,
                 $row->status,
                 (int) $row->school_class_id === $conflict['current_class_id'] ? 'own class' : 'LIKELY WRONG',
-                $row->recorder?->name ?? '-',
+                $row->recorder->name ?? '-',
                 $row->id,
             ]));
             $this->table(['Date', 'Learner', 'Recorded in', 'Status', 'Verdict', 'Recorded by', 'Row ID'], $this->limited($rows->all(), $limit));
@@ -50,10 +50,10 @@ class AuditMisfiledAttendance extends Command
         if ($otherClassRows->isNotEmpty()) {
             $rows = $otherClassRows->map(fn (Attendance $row) => [
                 $row->date->toDateString(),
-                $row->student?->name ?? '#'.$row->student_id,
-                $row->schoolClass?->name ?? '#'.$row->school_class_id,
+                $row->student->name ?? '#'.$row->student_id,
+                $row->schoolClass->name ?? '#'.$row->school_class_id,
                 $row->status,
-                $row->recorder?->name ?? '-',
+                $row->recorder->name ?? '-',
                 $row->id,
             ]);
             $this->table(['Date', 'Learner', 'Recorded in', 'Status', 'Recorded by', 'Row ID'], $this->limited($rows->all(), $limit));
