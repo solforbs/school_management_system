@@ -22,7 +22,7 @@
                     <span class="text-xs text-zinc-300">&bull;</span>
                     <span class="text-xs text-zinc-500 font-medium">Personnel Dossier</span>
                 </div>
-                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">{{ $staff->name }}
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900"><span translate="no">{{ $staff->name }}</span>
                 </flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
                     Employment terms, departmental allocation, and monthly payroll history.
@@ -60,7 +60,7 @@
                     </div>
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-lg sm:text-xl font-black text-zinc-900 truncate">{{ $staff->name }}</h3>
+                            <h3 class="text-lg sm:text-xl font-black text-zinc-900 truncate"><span translate="no">{{ $staff->name }}</span></h3>
                             <span
                                 class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0
                                 {{ $staff->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-zinc-100 text-zinc-600 border border-zinc-200' }}">
@@ -75,7 +75,7 @@
                             <span class="text-zinc-300">&bull;</span>
                             <span class="font-mono text-zinc-600 font-bold whitespace-nowrap">{{ $staffNo }}</span>
                             <span class="text-zinc-300">&bull;</span>
-                            <span class="truncate">{{ $staff->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span>
+                            <span class="truncate"><span translate="no">{{ $staff->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span></span>
                         </div>
                     </div>
                 </div>
@@ -160,7 +160,7 @@
                     <div>
                         <h3 class="text-base font-bold text-zinc-900">Salary Disbursements & Payroll History</h3>
                         <p class="text-xs text-zinc-500 mt-0.5">Historical compensation disbursements for
-                            {{ $staff->name }}.</p>
+                            <span translate="no">{{ $staff->name }}</span>.</p>
                     </div>
                     @can('create payroll')
                         <flux:button href="{{ route('staff.payments.create') }}" icon="plus" size="sm" variant="subtle"

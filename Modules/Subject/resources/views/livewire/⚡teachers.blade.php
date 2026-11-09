@@ -310,7 +310,7 @@ new #[Title('Subject Teachers')] class extends Component {
                     <flux:select label="Class" wire:model.live="classId">
                         <flux:select.option value="">Select Class</flux:select.option>
                         @foreach ($this->classes as $schoolClass)
-                            <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}
+                            <flux:select.option translate="no" value="{{ $schoolClass->id }}">{{ $schoolClass->name }}
                             </flux:select.option>
                         @endforeach
                     </flux:select>
@@ -357,7 +357,7 @@ new #[Title('Subject Teachers')] class extends Component {
                                 @php($teacher = $this->teachers->firstWhere('id', (int) $teacherId))
                                 <button type="button" wire:click="toggle('{{ $teacherId }}')"
                                     class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25">
-                                    {{ $teacher?->name }}
+                                    <span translate="no">{{ $teacher?->name }}</span>
                                     <span aria-hidden="true">&times;</span>
                                     <span class="sr-only">Remove</span>
                                 </button>
@@ -392,12 +392,12 @@ new #[Title('Subject Teachers')] class extends Component {
                                             'bg-emerald-500 text-white' => $isSelected,
                                             'bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' => !$isSelected,
                                         ])>
-                                            {{ $teacher->initials() }}
+                                            <span translate="no">{{ $teacher->initials() }}</span>
                                         </span>
 
                                         <span class="min-w-0 flex-1">
                                             <span class="block truncate text-sm font-medium text-zinc-900 dark:text-white">
-                                                {{ $teacher->name }}
+                                                <span translate="no">{{ $teacher->name }}</span>
                                             </span>
                                             <span class="block truncate text-xs text-zinc-500">
                                                 @php(
@@ -459,14 +459,14 @@ new #[Title('Subject Teachers')] class extends Component {
                 <flux:select wire:model.live="filterClassId" label="Class">
                     <flux:select.option value="">All classes</flux:select.option>
                     @foreach ($this->classes as $schoolClass)
-                        <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}
+                        <flux:select.option translate="no" value="{{ $schoolClass->id }}">{{ $schoolClass->name }}
                         </flux:select.option>
                     @endforeach
                 </flux:select>
                 <flux:select wire:model.live="filterTeacherId" label="Teacher">
                     <flux:select.option value="">All teachers</flux:select.option>
                     @foreach ($this->teachers as $teacher)
-                        <flux:select.option value="{{ $teacher->id }}">{{ $teacher->name }}</flux:select.option>
+                        <flux:select.option translate="no" value="{{ $teacher->id }}">{{ $teacher->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
@@ -491,7 +491,7 @@ new #[Title('Subject Teachers')] class extends Component {
                         @foreach ($classAssignments as $assignment)
                             <flux:table.row :key="$assignment->id">
                                 <flux:table.cell>{{ $assignment->subject?->name ?? '—' }}</flux:table.cell>
-                                <flux:table.cell>{{ $assignment->teacher?->name ?? '—' }}</flux:table.cell>
+                                <flux:table.cell><span translate="no">{{ $assignment->teacher?->name ?? '—' }}</span></flux:table.cell>
                                 <flux:table.cell>
                                     @can('edit subject')
                                         <flux:modal.trigger name="confirm-remove-assignment">

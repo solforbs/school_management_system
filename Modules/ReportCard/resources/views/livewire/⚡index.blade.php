@@ -156,7 +156,7 @@ new #[Title('Report Cards')] class extends Component
                         Academic Dossiers
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? 'Campus Records' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? 'Campus Records' }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Student Report Cards</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -172,7 +172,7 @@ new #[Title('Report Cards')] class extends Component
                         icon="printer" 
                         variant="primary" 
                         class="font-semibold shadow-sm px-4">
-                        {{ $currentClass ? 'Print Class Bundle (PDF)' : 'Print ' . ($homeroomClass ? $homeroomClass->name : 'Class') . ' Bundle' }}
+                        <span translate="no">{{ $currentClass ? 'Print Class Bundle (PDF)' : 'Print ' . ($homeroomClass ? $homeroomClass->name : 'Class') . ' Bundle' }}</span>
                     </flux:button>
                 @endif
                 <x-export-buttons base-route="reportcard.export" module="reportcard" :params="[
@@ -253,7 +253,7 @@ new #[Title('Report Cards')] class extends Component
                     <option value="">All Classes</option>
                     @foreach ($this->classes as $c)
                         <option value="{{ $c->id }}" {{ $currentClass == $c->id ? 'selected' : '' }}>
-                            {{ $c->name }} ({{ $c->level }})
+                            <span translate="no">{{ $c->name }}</span> ({{ $c->level }})
                         </option>
                     @endforeach
                 </select>
@@ -265,7 +265,7 @@ new #[Title('Report Cards')] class extends Component
                     <option value="">All Terms</option>
                     @foreach ($terms as $t)
                         <option value="{{ $t['id'] }}" {{ $currentTerm == $t['id'] ? 'selected' : '' }}>
-                            {{ $t['name'] }}
+                            <span translate="no">{{ $t['name'] }}</span>
                         </option>
                     @endforeach
                 </select>

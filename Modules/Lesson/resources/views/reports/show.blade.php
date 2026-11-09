@@ -4,7 +4,7 @@
         <div class="mb-4 flex items-center justify-between">
             <div>
                 <flux:heading size="lg">
-                    {{ $report->schoolClass?->name }} &mdash; {{ ucfirst($report->type) }} Report
+                    <span translate="no">{{ $report->schoolClass?->name }}</span> &mdash; {{ ucfirst($report->type) }} Report
                 </flux:heading>
                 <flux:text class="text-zinc-500">
                     {{ $report->period_start->format('d M Y') }}
@@ -68,7 +68,7 @@
                                         {{ $period['entry']->subject }}
                                     </td>
                                     <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2">
-                                        {{ $period['entry']->teacher?->name ?? '—' }}
+                                        <span translate="no">{{ $period['entry']->teacher?->name ?? '—' }}</span>
                                     </td>
                                     <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2">
                                         <flux:badge :color="$period['lesson']?->statusColor() ?? 'red'">

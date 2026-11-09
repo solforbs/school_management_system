@@ -266,7 +266,7 @@
                                         {{ $name }}
                                     </div>
                                     <div class="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate">
-                                        {{ $studentDetails->admission_number }}
+                                        <span translate="no">{{ $studentDetails->admission_number }}</span>
                                     </div>
                                 </div>
                             </div>

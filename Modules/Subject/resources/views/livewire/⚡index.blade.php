@@ -143,7 +143,7 @@ new #[Title('Academic Subjects')] class extends Component {
                 </span>
                 <span class="text-zinc-300">&bull;</span>
                 <span
-                    class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? 'Campus Operations' }}</span>
+                    class="text-xs text-zinc-500 font-medium"><span translate="no">{{ currentInstitution()?->name ?? 'Campus Operations' }}</span></span>
             </div>
             <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Academic Subjects
             </flux:heading>

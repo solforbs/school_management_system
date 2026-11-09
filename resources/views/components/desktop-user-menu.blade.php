@@ -13,8 +13,8 @@
                 :initials="auth()->user()->initials()"
             />
             <div class="grid flex-1 text-start text-sm leading-tight">
-                <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
-                <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
+                <flux:heading class="truncate"><span translate="no">{{ auth()->user()->name }}</span></flux:heading>
+                <flux:text class="truncate"><span translate="no">{{ auth()->user()->email }}</span></flux:text>
             </div>
         </div>
         <flux:menu.separator />

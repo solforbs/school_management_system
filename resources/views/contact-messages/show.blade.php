@@ -9,9 +9,9 @@
         <flux:card class="max-w-2xl">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <flux:heading size="lg">{{ $message->name }}</flux:heading>
+                    <flux:heading size="lg"><span translate="no">{{ $message->name }}</span></flux:heading>
                     <flux:text class="mt-1 text-zinc-500 dark:text-zinc-400">
-                        {{ $message->email }}{{ $message->phone ? ' · '.$message->phone : '' }}
+                        <span translate="no">{{ $message->email }}</span><span translate="no">{{ $message->phone ? ' · '.$message->phone : '' }}</span>
                     </flux:text>
                 </div>
                 <flux:badge color="indigo">

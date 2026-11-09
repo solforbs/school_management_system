@@ -33,14 +33,14 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <flux:heading size="xl" class="font-bold text-zinc-900 dark:text-white">
-                            {{ $reportCard->student?->name }}
+                            <span translate="no">{{ $reportCard->student?->name }}</span>
                         </flux:heading>
                         <flux:badge :color="$isCbc ? 'emerald' : 'blue'" size="sm" class="font-bold">
                             {{ $isCbc ? 'CBC Competency Report' : '8-4-4 Report' }}
                         </flux:badge>
                     </div>
                     <flux:text class="text-zinc-500 text-sm">
-                        {{ $reportCard->schoolClass?->name }} &middot; {{ $reportCard->term }}
+                        <span translate="no">{{ $reportCard->schoolClass?->name }}</span> &middot; {{ $reportCard->term }}
                         {{ $reportCard->academic_year }}
                     </flux:text>
                 </div>
@@ -171,7 +171,7 @@
                                     @endphp
                                     <tr class="hover:bg-zinc-50/50">
                                         <td class="py-3.5 px-4 font-bold text-zinc-900">
-                                            {{ $row->name }}
+                                            <span translate="no">{{ $row->name }}</span>
                                         </td>
                                         <td class="py-3.5 px-4 text-xs text-zinc-500">
                                             {{ $row->strand ?? ($row->learningArea ?? 'Core Learning Area') }}
@@ -265,7 +265,7 @@
             {{-- Footer Action Bar --}}
             <div class="border-t border-zinc-100 px-6 py-4 bg-zinc-50 flex items-center justify-between">
                 <span class="text-xs text-zinc-400">
-                    {{ $reportCard->institution?->name ?? (currentInstitution()?->name ?? config('app.name', 'Institution')) }}
+                    <span translate="no">{{ $reportCard->institution?->name ?? (currentInstitution()?->name ?? config('app.name', 'Institution')) }}</span>
                     &middot; Academic Management
                 </span>
                 <div class="flex items-center gap-3">

@@ -93,7 +93,7 @@ new #[Title('Parent')] class extends Component
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Parent</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update information and linked students for {{ $parent->name }}.
+                    Update information and linked students for <span translate="no">{{ $parent->name }}</span>.
                 </flux:text>
             </div>
             
@@ -168,17 +168,17 @@ new #[Title('Parent')] class extends Component
                                             class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
                                         <div class="flex flex-col">
                                             <div class="flex items-center gap-2">
-                                                <span class="text-sm font-medium text-zinc-900 dark:text-white">{{ $studentDetails->student?->name }}</span>
+                                                <span class="text-sm font-medium text-zinc-900 dark:text-white"><span translate="no">{{ $studentDetails->student?->name }}</span></span>
                                                 @if ($isLinked)
                                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">Currently Linked</span>
                                                 @endif
                                             </div>
                                             <span class="text-xs text-zinc-500">
                                                 @if ($studentDetails->admission_number)
-                                                    {{ $studentDetails->admission_number }}
+                                                    <span translate="no">{{ $studentDetails->admission_number }}</span>
                                                 @endif
                                                 @if (isAdmin())
-                                                    &mdash; {{ $studentDetails->institution?->name }}
+                                                    &mdash; <span translate="no">{{ $studentDetails->institution?->name }}</span>
                                                 @endif
                                             </span>
                                         </div>
@@ -279,13 +279,13 @@ new #[Title('Parent')] class extends Component
                                             @checked(collect(old('children'))->contains($studentDetails->student_id))
                                             class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-zinc-900 dark:text-white">{{ $studentDetails->student?->name }}</span>
+                                            <span class="text-sm font-medium text-zinc-900 dark:text-white"><span translate="no">{{ $studentDetails->student?->name }}</span></span>
                                             <span class="text-xs text-zinc-500">
                                                 @if ($studentDetails->admission_number)
-                                                    {{ $studentDetails->admission_number }}
+                                                    <span translate="no">{{ $studentDetails->admission_number }}</span>
                                                 @endif
                                                 @if (isAdmin())
-                                                    &mdash; {{ $studentDetails->institution?->name }}
+                                                    &mdash; <span translate="no">{{ $studentDetails->institution?->name }}</span>
                                                 @endif
                                             </span>
                                         </div>

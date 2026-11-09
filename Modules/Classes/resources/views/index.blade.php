@@ -122,7 +122,7 @@
                                         <div class="flex items-center gap-2">
                                             <a href="{{ route('classes.show', $schoolClass->id) }}"
                                                 class="font-semibold text-sm text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                                {{ $schoolClass->name }}
+                                                <span translate="no">{{ $schoolClass->name }}</span>
                                             </a>
                                             @if ($schoolClass->level)
                                                 <flux:badge size="sm" color="zinc"
@@ -141,7 +141,7 @@
                                             class="flex items-center gap-1.5 text-zinc-500 text-xs truncate max-w-[150px]">
                                             <flux:icon icon="building-library"
                                                 class="size-3.5 text-zinc-400 shrink-0" />
-                                            <span>{{ $schoolClass->institution?->name ?? '—' }}</span>
+                                            <span><span translate="no">{{ $schoolClass->institution?->name ?? '—' }}</span></span>
                                         </div>
                                     </flux:table.cell>
                                 @endif

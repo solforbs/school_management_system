@@ -785,7 +785,7 @@ new #[Title('Parent Notifications')] class extends Component
 
                 <flux:select wire:model.live="sourceTemplateId" label="Choose a template" placeholder="Write from scratch or pick a template">
                     @foreach (self::PREMADE_TEMPLATES as $key => $p)
-                        <flux:select.option value="premade:{{ $key }}">{{ $p['name'] }} (System)</flux:select.option>
+                        <flux:select.option translate="no" value="premade:{{ $key }}">{{ $p['name'] }} (System)</flux:select.option>
                     @endforeach
 
                     @foreach ($this->templates as $template)
@@ -1367,7 +1367,7 @@ new #[Title('Parent Notifications')] class extends Component
                                         {{ count($p['placeholders']) }} variables
                                     </span>
                                 </div>
-                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1">{{ $p['name'] }}</h4>
+                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1"><span translate="no">{{ $p['name'] }}</span></h4>
                                 <p class="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">{{ $p['body'] }}</p>
                             </div>
 
@@ -1388,7 +1388,7 @@ new #[Title('Parent Notifications')] class extends Component
             <div class="space-y-3 pt-2">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
-                        <h3 class="text-base font-bold text-zinc-900 dark:text-white">{{ currentInstitution()->name }} Custom Templates</h3>
+                        <h3 class="text-base font-bold text-zinc-900 dark:text-white"><span translate="no">{{ currentInstitution()->name }}</span> Custom Templates</h3>
                         <p class="text-xs text-zinc-500">Reusable templates created and managed specifically by your school.</p>
                     </div>
                     <flux:button variant="primary" icon="plus" wire:click="newTemplate" class="w-full sm:w-auto">New template</flux:button>
@@ -1755,7 +1755,7 @@ new #[Title('Parent Notifications')] class extends Component
                         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                             @foreach ($this->viewing->recipients as $r)
                                 <tr wire:key="rcpt-{{ $r->id }}">
-                                    <td class="py-2 px-3 font-medium text-zinc-900 dark:text-white">{{ $r->user?->name ?? '—' }}</td>
+                                    <td class="py-2 px-3 font-medium text-zinc-900 dark:text-white"><span translate="no">{{ $r->user?->name ?? '—' }}</span></td>
                                     <td class="py-2 px-3 uppercase text-xs font-semibold text-zinc-500">{{ $r->channel }}</td>
                                     <td class="py-2 px-3 text-zinc-500 font-mono text-xs">{{ $r->destination ?? '—' }}</td>
                                     <td class="py-2 px-3">

@@ -58,7 +58,8 @@ class SaveInstitution
             'type' => 'required|string|in:School,College,University,Training Centre',
             'education_level' => 'nullable|string|max:100',
             'timezone' => 'required|string|max:50',
-            'locale' => ['required', 'string', Rule::in(array_keys(config('locales.available')))],
+            // `sometimes`: an update that leaves the language out keeps the current one.
+            'locale' => ['sometimes', 'required', 'string', Rule::in(array_keys(config('locales.available')))],
             'logo' => 'nullable|image|max:2048',
             'min_electives' => 'nullable|integer|min:0',
             'max_electives' => 'nullable|integer|gte:min_electives',

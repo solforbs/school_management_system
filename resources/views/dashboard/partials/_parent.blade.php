@@ -33,8 +33,8 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="font-medium text-zinc-900 dark:text-white text-xs sm:text-sm truncate">{{ $name }}</div>
-                            <div class="text-xs text-zinc-500 truncate">{{ $child->institution?->name }} · Adm:
-                                {{ $child->admission_number }}</div>
+                            <div class="text-xs text-zinc-500 truncate"><span translate="no">{{ $child->institution?->name }}</span> · Adm:
+                                <span translate="no">{{ $child->admission_number }}</span></div>
                         </div>
                     </div>
                     <flux:badge size="sm" :color="$child->is_active ? 'emerald' : 'zinc'" class="font-semibold shrink-0">
@@ -77,7 +77,7 @@
                 @forelse ($stats['recent_fees'] as $fee)
                     <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
                         <flux:table.cell>
-                            <span class="font-medium text-xs">{{ $fee->student?->name ?? 'Unknown' }}</span>
+                            <span class="font-medium text-xs"><span translate="no">{{ $fee->student?->name ?? 'Unknown' }}</span></span>
                         </flux:table.cell>
                         <flux:table.cell class="text-zinc-600 dark:text-zinc-300 text-xs">{{ $fee->title }}
                         </flux:table.cell>

@@ -86,7 +86,7 @@
                             class="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-800 font-bold border border-zinc-200/80 whitespace-nowrap">{{ $empNumber }}</span>
                         <span class="text-zinc-300">&bull;</span>
                         <span
-                            class="font-sans font-semibold text-zinc-700 truncate">{{ $teacherDetails->institution?->name ?? 'Main Campus' }}</span>
+                            class="font-sans font-semibold text-zinc-700 truncate"><span translate="no">{{ $teacherDetails->institution?->name ?? 'Main Campus' }}</span></span>
                     </div>
                 </div>
             </div>
@@ -153,7 +153,7 @@
                                 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Assigned
                                 Campus</span>
                             <span
-                                class="font-bold text-zinc-900 text-xs sm:text-sm truncate block">{{ $teacherDetails->institution?->name ?? 'Main Campus' }}</span>
+                                class="font-bold text-zinc-900 text-xs sm:text-sm truncate block"><span translate="no">{{ $teacherDetails->institution?->name ?? 'Main Campus' }}</span></span>
                         </div>
                     </div>
                 </div>
@@ -246,7 +246,7 @@
                             <span
                                 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Email
                                 Address</span>
-                            <span class="font-medium text-zinc-900 text-xs">{{ $teacherUser?->email ?? '—' }}</span>
+                            <span class="font-medium text-zinc-900 text-xs"><span translate="no">{{ $teacherUser?->email ?? '—' }}</span></span>
                         </div>
 
                         <div>

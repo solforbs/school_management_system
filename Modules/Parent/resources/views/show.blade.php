@@ -21,7 +21,7 @@
                     <span class="text-xs text-zinc-300">&bull;</span>
                     <span class="text-xs text-zinc-500 font-medium">Guardian File</span>
                 </div>
-                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">{{ $parent->name }}
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900"><span translate="no">{{ $parent->name }}</span>
                 </flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
                     Guardian overview, direct contact details, and linked student academic files.
@@ -59,7 +59,7 @@
                     </div>
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-lg sm:text-xl font-black text-zinc-900 truncate">{{ $parent->name }}</h3>
+                            <h3 class="text-lg sm:text-xl font-black text-zinc-900 truncate"><span translate="no">{{ $parent->name }}</span></h3>
                             <span
                                 class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">
                                 <span class="size-1.5 rounded-full bg-emerald-500"></span>
@@ -71,7 +71,7 @@
                             <a href="mailto:{{ $parent->email }}"
                                 class="flex items-center gap-1.5 text-zinc-600 hover:text-blue-600 transition truncate">
                                 <flux:icon icon="envelope" class="size-3.5 text-zinc-400 shrink-0" />
-                                <span class="truncate">{{ $parent->email }}</span>
+                                <span class="truncate"><span translate="no">{{ $parent->email }}</span></span>
                             </a>
                             @if ($phone)
                                 <a href="tel:{{ $phone }}"
@@ -118,7 +118,7 @@
                     <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Campus
                         Affiliation</span>
                     <span
-                        class="text-xs sm:text-sm font-black text-zinc-900 truncate block">{{ currentInstitution()?->name ?? __('Institution') }}</span>
+                        class="text-xs sm:text-sm font-black text-zinc-900 truncate block"><span translate="no">{{ currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
             </div>
         </div>
@@ -129,7 +129,7 @@
                 <div>
                     <h3 class="text-base font-bold text-zinc-900">Enrolled Children & Students</h3>
                     <p class="text-xs text-zinc-500 mt-0.5">Students officially under the legal custody and guardianship
-                        of {{ $parent->name }}.</p>
+                        of <span translate="no">{{ $parent->name }}</span>.</p>
                 </div>
                 <span class="px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-semibold font-mono">
                     {{ $linkedCount }} {{ Str::plural('Student', $linkedCount) }}
@@ -171,10 +171,10 @@
                                         </div>
                                         <div>
                                             <h4 class="text-sm font-bold text-zinc-900">
-                                                {{ $studentUser?->name ?? 'Student Name' }}
+                                                <span translate="no">{{ $studentUser?->name ?? 'Student Name' }}</span>
                                             </h4>
                                             <div class="text-xs text-zinc-500 font-mono mt-0.5">
-                                                {{ $child->admission_number ?? 'ADM-—' }}
+                                                <span translate="no">{{ $child->admission_number ?? 'ADM-—' }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -193,7 +193,7 @@
                                     <div class="flex items-center justify-between">
                                         <span class="text-zinc-400">Institution:</span>
                                         <span
-                                            class="font-medium text-zinc-700">{{ $child->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span>
+                                            class="font-medium text-zinc-700"><span translate="no">{{ $child->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span></span>
                                     </div>
                                 </div>
                             </div>

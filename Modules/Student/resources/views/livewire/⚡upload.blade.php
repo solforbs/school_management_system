@@ -1528,7 +1528,7 @@ new #[Title('Upload Student Records')] class extends Component
                         class="mt-1 text-sm font-bold rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white py-1.5 px-3 focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors min-w-[220px]">
                         <option value="" @selected($selectedClassId === null)>-- All / Mixed Classes --</option>
                         @foreach ($this->classes as $c)
-                            <option value="{{ $c->id }}" @selected($selectedClassId === $c->id)>{{ $c->name }} ({{ $c->level ?? 'Class' }})</option>
+                            <option translate="no" value="{{ $c->id }}" @selected($selectedClassId === $c->id)>{{ $c->name }} ({{ $c->level ?? 'Class' }})</option>
                         @endforeach
                     </select>
                 </div>
@@ -1653,7 +1653,7 @@ new #[Title('Upload Student Records')] class extends Component
                         </div>
                         <div>
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white">{{ $this->selectedClass?->name ?? 'All Classes' }} Enrolled Roster</h4>
+                                <h4 class="text-sm font-bold text-zinc-900 dark:text-white"><span translate="no">{{ $this->selectedClass?->name ?? 'All Classes' }}</span> Enrolled Roster</h4>
                                 <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
                                     {{ $stats['total'] }} Students Enrolled
                                 </span>
@@ -1832,7 +1832,7 @@ new #[Title('Upload Student Records')] class extends Component
                         Quick Student Entry
                     </span>
                     <span class="text-xs text-zinc-600 dark:text-zinc-400 font-medium">
-                        Assigning to <strong class="text-zinc-900 dark:text-white">{{ $this->selectedClass ? $this->selectedClass->name : 'Selected Classes' }}</strong>
+                        Assigning to <strong class="text-zinc-900 dark:text-white"><span translate="no">{{ $this->selectedClass ? $this->selectedClass->name : 'Selected Classes' }}</span></strong>
                         &bull; ({{ count($this->filledRows()) }} ready to save)
                     </span>
                 </div>
@@ -1931,7 +1931,7 @@ new #[Title('Upload Student Records')] class extends Component
                                             <option value="">Select Class</option>
                                             @foreach ($this->classes as $schoolClass)
                                                 <option value="{{ $schoolClass->name }}" @selected(strcasecmp($row['class_name'] ?? '', $schoolClass->name) === 0)>
-                                                    {{ $schoolClass->name }}
+                                                    <span translate="no">{{ $schoolClass->name }}</span>
                                                 </option>
                                             @endforeach
                                         </select>
@@ -2030,22 +2030,22 @@ new #[Title('Upload Student Records')] class extends Component
                     <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Unsaved Student Entries</flux:heading>
                     <flux:subheading class="mt-1 text-zinc-600 dark:text-zinc-300 text-sm">
                         You have <strong class="text-zinc-900 dark:text-white">{{ count($this->filledRows()) }} unsaved student record(s)</strong> entered for
-                        <strong class="text-zinc-900 dark:text-white">{{ $this->selectedClass?->name ?? 'the current class' }}</strong>.
-                        Switching to <strong class="text-zinc-900 dark:text-white">{{ $this->pendingClass?->name ?? 'another class' }}</strong> will discard these rows unless you save them first.
+                        <strong class="text-zinc-900 dark:text-white"><span translate="no">{{ $this->selectedClass?->name ?? 'the current class' }}</span></strong>.
+                        Switching to <strong class="text-zinc-900 dark:text-white"><span translate="no">{{ $this->pendingClass?->name ?? 'another class' }}</span></strong> will discard these rows unless you save them first.
                     </flux:subheading>
                 </div>
             </div>
 
             <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-600 dark:text-zinc-300 space-y-1">
                 <p class="font-semibold text-zinc-900 dark:text-white">What would you like to do?</p>
-                <p>&bull; <strong>Save & Switch:</strong> Saves your current students to {{ $this->selectedClass?->name }} and opens {{ $this->pendingClass?->name }}.</p>
-                <p>&bull; <strong>Discard & Switch:</strong> Clears your typed rows and opens {{ $this->pendingClass?->name }}.</p>
-                <p>&bull; <strong>Stay Here:</strong> Keeps your typed students and remains on {{ $this->selectedClass?->name }}.</p>
+                <p>&bull; <strong>Save & Switch:</strong> Saves your current students to <span translate="no">{{ $this->selectedClass?->name }}</span> and opens <span translate="no">{{ $this->pendingClass?->name }}</span>.</p>
+                <p>&bull; <strong>Discard & Switch:</strong> Clears your typed rows and opens <span translate="no">{{ $this->pendingClass?->name }}</span>.</p>
+                <p>&bull; <strong>Stay Here:</strong> Keeps your typed students and remains on <span translate="no">{{ $this->selectedClass?->name }}</span>.</p>
             </div>
 
             <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                 <flux:button variant="filled" wire:click="cancelSwitchClass" class="w-full sm:w-auto font-medium">
-                    Stay on {{ $this->selectedClass?->name ?? 'Current Class' }}
+                    Stay on <span translate="no">{{ $this->selectedClass?->name ?? 'Current Class' }}</span>
                 </flux:button>
                 <flux:button variant="danger" wire:click="discardAndSwitchClass" icon="trash" class="w-full sm:w-auto font-semibold">
                     Discard & Switch
@@ -2167,7 +2167,7 @@ new #[Title('Upload Student Records')] class extends Component
                             @foreach ($parentAnalysis['ambiguous_matches'] as $key => $amb)
                                 <div class="p-3 rounded-lg bg-white dark:bg-zinc-800 border border-amber-200 dark:border-amber-800/80 text-xs space-y-2">
                                     <div class="flex items-center justify-between font-semibold text-zinc-800 dark:text-zinc-200">
-                                        <span>Guardian: <strong>{{ $amb['guardian_name'] }}</strong></span>
+                                        <span>Guardian: <strong><span translate="no">{{ $amb['guardian_name'] }}</span></strong></span>
                                         <span class="text-zinc-500">Child(ren): {{ implode(', ', $amb['children']) }}</span>
                                     </div>
                                     <div class="space-y-1.5 pl-2">
@@ -2175,7 +2175,7 @@ new #[Title('Upload Student Records')] class extends Component
                                             <label class="flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
                                                 <input type="radio" wire:model.live="ambiguousDecisions.{{ $key }}" value="{{ $cand['id'] }}"
                                                     class="text-sky-600 focus:ring-sky-500 size-3.5">
-                                                <span>Link to existing parent: <strong>{{ $cand['name'] }}</strong> (ID #{{ $cand['id'] }}{{ $cand['phone'] ? ', Phone: '.$cand['phone'] : '' }}, {{ $cand['child_count'] }} existing child)</span>
+                                                <span>Link to existing parent: <strong>{{ $cand['name'] }}</strong> (ID #{{ $cand['id'] }}<span translate="no">{{ $cand['phone'] ? ', Phone: '.$cand['phone'] : '' }}</span>, {{ $cand['child_count'] }} existing child)</span>
                                             </label>
                                         @endforeach
                                         <label class="flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
@@ -2195,8 +2195,8 @@ new #[Title('Upload Student Records')] class extends Component
                     @foreach ($parentAnalysis['matched_existing'] as $m)
                         <div class="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
                             <div class="flex items-center justify-between font-bold text-emerald-900 dark:text-emerald-200">
-                                <span>{{ $m['parent_name'] }} (Reused #{{ $m['parent_id'] }})</span>
-                                <span class="text-[10px] font-mono">{{ $m['parent_phone'] ?? 'Email Match' }}</span>
+                                <span><span translate="no">{{ $m['parent_name'] }}</span> (Reused #{{ $m['parent_id'] }})</span>
+                                <span class="text-[10px] font-mono"><span translate="no">{{ $m['parent_phone'] ?? 'Email Match' }}</span></span>
                             </div>
                             <p class="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
                                 Linking to: <strong>{{ implode(', ', $m['children']) }}</strong>
@@ -2207,8 +2207,8 @@ new #[Title('Upload Student Records')] class extends Component
                     @foreach ($parentAnalysis['new_parents'] as $np)
                         <div class="p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 text-xs">
                             <div class="flex items-center justify-between font-bold text-blue-900 dark:text-blue-200">
-                                <span>{{ $np['parent_name'] }} (New Parent)</span>
-                                <span class="text-[10px] font-mono">{{ $np['parent_phone'] ?? 'No Phone' }}</span>
+                                <span><span translate="no">{{ $np['parent_name'] }}</span> (New Parent)</span>
+                                <span class="text-[10px] font-mono"><span translate="no">{{ $np['parent_phone'] ?? 'No Phone' }}</span></span>
                             </div>
                             <p class="text-[11px] text-blue-700 dark:text-blue-400 mt-1">
                                 Shared by {{ count($np['children']) }} student(s): <strong>{{ implode(', ', $np['children']) }}</strong>
@@ -2345,7 +2345,7 @@ new #[Title('Upload Student Records')] class extends Component
                     <flux:icon icon="arrow-path" class="size-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                    <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Merge Duplicate Students in {{ $this->selectedClass?->name ?? 'Class' }}</flux:heading>
+                    <flux:heading size="lg" class="text-zinc-900 dark:text-white font-bold">Merge Duplicate Students in <span translate="no">{{ $this->selectedClass?->name ?? 'Class' }}</span></flux:heading>
                     <flux:subheading class="mt-1 text-zinc-600 dark:text-zinc-300 text-sm">
                         Found <strong class="text-zinc-900 dark:text-white">{{ $this->totalDuplicatesInRoster }} duplicate record(s)</strong> across {{ count($this->duplicateGroupsInRoster) }} student name(s).
                     </flux:subheading>

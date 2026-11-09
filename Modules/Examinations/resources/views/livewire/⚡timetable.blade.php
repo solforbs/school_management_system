@@ -190,7 +190,7 @@ new #[Title('Exam Timetable')] class extends Component {
                     Examination Schedule
                 </span>
                 <span class="text-xs text-zinc-400">&bull;</span>
-                <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? __('Institution') }}</span>
+                <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ currentInstitution()?->name ?? __('Institution') }}</span></span>
             </div>
 
             <flux:heading size="xl" class="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">
@@ -287,7 +287,7 @@ new #[Title('Exam Timetable')] class extends Component {
             <flux:select wire:model.live="classId" label="Class" size="sm">
                 <flux:select.option value="">All classes</flux:select.option>
                 @foreach ($this->classes as $schoolClass)
-                    <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
+                    <flux:select.option translate="no" value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
                 @endforeach
             </flux:select>
         </div>

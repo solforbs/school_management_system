@@ -122,7 +122,7 @@
                             <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                                 <div class="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300 truncate">
                                     <flux:icon icon="building-office-2" class="size-3.5 text-zinc-400 shrink-0" />
-                                    <span class="truncate">{{ $device->institution?->name ?? '—' }}</span>
+                                    <span class="truncate"><span translate="no">{{ $device->institution?->name ?? '—' }}</span></span>
                                 </div>
                                 <div class="flex items-center justify-end gap-1.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
                                     <flux:icon icon="signal" class="size-3 text-zinc-400 shrink-0" />
@@ -210,7 +210,7 @@
                                     <flux:table.cell>
                                         <div class="flex items-center gap-2 text-zinc-600 dark:text-zinc-300 text-sm">
                                             <flux:icon icon="building-office-2" class="size-4 text-zinc-400 shrink-0" />
-                                            <span class="truncate max-w-[200px]">{{ $device->institution?->name ?? '—' }}</span>
+                                            <span class="truncate max-w-[200px]"><span translate="no">{{ $device->institution?->name ?? '—' }}</span></span>
                                         </div>
                                     </flux:table.cell>
 

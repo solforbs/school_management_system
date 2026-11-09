@@ -473,7 +473,7 @@ new #[Title('Enter Marks')] class extends Component {
                         {{ $subjectId === '' ? 'Select a subject first' : 'Select a class' }}
                     </flux:select.option>
                     @foreach ($this->classes as $schoolClass)
-                        <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
+                        <flux:select.option translate="no" value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
@@ -527,8 +527,8 @@ new #[Title('Enter Marks')] class extends Component {
                                     @php($status = $this->rowStatus($mark))
                                     @php($percentage = $this->rowPercentage($mark))
                                     <flux:table.row :key="$details->student_id">
-                                        <flux:table.cell>{{ $details->admission_number ?? $index + 1 }}</flux:table.cell>
-                                        <flux:table.cell>{{ $details->student?->name ?? '—' }}</flux:table.cell>
+                                        <flux:table.cell><span translate="no">{{ $details->admission_number ?? $index + 1 }}</span></flux:table.cell>
+                                        <flux:table.cell><span translate="no">{{ $details->student?->name ?? '—' }}</span></flux:table.cell>
                                         <flux:table.cell>
                                             <flux:input type="number" step="0.01" min="0"
                                                 max="{{ $this->examination->total_marks }}" size="sm"

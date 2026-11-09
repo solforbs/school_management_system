@@ -53,11 +53,11 @@
                     </div>
                     <div>
                         <p class="text-xs uppercase text-gray-500">Recorded By</p>
-                        <p class="text-sm text-gray-900">{{ $expenditure->recordedBy?->name ?? '—' }}</p>
+                        <p class="text-sm text-gray-900"><span translate="no">{{ $expenditure->recordedBy?->name ?? '—' }}</span></p>
                     </div>
                     <div>
                         <p class="text-xs uppercase text-gray-500">Institution</p>
-                        <p class="text-sm text-gray-900">{{ $expenditure->institution?->name }}</p>
+                        <p class="text-sm text-gray-900"><span translate="no">{{ $expenditure->institution?->name }}</span></p>
                     </div>
                 </div>
 

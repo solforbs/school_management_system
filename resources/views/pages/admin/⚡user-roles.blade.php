@@ -185,11 +185,11 @@ new #[Title('Admin Access')] class extends Component
                     @forelse ($this->directors as $director)
                         <tr wire:key="director-{{ $director->id }}">
                             <td class="py-3 pr-4">
-                                <span class="font-semibold text-zinc-900 dark:text-white">{{ $director->name }}</span>
+                                <span class="font-semibold text-zinc-900 dark:text-white"><span translate="no">{{ $director->name }}</span></span>
                                 <span class="block text-[11px] text-zinc-400 font-mono">#{{ $director->id }}</span>
                             </td>
-                            <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $director->email }}</td>
-                            <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $director->activeInstitution?->name ?? '—' }}</td>
+                            <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300"><span translate="no">{{ $director->email }}</span></td>
+                            <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300"><span translate="no">{{ $director->activeInstitution?->name ?? '—' }}</span></td>
                             <td class="py-3 pr-4">
                                 <div class="flex items-center justify-end gap-1.5">
                                     <x-impersonate-button :user="$director" />
@@ -232,10 +232,10 @@ new #[Title('Admin Access')] class extends Component
                     @foreach ($this->admins as $admin)
                         <tr wire:key="admin-{{ $admin->id }}">
                             <td class="py-3 pr-4">
-                                <span class="font-semibold text-zinc-900 dark:text-white">{{ $admin->name }}</span>
+                                <span class="font-semibold text-zinc-900 dark:text-white"><span translate="no">{{ $admin->name }}</span></span>
                                 <span class="block text-[11px] text-zinc-400 font-mono">#{{ $admin->id }}</span>
                             </td>
-                            <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300">{{ $admin->email }}</td>
+                            <td class="py-3 pr-4 text-zinc-600 dark:text-zinc-300"><span translate="no">{{ $admin->email }}</span></td>
                             <td class="py-3 pr-4 text-right">
                                 @if ($admin->isProtectedAdmin())
                                     <flux:badge size="sm" color="amber" icon="lock-closed">Platform owner</flux:badge>
@@ -264,7 +264,7 @@ new #[Title('Admin Access')] class extends Component
                 <flux:heading size="lg">Promote to platform Admin?</flux:heading>
                 <flux:subheading>
                     @if ($this->promoteTarget)
-                        <strong>{{ $this->promoteTarget->name }}</strong> ({{ $this->promoteTarget->email }}) will
+                        <strong>{{ $this->promoteTarget->name }}</strong> (<span translate="no">{{ $this->promoteTarget->email }}</span>) will
                         lose their Director role and gain full platform Admin access. They will no longer be able to
                         run a school from this account.
                     @else
@@ -291,7 +291,7 @@ new #[Title('Admin Access')] class extends Component
                 <flux:heading size="lg">Revoke Admin access?</flux:heading>
                 <flux:subheading>
                     @if ($this->demoteTarget)
-                        <strong>{{ $this->demoteTarget->name }}</strong> ({{ $this->demoteTarget->email }}) will
+                        <strong>{{ $this->demoteTarget->name }}</strong> (<span translate="no">{{ $this->demoteTarget->email }}</span>) will
                         return to Director access and lose every platform Admin permission.
                     @else
                         Select an Admin to revoke.

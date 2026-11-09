@@ -96,7 +96,7 @@ new #[Title('Staff Payroll & Payments')] class extends Component
                         Payroll Administration
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? 'Campus Operations' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? 'Campus Operations' }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Staff Payroll &amp; Disbursements</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">

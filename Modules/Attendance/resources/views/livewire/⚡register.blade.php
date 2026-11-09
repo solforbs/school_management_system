@@ -356,7 +356,7 @@ new #[Title('Class Attendance Register')] class extends Component
             <nav class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 font-medium mb-1">
                 <span>Classes</span>
                 <flux:icon icon="chevron-right" class="size-3 text-zinc-400" />
-                <span class="text-zinc-700 dark:text-zinc-200 font-semibold">{{ $this->currentClass?->name ?? 'Select Class' }}</span>
+                <span class="text-zinc-700 dark:text-zinc-200 font-semibold"><span translate="no">{{ $this->currentClass?->name ?? 'Select Class' }}</span></span>
                 <flux:icon icon="chevron-right" class="size-3 text-zinc-400" />
                 <span class="text-blue-600 dark:text-blue-400 font-bold">Attendance</span>
             </nav>
@@ -413,7 +413,7 @@ new #[Title('Class Attendance Register')] class extends Component
                             wire:loading.attr="disabled"
                             class="inline-flex items-center justify-center gap-1.5 flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer {{ $this->classId === $classOption->id ? 'bg-blue-600 text-white border-blue-600 shadow-xs' : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700' }}">
                             <flux:icon wire:loading wire:target="$set('classId', {{ $classOption->id }})" icon="arrow-path" class="size-3 animate-spin shrink-0" />
-                            <span>{{ $classOption->name }}</span>
+                            <span><span translate="no">{{ $classOption->name }}</span></span>
                             <span class="opacity-80 font-normal">({{ $classOption->students_count }})</span>
                         </button>
                     @endforeach
@@ -553,7 +553,7 @@ new #[Title('Class Attendance Register')] class extends Component
 
                     await $wire.saveAttendance(cleanStatuses, cleanNotified, cleanNotes);
                     this.savedBanner = true;
-                    this.savedMessage = 'Attendance for {{ $this->currentClass?->name ?? 'Class' }} saved successfully!';
+                    this.savedMessage = 'Attendance for <span translate="no">{{ $this->currentClass?->name ?? 'Class' }}</span> saved successfully!';
                     setTimeout(() => { this.savedBanner = false; }, 6000);
                 } catch (err) {
                     console.error('Attendance save error:', err);
@@ -569,7 +569,7 @@ new #[Title('Class Attendance Register')] class extends Component
                     <flux:icon icon="eye" class="size-5 text-amber-600 shrink-0 mt-0.5" />
                     <p class="text-xs sm:text-sm">
                         <strong>View only.</strong>
-                        Daily roll-call for {{ $this->currentClass?->name }} is recorded by the class teacher. You can review attendance for the classes you teach but cannot change it.
+                        Daily roll-call for <span translate="no">{{ $this->currentClass?->name }}</span> is recorded by the class teacher. You can review attendance for the classes you teach but cannot change it.
                     </p>
                 </div>
             @endunless
@@ -657,10 +657,10 @@ new #[Title('Class Attendance Register')] class extends Component
                     {{-- Class meta --}}
                     <div class="space-y-1">
                         <h2 class="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
-                            {{ $this->currentClass->name }}
+                            <span translate="no">{{ $this->currentClass->name }}</span>
                         </h2>
                         <div class="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                            <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ currentInstitution()?->name ?? 'Solforbs Academy' }}</span>
+                            <span class="font-medium text-zinc-700 dark:text-zinc-300"><span translate="no">{{ currentInstitution()?->name ?? 'Solforbs Academy' }}</span></span>
                             <span>•</span>
                             <span class="font-semibold text-zinc-900 dark:text-white">{{ $totalCount }} learners</span>
                         </div>
@@ -795,7 +795,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                         <div class="flex-1 min-w-0 pr-1 sm:pr-2">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <span class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate">
-                                                    {{ $student['name'] }}
+                                                    <span translate="no">{{ $student['name'] }}</span>
                                                 </span>
                                                 @if ($student['has_gate_scan'])
                                                     <span title="Gate check-in recorded at {{ $student['scanned_at'] }}" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
@@ -861,7 +861,7 @@ new #[Title('Class Attendance Register')] class extends Component
                                         <div class="flex-1 min-w-0 pr-1 sm:pr-2">
                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                 <span class="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate">
-                                                    {{ $student['name'] }}
+                                                    <span translate="no">{{ $student['name'] }}</span>
                                                 </span>
                                                 @if ($student['has_gate_scan'])
                                                     <span title="Gate check-in recorded at {{ $student['scanned_at'] }}" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shrink-0 whitespace-nowrap">
@@ -935,13 +935,13 @@ new #[Title('Class Attendance Register')] class extends Component
                                     <div class="flex items-center justify-between gap-3">
                                         <div class="min-w-0">
                                             <p class="text-sm font-bold text-zinc-900 dark:text-white truncate">
-                                                {{ $absentee['name'] }}
+                                                <span translate="no">{{ $absentee['name'] }}</span>
                                             </p>
                                             <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                                                <span class="font-mono">#{{ $absentee['admission_number'] }}</span>
+                                                <span class="font-mono">#<span translate="no">{{ $absentee['admission_number'] }}</span></span>
                                                 @if($hasPhone)
                                                     <span>•</span>
-                                                    <span class="text-zinc-500 font-mono text-[10px]">{{ $absentee['parent_phone'] }}</span>
+                                                    <span class="text-zinc-500 font-mono text-[10px]"><span translate="no">{{ $absentee['parent_phone'] }}</span></span>
                                                 @endif
                                             </div>
                                         </div>

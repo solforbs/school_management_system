@@ -47,7 +47,7 @@
                             <flux:select.option value="">Select Institution</flux:select.option>
                             @foreach ($institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
-                                    {{ $institution->name }}
+                                    <span translate="no">{{ $institution->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -56,7 +56,7 @@
                             <flux:select.option value="">Select Class</flux:select.option>
                             @foreach ($classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" data-institution-id="{{ $schoolClass->institution_id }}" :selected="old('class_id') == $schoolClass->id">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -65,9 +65,9 @@
                             <flux:select.option value="">Select Student</flux:select.option>
                             @foreach ($students as $studentDetail)
                                 <flux:select.option value="{{ $studentDetail->student_id }}" data-class-id="{{ $studentDetail->class_id }}" :selected="old('student_id') == $studentDetail->student_id">
-                                    {{ $studentDetail->student?->name }}
+                                    <span translate="no">{{ $studentDetail->student?->name }}</span>
                                     @if ($studentDetail->admission_number)
-                                        ({{ $studentDetail->admission_number }})
+                                        (<span translate="no">{{ $studentDetail->admission_number }}</span>)
                                     @endif
                                 </flux:select.option>
                             @endforeach

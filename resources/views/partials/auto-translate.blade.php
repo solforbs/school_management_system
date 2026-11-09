@@ -74,17 +74,21 @@
 
         // Google rebuilds translated sentences from clones, which strips
         // Alpine's scope from x-text/x-html nodes ("count is not defined").
-        // Leaving those nodes untranslated keeps them bound.
+        // Leaving those nodes untranslated keeps them bound. Contact links
+        // and avatars hold people's details, which must never be translated;
+        // names elsewhere are marked translate="no" in the views.
+        var untranslatable = '[x-text],[x-html],a[href^="tel:"],a[href^="mailto:"],[data-flux-avatar],[data-flux-profile],[data-flux-sidebar-profile]';
+
         function protectAlpineBindings(root) {
             if (!window.__autoTranslateTarget || !root || !root.querySelectorAll) {
                 return;
             }
 
-            if (root.matches && root.matches('[x-text],[x-html]')) {
+            if (root.matches && root.matches(untranslatable)) {
                 root.classList.add('notranslate');
             }
 
-            root.querySelectorAll('[x-text],[x-html]').forEach(function (el) {
+            root.querySelectorAll(untranslatable).forEach(function (el) {
                 el.classList.add('notranslate');
             });
         }

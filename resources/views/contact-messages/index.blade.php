@@ -34,9 +34,9 @@
                         @foreach ($messages as $contactMessage)
                             <flux:table.row>
                                 <flux:table.cell>
-                                    <div class="font-medium text-zinc-900 dark:text-white">{{ $contactMessage->name }}
+                                    <div class="font-medium text-zinc-900 dark:text-white"><span translate="no">{{ $contactMessage->name }}</span>
                                     </div>
-                                    <div class="text-sm text-zinc-500 dark:text-zinc-400">{{ $contactMessage->email }}
+                                    <div class="text-sm text-zinc-500 dark:text-zinc-400"><span translate="no">{{ $contactMessage->email }}</span>
                                     </div>
                                 </flux:table.cell>
                                 <flux:table.cell>

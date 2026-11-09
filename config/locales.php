@@ -1,102 +1,87 @@
 <?php
 
 /**
- * Languages an institution can run the app in. Sourced from the
- * shammaa/laravel-multilingual locale list (that package does not support
- * Laravel 13 and only does URL-prefix routing, so the locale is resolved
- * per institution by App\Http\Middleware\SetInstitutionLocale instead).
+ * Languages the app can be shown in. An institution picks the default for
+ * its users and each person can switch for themselves (see
+ * App\Http\Middleware\SetInstitutionLocale). Pages are machine-translated
+ * from English by Google's page translator, so every code here must be
+ * one Google supports.
  */
 return [
     'default' => 'en',
 
     /*
+     * Name of the cookie that holds a person's own language choice. It is
+     * only set while that choice differs from their institution's default.
+     */
+    'cookie' => 'locale',
+
+    /*
      * Google page-translator language codes where they differ from ours.
-     * null = render untranslated (English, or not supported by Google).
+     * null = render untranslated (the app is written in English).
      */
     'machine_translation_codes' => [
         'en' => null,
-        'en-US' => null,
-        'en-GB' => null,
-        'es-MX' => 'es',
-        'pt-BR' => 'pt',
-        'zh' => 'zh-CN',
-        'fil' => 'tl',
-        'br' => null,
     ],
 
+    /*
+     * `switcher` holds the few phrases the language switcher shows. They
+     * are written by hand, never machine-translated, so someone who picked
+     * a language by mistake can still read how to get back.
+     */
     'available' => [
-        // African
-        'en' => ['name' => 'English', 'native' => 'English'],
-        'sw' => ['name' => 'Swahili', 'native' => 'Kiswahili'],
-        'af' => ['name' => 'Afrikaans', 'native' => 'Afrikaans'],
-        'am' => ['name' => 'Amharic', 'native' => 'አማርኛ'],
-        'zu' => ['name' => 'Zulu', 'native' => 'isiZulu'],
-        'xh' => ['name' => 'Xhosa', 'native' => 'isiXhosa'],
-        'yo' => ['name' => 'Yoruba', 'native' => 'Yorùbá'],
-        'ig' => ['name' => 'Igbo', 'native' => 'Igbo'],
-        'ha' => ['name' => 'Hausa', 'native' => 'Hausa'],
-
-        // European
-        'en-US' => ['name' => 'English (US)', 'native' => 'English (US)'],
-        'en-GB' => ['name' => 'English (UK)', 'native' => 'English (UK)'],
-        'fr' => ['name' => 'French', 'native' => 'Français'],
-        'es' => ['name' => 'Spanish', 'native' => 'Español'],
-        'es-MX' => ['name' => 'Spanish (Mexico)', 'native' => 'Español (México)'],
-        'de' => ['name' => 'German', 'native' => 'Deutsch'],
-        'it' => ['name' => 'Italian', 'native' => 'Italiano'],
-        'pt' => ['name' => 'Portuguese', 'native' => 'Português'],
-        'pt-BR' => ['name' => 'Portuguese (Brazil)', 'native' => 'Português (Brasil)'],
-        'ru' => ['name' => 'Russian', 'native' => 'Русский'],
-        'pl' => ['name' => 'Polish', 'native' => 'Polski'],
-        'nl' => ['name' => 'Dutch', 'native' => 'Nederlands'],
-        'sv' => ['name' => 'Swedish', 'native' => 'Svenska'],
-        'no' => ['name' => 'Norwegian', 'native' => 'Norsk'],
-        'da' => ['name' => 'Danish', 'native' => 'Dansk'],
-        'fi' => ['name' => 'Finnish', 'native' => 'Suomi'],
-        'el' => ['name' => 'Greek', 'native' => 'Ελληνικά'],
-        'cs' => ['name' => 'Czech', 'native' => 'Čeština'],
-        'sk' => ['name' => 'Slovak', 'native' => 'Slovenčina'],
-        'hu' => ['name' => 'Hungarian', 'native' => 'Magyar'],
-        'ro' => ['name' => 'Romanian', 'native' => 'Română'],
-        'bg' => ['name' => 'Bulgarian', 'native' => 'Български'],
-        'hr' => ['name' => 'Croatian', 'native' => 'Hrvatski'],
-        'sr' => ['name' => 'Serbian', 'native' => 'Српски'],
-        'sl' => ['name' => 'Slovenian', 'native' => 'Slovenščina'],
-        'uk' => ['name' => 'Ukrainian', 'native' => 'Українська'],
-        'be' => ['name' => 'Belarusian', 'native' => 'Беларуская'],
-        'lt' => ['name' => 'Lithuanian', 'native' => 'Lietuvių'],
-        'lv' => ['name' => 'Latvian', 'native' => 'Latviešu'],
-        'et' => ['name' => 'Estonian', 'native' => 'Eesti'],
-        'ga' => ['name' => 'Irish', 'native' => 'Gaeilge'],
-        'cy' => ['name' => 'Welsh', 'native' => 'Cymraeg'],
-        'mt' => ['name' => 'Maltese', 'native' => 'Malti'],
-        'is' => ['name' => 'Icelandic', 'native' => 'Íslenska'],
-        'ca' => ['name' => 'Catalan', 'native' => 'Català'],
-        'eu' => ['name' => 'Basque', 'native' => 'Euskara'],
-        'gl' => ['name' => 'Galician', 'native' => 'Galego'],
-        'br' => ['name' => 'Breton', 'native' => 'Brezhoneg'],
-        'lb' => ['name' => 'Luxembourgish', 'native' => 'Lëtzebuergesch'],
-
-        // Middle East & Asia
-        'ar' => ['name' => 'Arabic', 'native' => 'العربية', 'rtl' => true],
-        'fa' => ['name' => 'Persian', 'native' => 'فارسی', 'rtl' => true],
-        'ur' => ['name' => 'Urdu', 'native' => 'اردو', 'rtl' => true],
-        'ps' => ['name' => 'Pashto', 'native' => 'پښتو', 'rtl' => true],
-        'ku' => ['name' => 'Kurdish', 'native' => 'Kurdî'],
-        'tr' => ['name' => 'Turkish', 'native' => 'Türkçe'],
-        'hi' => ['name' => 'Hindi', 'native' => 'हिन्दी'],
-        'bn' => ['name' => 'Bengali', 'native' => 'বাংলা'],
-        'ta' => ['name' => 'Tamil', 'native' => 'தமிழ்'],
-        'te' => ['name' => 'Telugu', 'native' => 'తెలుగు'],
-        'mr' => ['name' => 'Marathi', 'native' => 'मराठी'],
-        'th' => ['name' => 'Thai', 'native' => 'ไทย'],
-        'vi' => ['name' => 'Vietnamese', 'native' => 'Tiếng Việt'],
-        'id' => ['name' => 'Indonesian', 'native' => 'Bahasa Indonesia'],
-        'ms' => ['name' => 'Malay', 'native' => 'Bahasa Melayu'],
-        'fil' => ['name' => 'Filipino', 'native' => 'Filipino'],
-        'zh' => ['name' => 'Chinese (Simplified)', 'native' => '中文'],
-        'zh-TW' => ['name' => 'Chinese (Traditional)', 'native' => '繁體中文'],
-        'ja' => ['name' => 'Japanese', 'native' => '日本語'],
-        'ko' => ['name' => 'Korean', 'native' => '한국어'],
+        'en' => [
+            'name' => 'English',
+            'native' => 'English',
+            'switcher' => [
+                'language' => 'Language',
+                'question' => 'Switch the app language to :language?',
+                'note' => 'This only changes the language for you, not for anyone else.',
+                'confirm' => 'Yes, switch',
+                'cancel' => 'Cancel',
+                'changed' => 'The language is now :language.',
+                'undo' => 'Go back to :language',
+            ],
+        ],
+        'ar' => [
+            'name' => 'Arabic',
+            'native' => 'العربية',
+            'rtl' => true,
+            'switcher' => [
+                'language' => 'اللغة',
+                'question' => 'هل تريد تغيير لغة التطبيق إلى :language؟',
+                'note' => 'هذا يغيّر اللغة لك وحدك، وليس لأي شخص آخر.',
+                'confirm' => 'نعم، غيّر اللغة',
+                'cancel' => 'إلغاء',
+                'changed' => 'اللغة الآن :language.',
+                'undo' => 'العودة إلى :language',
+            ],
+        ],
+        'fr' => [
+            'name' => 'French',
+            'native' => 'Français',
+            'switcher' => [
+                'language' => 'Langue',
+                'question' => 'Passer l’application en :language ?',
+                'note' => 'Cela change la langue pour vous seulement, pas pour les autres.',
+                'confirm' => 'Oui, changer',
+                'cancel' => 'Annuler',
+                'changed' => 'La langue est maintenant : :language.',
+                'undo' => 'Revenir à :language',
+            ],
+        ],
+        'sw' => [
+            'name' => 'Swahili',
+            'native' => 'Kiswahili',
+            'switcher' => [
+                'language' => 'Lugha',
+                'question' => 'Badilisha lugha ya programu kuwa :language?',
+                'note' => 'Hii inabadilisha lugha kwako tu, si kwa watu wengine.',
+                'confirm' => 'Ndiyo, badilisha',
+                'cancel' => 'Ghairi',
+                'changed' => 'Lugha sasa ni :language.',
+                'undo' => 'Rudi kwenye :language',
+            ],
+        ],
     ],
 ];

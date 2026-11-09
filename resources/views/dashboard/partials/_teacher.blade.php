@@ -63,7 +63,7 @@
                         </span>
                     </div>
                     <h2 class="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-                        {{ $homeroom->name }}
+                        <span translate="no">{{ $homeroom->name }}</span>
                         <span class="text-xs font-normal text-zinc-500 dark:text-zinc-400">({{ $homeroom->students_count ?? 0 }} Registered Learners)</span>
                     </h2>
                     <p class="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-xl">
@@ -114,7 +114,7 @@
                         <div class="space-y-1">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                                    {{ $alloc->schoolClass?->name ?? 'Class' }}
+                                    <span translate="no">{{ $alloc->schoolClass?->name ?? 'Class' }}</span>
                                 </span>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold {{ $isCbc ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800' }}">
                                     {{ $isCbc ? 'CBC' : '8-4-4' }}

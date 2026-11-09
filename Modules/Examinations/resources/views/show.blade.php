@@ -42,10 +42,10 @@
                 <flux:text class="text-zinc-500 text-sm mt-1 flex items-center gap-2">
                     <span>{{ $examination->subject?->name ?? ($examination->subject_name ?? 'All subjects') }}</span>
                     <span>&bull;</span>
-                    <span>{{ $examination->schoolClass?->name ?? ($examination->class_name ?? 'All classes') }}</span>
+                    <span><span translate="no">{{ $examination->schoolClass?->name ?? ($examination->class_name ?? 'All classes') }}</span></span>
                     @if ($examination->institution)
                         <span>&bull;</span>
-                        <span class="text-zinc-400">{{ $examination->institution->name }}</span>
+                        <span class="text-zinc-400"><span translate="no">{{ $examination->institution->name }}</span></span>
                     @endif
                 </flux:text>
             </div>
@@ -129,7 +129,7 @@
                     <div>
                         <span class="text-zinc-400 uppercase font-semibold text-[10px]">Campus</span>
                         <p class="text-sm font-semibold text-zinc-900 dark:text-white mt-0.5">
-                            {{ $examination->institution?->name ?? 'Default Campus' }}</p>
+                            <span translate="no">{{ $examination->institution?->name ?? 'Default Campus' }}</span></p>
                     </div>
                     <div>
                         <span class="text-zinc-400 uppercase font-semibold text-[10px]">Results Recorded</span>

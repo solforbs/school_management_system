@@ -67,7 +67,7 @@
                     <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 mt-1 font-mono">
                         <span class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 font-bold border border-zinc-200/80 text-[11px]">{{ $code }}</span>
                         <span class="text-zinc-300">&bull;</span>
-                        <span class="font-sans text-xs text-zinc-600">{{ $subject->institution?->name ?? 'Main Campus' }}</span>
+                        <span class="font-sans text-xs text-zinc-600"><span translate="no">{{ $subject->institution?->name ?? 'Main Campus' }}</span></span>
                     </div>
                 </div>
             </div>
@@ -170,7 +170,7 @@
 
                         <div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Enrolled Institution</span>
-                            <strong class="text-zinc-900 font-bold">{{ $subject->institution?->name ?? 'Main Campus' }}</strong>
+                            <strong class="text-zinc-900 font-bold"><span translate="no">{{ $subject->institution?->name ?? 'Main Campus' }}</span></strong>
                         </div>
                     </div>
                 </div>

@@ -197,7 +197,7 @@ new #[Title('Payments')] class extends Component {
                 <flux:select label="Institution" size="sm" wire:model.live="institutionId">
                     <flux:select.option value="">All institutions</flux:select.option>
                     @foreach ($this->institutions as $institution)
-                        <flux:select.option value="{{ $institution->id }}">{{ $institution->name }}</flux:select.option>
+                        <flux:select.option translate="no" value="{{ $institution->id }}">{{ $institution->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
@@ -268,7 +268,7 @@ new #[Title('Payments')] class extends Component {
                                     @if ($payment->institution)
                                         <a href="{{ route('institution.show', $payment->institution_id) }}" wire:navigate.hover
                                             class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-xs sm:text-sm">
-                                            {{ $payment->institution->name }}
+                                            <span translate="no">{{ $payment->institution->name }}</span>
                                         </a>
                                     @else
                                         <span class="text-xs text-zinc-400 italic">Not yet claimed</span>

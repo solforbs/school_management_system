@@ -150,7 +150,7 @@ new #[Title('Record Assessment')] class extends Component
                         <flux:select.option value="">— Select class —</flux:select.option>
                         @foreach ($this->classes as $class)
                             <flux:select.option value="{{ $class->id }}" :selected="old('class_id') == $class->id">
-                                {{ $class->name }}
+                                <span translate="no">{{ $class->name }}</span>
                                 @if ($class->curriculum)
                                     ({{ $class->curriculum->systemLabel() }})
                                 @endif

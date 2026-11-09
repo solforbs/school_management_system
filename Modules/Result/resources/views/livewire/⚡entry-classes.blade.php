@@ -92,7 +92,7 @@ new #[Title('Pick a Class')] class extends Component {
                     class="group flex items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-xs transition hover:border-blue-300 hover:shadow-sm">
                     <div class="min-w-0">
                         <div class="font-bold text-zinc-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                            {{ $schoolClass->name }}
+                            <span translate="no">{{ $schoolClass->name }}</span>
                         </div>
                         <div class="text-[11px] text-zinc-400 mt-0.5">
                             {{ $subjectCount }} {{ Str::plural('subject', $subjectCount) }} for you

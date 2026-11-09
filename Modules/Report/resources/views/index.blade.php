@@ -14,7 +14,7 @@
                         {{ ucfirst(auth()->user()->getRoleNames()->first() ?? 'Institutional') }} Intelligence
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $stats['institution']?->name ?? currentInstitution()?->name ?? 'Campus Analytics' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $stats['institution']?->name ?? currentInstitution()?->name ?? 'Campus Analytics' }}</span></span>
                 </div>
                 @if (auth()->user()->hasRole('Teacher'))
                     <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Classroom &amp; Academic Analytics</flux:heading>

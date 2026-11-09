@@ -10,7 +10,7 @@
                 class="h-32 w-32 rounded-full object-cover border-4 border-gray-200">
         @else
             <div class="h-32 w-32 rounded-full bg-gray-100 border-4 border-gray-200 flex items-center justify-center">
-                <span class="text-3xl font-semibold text-gray-400">{{ strtoupper(substr($student->name, 0, 1)) }}</span>
+                <span class="text-3xl font-semibold text-gray-400"><span translate="no">{{ strtoupper(substr($student->name, 0, 1)) }}</span></span>
             </div>
         @endif
         <label for="profile_image"

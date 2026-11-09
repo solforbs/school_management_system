@@ -59,8 +59,8 @@ it('renders roster for all classes and a single class without errors', function 
         ->test('student::upload')
         ->call('onClassSelectChange', '')
         ->assertOk()
-        ->assertSee('All Classes Enrolled Roster')
+        ->assertSeeText('All Classes Enrolled Roster')
         ->call('onClassSelectChange', (string) $class->id)
         ->assertOk()
-        ->assertSee('Grade 3 Enrolled Roster');
+        ->assertSeeText('Grade 3 Enrolled Roster');
 });

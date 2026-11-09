@@ -48,7 +48,7 @@
                 <flux:select name="class_id" onchange="this.form.submit()" placeholder="Select Class to View Reports" class="w-full">
                     @foreach ($classes as $class)
                         <flux:select.option value="{{ $class->id }}" :selected="$selectedClass?->id === $class->id">
-                            {{ $class->name }}
+                            <span translate="no">{{ $class->name }}</span>
                         </flux:select.option>
                     @endforeach
                 </flux:select>
@@ -56,7 +56,7 @@
             
             @if ($selectedClass)
                 <div class="text-xs text-zinc-500 font-medium self-start md:self-center">
-                    Managing archive for <strong class="text-zinc-900 font-bold">{{ $selectedClass->name }}</strong>
+                    Managing archive for <strong class="text-zinc-900 font-bold"><span translate="no">{{ $selectedClass->name }}</span></strong>
                 </div>
             @endif
         </div>
@@ -86,7 +86,7 @@
                         {{ $totalReportsCount }} Reports
                     </div>
                     <div class="text-xs text-zinc-500 mt-2 font-medium">
-                        {{ $selectedClass->name }} verified records
+                        <span translate="no">{{ $selectedClass->name }}</span> verified records
                     </div>
                 </div>
 
@@ -128,7 +128,7 @@
                 <div class="bg-white rounded-2xl p-6 border border-zinc-200/80 shadow-sm">
                     <div class="mb-4">
                         <h3 class="text-base font-bold text-zinc-900">Generate New Attendance Report</h3>
-                        <p class="text-xs text-zinc-500 mt-0.5">Create a structured daily or weekly audit report for {{ $selectedClass->name }}.</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">Create a structured daily or weekly audit report for <span translate="no">{{ $selectedClass->name }}</span>.</p>
                     </div>
                     
                     <form action="{{ route('lesson.reports.generate') }}" method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
@@ -160,7 +160,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-base font-bold text-zinc-900">Archived Reports</h3>
-                        <p class="text-xs text-zinc-500 mt-0.5">Downloadable PDF reports and audit summaries for {{ $selectedClass->name }}.</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">Downloadable PDF reports and audit summaries for <span translate="no">{{ $selectedClass->name }}</span>.</p>
                     </div>
                 </div>
 

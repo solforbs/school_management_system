@@ -362,7 +362,7 @@ new #[Title('Class Management')] class extends Component
 
                         <div>
                             <h3 class="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
-                                {{ $homeroomClass->name }}
+                                <span translate="no">{{ $homeroomClass->name }}</span>
                             </h3>
                             <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                 {{ $homeroomClass->students_count }} Enrolled Learners &middot;
@@ -452,7 +452,7 @@ new #[Title('Class Management')] class extends Component
                                         <div>
                                             <div class="flex items-center gap-2">
                                                 <a href="{{ route('classes.show', $schoolClass->id) }}" class="font-bold text-sm text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                                    {{ $schoolClass->name }}
+                                                    <span translate="no">{{ $schoolClass->name }}</span>
                                                 </a>
                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-tight {{ $isCbc ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60' : 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60' }}">
                                                     {{ $isCbc ? 'CBC' : '8-4-4' }}
@@ -603,7 +603,7 @@ new #[Title('Class Management')] class extends Component
                                         <div class="flex items-center gap-2">
                                             <a href="{{ route('classes.show', $schoolClass->id) }}"
                                                 class="font-semibold text-sm text-zinc-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                                {{ $schoolClass->name }}
+                                                <span translate="no">{{ $schoolClass->name }}</span>
                                             </a>
                                             @if ($schoolClass->level)
                                                 <flux:badge size="sm" color="zinc" class="font-medium text-[11px]">
@@ -624,7 +624,7 @@ new #[Title('Class Management')] class extends Component
                                     <flux:table.cell>
                                         <div class="flex items-center gap-1.5 text-zinc-500 text-xs truncate max-w-[150px]">
                                             <flux:icon icon="building-library" class="size-3.5 text-zinc-400 shrink-0" />
-                                            <span>{{ $schoolClass->institution?->name ?? '—' }}</span>
+                                            <span><span translate="no">{{ $schoolClass->institution?->name ?? '—' }}</span></span>
                                         </div>
                                     </flux:table.cell>
                                 @endif
