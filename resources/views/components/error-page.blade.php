@@ -14,7 +14,7 @@
 @endphp
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="utf-8" />

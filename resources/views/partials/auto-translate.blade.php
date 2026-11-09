@@ -6,6 +6,10 @@
     wire:navigate swaps <body> (dropping the translator's widget) and
     Livewire morphs put fresh English text back into the DOM, so the
     page is re-translated after every navigation and component update.
+
+    Layouts must keep <html lang="en">: the text is written in English, and
+    if lang names the target language Google treats the page as already
+    translated and leaves it untouched. Google sets lang itself afterwards.
 --}}
 @php
     $locale = app()->getLocale();

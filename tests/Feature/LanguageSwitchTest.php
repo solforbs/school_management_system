@@ -42,7 +42,7 @@ test('every language has all the switcher phrases', function () {
 });
 
 test('guests see the app in english by default', function () {
-    $this->get(route('login'))->assertOk()->assertSee('<html lang="en" dir="ltr"', false);
+    $this->get(route('login'))->assertOk()->assertSee('<html lang="en" dir="ltr"', false)->assertSee('var target = null;', false);
 });
 
 test('a person switching language gets that language and an undo offer', function () {
@@ -57,7 +57,7 @@ test('the chosen language is used on the next page', function () {
     $this->withCookie('locale', 'ar')
         ->get(route('login'))
         ->assertOk()
-        ->assertSee('<html lang="ar" dir="rtl"', false);
+        ->assertSee('<html lang="en" dir="rtl"', false)->assertSee("var target = 'ar';", false);
 });
 
 test('right after a switch the undo banner speaks the previous language', function () {
@@ -87,21 +87,21 @@ test('lang=en in the address always brings the app back to english', function ()
     $this->withCookie('locale', 'ar')
         ->get(route('login', ['lang' => 'en']))
         ->assertOk()
-        ->assertSee('<html lang="en" dir="ltr"', false);
+        ->assertSee('var target = null;', false);
 });
 
 test('an unknown lang in the address is ignored', function () {
     $this->withCookie('locale', 'sw')
         ->get(route('login', ['lang' => 'xx']))
         ->assertOk()
-        ->assertSee('<html lang="sw" dir="ltr"', false);
+        ->assertSee("var target = 'sw';", false);
 });
 
 test('signed-in users get their institution language', function () {
     $this->actingAs(directorWithInstitutionLocale('sw'))
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('<html lang="sw"', false);
+        ->assertSee("var target = 'sw';", false);
 });
 
 test('a personal choice overrides the institution language', function () {
@@ -109,7 +109,7 @@ test('a personal choice overrides the institution language', function () {
         ->withCookie('locale', 'fr')
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('<html lang="fr"', false);
+        ->assertSee("var target = 'fr';", false);
 });
 
 test('choosing the institution language clears the personal choice', function () {
@@ -153,4 +153,12 @@ test('an institution can not be saved with a language outside the four', functio
             'locale' => 'de',
         ])
         ->assertSessionHasErrors('locale');
+});
+
+test('pages always declare english as their language so google translates them', function () {
+    $this->withCookie('locale', 'sw')
+        ->get(route('login'))
+        ->assertOk()
+        ->assertSee('<html lang="en"', false)
+        ->assertDontSee('<html lang="sw"', false);
 });

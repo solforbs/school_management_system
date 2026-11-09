@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ config('locales.available.'.app()->getLocale().'.rtl') ? 'rtl' : 'ltr' }}" >
+<html lang="en" dir="{{ config('locales.available.'.app()->getLocale().'.rtl') ? 'rtl' : 'ltr' }}" >
 
 <head>
     @include('partials.head')
