@@ -338,6 +338,12 @@ class AnalyticsService
             'overdue_fees_count' => (clone $feeQuery)->whereColumn('amount_paid', '<', 'amount')
                 ->whereDate('due_date', '<', today())
                 ->count(),
+            // Defaulters are people: a learner with several overdue fee
+            // items is one defaulter, so this can never exceed the roll.
+            'overdue_students_count' => (clone $feeQuery)->whereColumn('amount_paid', '<', 'amount')
+                ->whereDate('due_date', '<', today())
+                ->distinct()
+                ->count('student_id'),
             'fees_by_status' => $this->feesByStatus(clone $feeQuery),
             'fee_collection_trend' => $this->monthlyFeeTrend(clone $feeQuery),
             'recent_fees' => $this->applySort(

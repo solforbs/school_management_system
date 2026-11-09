@@ -19,10 +19,10 @@
             <x-kpi-card title="Outstanding Arrears" icon="banknotes" color="rose"
                 count="KES {{ $currency($stats['fees_outstanding']) }}"
                 href="{{ route('feemanagement.index', ['status' => 'overdue']) }}">
-                <span class="text-xs font-semibold text-rose-600 block">{{ $stats['overdue_fees_count'] }} overdue
+                <span class="text-xs font-semibold text-rose-600 block">{{ $stats['overdue_students_count'] }} overdue
                     defaulters</span>
             </x-kpi-card>
-            <x-kpi-card title="Overdue Accounts" icon="exclamation-triangle" color="amber" :count="$stats['overdue_fees_count']"
+            <x-kpi-card title="Overdue Accounts" icon="exclamation-triangle" color="amber" :count="$stats['overdue_students_count']"
                 href="{{ route('feemanagement.index', ['status' => 'overdue']) }}"
                 subtext="require collection reminders" />
         </div>
