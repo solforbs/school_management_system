@@ -480,7 +480,7 @@ new #[Title('Student Directory')] class extends Component
                             <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                 @if ($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
                                     <img src="{{ asset('storage/' . $student->profile_photo) }}"
-                                        alt="{{ $user?->name }}"
+                                        alt="{{ $user?->name }}" translate="no"
                                         class="size-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0">
                                 @else
                                     <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
@@ -616,7 +616,7 @@ new #[Title('Student Directory')] class extends Component
                                     <div class="flex items-center gap-3">
                                         @if ($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
                                             <img src="{{ asset('storage/' . $student->profile_photo) }}"
-                                                alt="{{ $user?->name }}"
+                                                alt="{{ $user?->name }}" translate="no"
                                                 class="size-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0">
                                         @else
                                             <div

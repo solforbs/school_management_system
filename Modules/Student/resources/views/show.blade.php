@@ -59,7 +59,7 @@
         <div class="bg-white rounded-3xl p-5 sm:p-8 border border-zinc-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
             <div class="flex items-start sm:items-center gap-4">
                 @if($details?->profile_photo && Storage::disk('public')->exists($details->profile_photo))
-                    <img src="{{ asset('storage/' . $details->profile_photo) }}" alt="{{ $student->name }}" 
+                    <img src="{{ asset('storage/' . $details->profile_photo) }}" alt="{{ $student->name }}" translate="no" 
                         class="size-16 sm:size-20 rounded-2xl object-cover border border-zinc-200 shadow-sm shrink-0">
                 @else
                     <div class="size-16 sm:size-20 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-xl sm:text-2xl shadow-sm shrink-0">

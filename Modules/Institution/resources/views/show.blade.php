@@ -17,7 +17,7 @@
                 <div class="shrink-0">
                     <span class="inline-flex size-16 sm:size-20 items-center justify-center rounded-2xl bg-white border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden p-2">
                         @if ($institution->logo)
-                            <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" class="w-full h-full object-contain">
+                            <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" translate="no" class="w-full h-full object-contain">
                         @else
                             <div class="text-xl font-bold bg-gradient-to-r from-[#00A3FF] to-[#0047FF] bg-clip-text text-transparent">
                                 <span translate="no">{{ substr($institution->name, 0, 1) }}</span>

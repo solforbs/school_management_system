@@ -10,7 +10,7 @@
     <flux:sidebar.brand href="{{ route('dashboard') }}" class="px-2 pb-2" {{ $attributes }}>
         @if ($institution && $institution->logo)
             <div class="flex flex-col items-center justify-center w-full">
-                <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}"
+                <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" translate="no"
                     class="h-10 w-auto object-contain hover:scale-105 transition-transform duration-300 drop-shadow-sm" />
             </div>
         @else

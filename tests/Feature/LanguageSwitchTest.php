@@ -162,3 +162,44 @@ test('pages always declare english as their language so google translates them',
         ->assertSee('<html lang="en"', false)
         ->assertDontSee('<html lang="sw"', false);
 });
+
+test('a new institution can choose its language when it is created', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('institution.store'), [
+        'name' => 'Shule ya Amani',
+        'email' => 'info@amani.test',
+        'locale' => 'sw',
+    ])->assertSessionHasNoErrors();
+
+    expect(Institution::where('email', 'info@amani.test')->value('locale'))->toBe('sw');
+});
+
+test('a new institution without a language starts in english', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('institution.store'), [
+        'name' => 'Plain Academy',
+        'email' => 'info@plain.test',
+    ])->assertSessionHasNoErrors();
+
+    expect(Institution::where('email', 'info@plain.test')->value('locale'))->toBe('en');
+});
+
+test('a new institution can not choose a language outside the four', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('institution.store'), [
+            'name' => 'German Academy',
+            'email' => 'info@german.test',
+            'locale' => 'de',
+        ])
+        ->assertSessionHasErrors('locale');
+});
+
+test('the sign-up form offers the language choice', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('institution.create'))
+        ->assertOk()
+        ->assertSee('name="locale"', false)
+        ->assertSee('Kiswahili');
+});
