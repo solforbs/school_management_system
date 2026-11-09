@@ -454,8 +454,10 @@ new #[Title('Class Attendance Register')] class extends Component
             $totalCount = $students->count();
         @endphp
 
-        {{-- Instant 0ms SPA Alpine Container --}}
-        <div x-data="{
+        {{-- Instant 0ms SPA Alpine Container. Keyed by class and date so a
+             switch rebuilds it: a morph would keep the previous class's
+             ticks in Alpine state and save them into the new class. --}}
+        <div wire:key="register-{{ $this->classId }}-{{ $this->date }}" x-data="{
             statuses: @js($statuses),
             notified: @js($parentNotified),
             notes: @js($notes),
@@ -553,7 +555,7 @@ new #[Title('Class Attendance Register')] class extends Component
 
                     await $wire.saveAttendance(cleanStatuses, cleanNotified, cleanNotes);
                     this.savedBanner = true;
-                    this.savedMessage = 'Attendance for <span translate="no">{{ $this->currentClass?->name ?? 'Class' }}</span> saved successfully!';
+                    this.savedMessage = 'Attendance for {{ $this->currentClass?->name ?? 'Class' }} saved successfully!';
                     setTimeout(() => { this.savedBanner = false; }, 6000);
                 } catch (err) {
                     console.error('Attendance save error:', err);
