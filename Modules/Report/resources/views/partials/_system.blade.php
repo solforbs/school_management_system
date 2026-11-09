@@ -181,7 +181,7 @@
                     <div class="rounded-xl border border-zinc-100 dark:border-zinc-800 p-3">
                         <div class="flex items-center justify-between gap-2">
                             <span class="font-bold text-xs text-zinc-900 dark:text-white truncate">
-                                {{ $payment->institution?->name ?? 'Unclaimed' }}
+                                <span translate="no">{{ $payment->institution?->name ?? 'Unclaimed' }}</span>
                             </span>
                             <span class="font-mono text-xs font-semibold text-zinc-700 dark:text-zinc-300 shrink-0">
                                 KES {{ $currency($payment->amount) }}
@@ -275,9 +275,9 @@
                     <flux:table.rows>
                         @foreach ($stats['pending_institutions'] as $institution)
                             <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
-                                <flux:table.cell class="font-semibold text-xs sm:text-sm">{{ $institution->name }}
+                                <flux:table.cell class="font-semibold text-xs sm:text-sm"><span translate="no">{{ $institution->name }}</span>
                                 </flux:table.cell>
-                                <flux:table.cell class="text-xs">{{ $institution->owner?->name }}</flux:table.cell>
+                                <flux:table.cell class="text-xs"><span translate="no">{{ $institution->owner?->name }}</span></flux:table.cell>
                                 <flux:table.cell class="text-xs">{{ $institution->type }}</flux:table.cell>
                                 <flux:table.cell class="text-xs text-zinc-400">
                                     {{ $institution->created_at?->diffForHumans() }}</flux:table.cell>
@@ -317,9 +317,9 @@
                     <flux:table.rows>
                         @forelse ($stats['recent_institutions'] as $institution)
                             <flux:table.row class="transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20">
-                                <flux:table.cell class="font-semibold text-xs sm:text-sm">{{ $institution->name }}
+                                <flux:table.cell class="font-semibold text-xs sm:text-sm"><span translate="no">{{ $institution->name }}</span>
                                 </flux:table.cell>
-                                <flux:table.cell class="text-xs">{{ $institution->owner?->name }}</flux:table.cell>
+                                <flux:table.cell class="text-xs"><span translate="no">{{ $institution->owner?->name }}</span></flux:table.cell>
                                 <flux:table.cell>
                                     <flux:badge size="sm" :color="$institution->is_active ? 'emerald' : 'zinc'"
                                         class="font-semibold text-[11px]">
@@ -352,7 +352,7 @@
                         class="block rounded-xl border border-zinc-100 dark:border-zinc-800 p-3 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition">
                         <div class="flex items-center justify-between">
                             <span
-                                class="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white">{{ $message->name }}</span>
+                                class="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white"><span translate="no">{{ $message->name }}</span></span>
                             <span class="text-[11px] text-zinc-400">{{ $message->created_at->diffForHumans() }}</span>
                         </div>
                         <p class="mt-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{{ $message->message }}</p>

@@ -126,7 +126,7 @@
                         Academic Delivery
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Lesson Attendance</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -159,7 +159,7 @@
                     <flux:select name="class_id" onchange="this.form.submit()" placeholder="Select Class" class="w-full">
                         @foreach ($classes as $class)
                             <flux:select.option value="{{ $class->id }}" :selected="$selectedClass?->id === $class->id">
-                                {{ $class->name }}
+                                <span translate="no">{{ $class->name }}</span>
                             </flux:select.option>
                         @endforeach
                     </flux:select>
@@ -208,7 +208,7 @@
                         <span x-text="total">{{ $totalPeriods }}</span> Periods
                     </div>
                     <div class="text-xs text-zinc-500 mt-2 font-medium">
-                        {{ $selectedClass->name }} &bull; {{ $date->format('l, d M Y') }}
+                        <span translate="no">{{ $selectedClass->name }}</span> &bull; {{ $date->format('l, d M Y') }}
                     </div>
                 </div>
 
@@ -263,7 +263,7 @@
                                     {{ $avgTrendRate }}% Avg Compliance
                                 </span>
                             </div>
-                            <p class="text-xs text-zinc-500 mt-0.5">Continuous delivery curve for {{ $selectedClass->name }} across the past 10 class sessions.</p>
+                            <p class="text-xs text-zinc-500 mt-0.5">Continuous delivery curve for <span translate="no">{{ $selectedClass->name }}</span> across the past 10 class sessions.</p>
                         </div>
                         
                         <div class="flex items-center gap-4 text-xs font-medium text-zinc-500">
@@ -375,7 +375,7 @@
                     <flux:icon icon="calendar" class="size-12 mx-auto text-zinc-300 mb-3" />
                     <h4 class="text-base font-bold text-zinc-900">No Timetable Periods Found</h4>
                     <p class="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
-                        There are no timetable periods scheduled for {{ $selectedClass->name }} on {{ $date->format('l') }}.
+                        There are no timetable periods scheduled for <span translate="no">{{ $selectedClass->name }}</span> on {{ $date->format('l') }}.
                     </p>
                 </div>
             @else
@@ -545,7 +545,7 @@
                 <div class="mt-8">
                     <div class="mb-4">
                         <flux:heading size="lg" class="font-bold text-zinc-900">Recent Lesson Records</flux:heading>
-                        <flux:text class="text-xs text-zinc-500 mt-0.5">Historical verification logs for {{ $selectedClass->name }}.</flux:text>
+                        <flux:text class="text-xs text-zinc-500 mt-0.5">Historical verification logs for <span translate="no">{{ $selectedClass->name }}</span>.</flux:text>
                     </div>
                     
                     <div class="bg-white shadow-sm border border-zinc-200/80 rounded-2xl overflow-hidden flex flex-col">

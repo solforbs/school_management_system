@@ -59,7 +59,7 @@ new #[Title('Teacher')] class extends Component {
                         Teacher Profile</flux:heading>
                     <flux:text class="text-zinc-500 text-sm mt-1">
                         Update employment and contact information for <span
-                            class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $teacher->teacher?->name }}</span>.
+                            class="font-semibold text-zinc-700 dark:text-zinc-300"><span translate="no">{{ $teacher->teacher?->name }}</span></span>.
                     </flux:text>
                 </div>
 
@@ -131,7 +131,7 @@ new #[Title('Teacher')] class extends Component {
                                     @foreach ($this->institutions as $institution)
                                         <flux:select.option value="{{ $institution->id }}"
                                             :selected="old('institution_id', $teacher->institution_id) == $institution->id">
-                                            {{ $institution->name }}
+                                            <span translate="no">{{ $institution->name }}</span>
                                         </flux:select.option>
                                     @endforeach
                                 </flux:select>
@@ -336,7 +336,7 @@ new #[Title('Teacher')] class extends Component {
                                     @foreach ($this->institutions as $institution)
                                         <flux:select.option value="{{ $institution->id }}"
                                             :selected="old('institution_id') == $institution->id">
-                                            {{ $institution->name }}
+                                            <span translate="no">{{ $institution->name }}</span>
                                         </flux:select.option>
                                     @endforeach
                                 </flux:select>

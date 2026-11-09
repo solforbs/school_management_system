@@ -176,7 +176,7 @@ new #[Title('Teacher Management')] class extends Component
                         Faculty Management
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? 'Campus Faculty' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ currentInstitution()?->name ?? 'Campus Faculty' }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Teachers Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -386,13 +386,13 @@ new #[Title('Teacher Management')] class extends Component
                                     @if($teacherDetails->phone)
                                         <a href="tel:{{ $teacherDetails->phone }}" class="text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
                                             <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
-                                            <span class="font-mono text-[11px]">{{ $teacherDetails->phone }}</span>
+                                            <span class="font-mono text-[11px]"><span translate="no">{{ $teacherDetails->phone }}</span></span>
                                         </a>
                                     @endif
                                     @if($teacherUser?->email)
                                         <a href="mailto:{{ $teacherUser->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[150px]">
                                             <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
-                                            <span class="truncate text-[11px]">{{ $teacherUser->email }}</span>
+                                            <span class="truncate text-[11px]"><span translate="no">{{ $teacherUser->email }}</span></span>
                                         </a>
                                     @endif
                                 </div>
@@ -458,11 +458,11 @@ new #[Title('Teacher Management')] class extends Component
                                                 </a>
                                                 <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem; flex-wrap: nowrap;">
                                                     <span style="white-space: nowrap;" class="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono font-semibold border border-zinc-200 dark:border-zinc-700 text-[11px]">
-                                                        {{ $teacherDetails->employee_number ?? 'EMP-T-' . str_pad($teacherDetails->id, 3, '0', STR_PAD_LEFT) }}
+                                                        <span translate="no">{{ $teacherDetails->employee_number ?? 'EMP-T-' . str_pad($teacherDetails->id, 3, '0', STR_PAD_LEFT) }}</span>
                                                     </span>
                                                     <span class="text-zinc-300">&bull;</span>
                                                     <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="font-sans text-[11px] text-zinc-500">
-                                                        {{ $teacherUser?->email ?? 'No email' }}
+                                                        <span translate="no">{{ $teacherUser?->email ?? 'No email' }}</span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -487,7 +487,7 @@ new #[Title('Teacher Management')] class extends Component
                                     <td class="py-4 px-5">
                                         <div style="display: flex; flex-direction: column; gap: 0.2rem;">
                                             <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 font-mono">
-                                                {{ $teacherDetails->phone ?? '—' }}
+                                                <span translate="no">{{ $teacherDetails->phone ?? '—' }}</span>
                                             </span>
                                             <span class="text-[11px] text-zinc-400">
                                                 Joined {{ $teacherDetails->created_at?->format('M Y') ?? 'Recently' }}

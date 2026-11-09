@@ -64,7 +64,7 @@
                                 @foreach ($students as $studentDetails)
                                     <flux:select.option value="{{ $studentDetails->student_id }}"
                                         :selected="old('student_id', $matchedStudent?->student_id) == $studentDetails->student_id">
-                                        {{ $studentDetails->student?->name }} ({{ $studentDetails->admission_number ?? '—' }})
+                                        <span translate="no">{{ $studentDetails->student?->name }}</span> (<span translate="no">{{ $studentDetails->admission_number ?? '—' }}</span>)
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>

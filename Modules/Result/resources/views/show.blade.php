@@ -67,21 +67,21 @@
                             @if ($student)
                                 <a href="{{ route('student.show', $student->id) }}" wire:navigate.hover
                                     class="text-xl font-black text-zinc-900 hover:text-blue-600 transition">
-                                    {{ $student->name }}
+                                    <span translate="no">{{ $student->name }}</span>
                                 </a>
                             @else
                                 <span class="text-xl font-black text-zinc-900">Student</span>
                             @endif
                             <span
                                 class="px-2.5 py-0.5 rounded-lg bg-zinc-100 text-zinc-700 font-medium text-xs border border-zinc-200/60">
-                                {{ $result->schoolClass?->name ?? 'Class Assigned' }}
+                                <span translate="no">{{ $result->schoolClass?->name ?? 'Class Assigned' }}</span>
                             </span>
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-zinc-500 font-medium">
                             <span class="font-mono">{{ $admNo }}</span>
                             <span class="text-zinc-300">&bull;</span>
-                            <span>{{ $result->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span>
+                            <span><span translate="no">{{ $result->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span></span>
                         </div>
                     </div>
                 </div>
@@ -149,7 +149,7 @@
                 <div class="flex items-center gap-2">
                     <span class="text-zinc-400">Recorded By:</span>
                     <strong
-                        class="text-zinc-800 font-semibold">{{ $result->recordedBy?->name ?? 'System Administrator' }}</strong>
+                        class="text-zinc-800 font-semibold"><span translate="no">{{ $result->recordedBy?->name ?? 'System Administrator' }}</span></strong>
                 </div>
                 <div class="font-mono text-zinc-400 text-[11px]">
                     Evaluation ID #{{ $result->id }}

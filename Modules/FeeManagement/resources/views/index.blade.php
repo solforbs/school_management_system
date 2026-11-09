@@ -18,7 +18,7 @@
                         Financial Operations
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Fee Management & Ledger</flux:heading>
                 <flux:text class="text-zinc-500 text-xs mt-0.5">
@@ -196,7 +196,7 @@
                                                 <div class="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5 font-mono">
                                                     <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-semibold border border-zinc-200/80 text-[10px]">{{ $admNum }}</span>
                                                     <span class="text-zinc-300">&bull;</span>
-                                                    <span class="font-sans text-[11px] text-zinc-500">{{ $fee->institution?->name ?? 'Main Campus' }}</span>
+                                                    <span class="font-sans text-[11px] text-zinc-500"><span translate="no">{{ $fee->institution?->name ?? 'Main Campus' }}</span></span>
                                                 </div>
                                             </div>
                                         </div>

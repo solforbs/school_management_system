@@ -13,7 +13,7 @@
                 <flux:select name="institution_id" label="Institution" placeholder="Select Institution">
                     @foreach ($institutions as $institution)
                         <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $schoolClass->institution_id ?? null) == $institution->id">
-                            {{ $institution->name }}
+                            <span translate="no">{{ $institution->name }}</span>
                         </flux:select.option>
                     @endforeach
                 </flux:select>
@@ -48,7 +48,7 @@
             <flux:select.option value="">Unassigned</flux:select.option>
             @foreach ($teachers as $teacher)
                 <flux:select.option value="{{ $teacher->id }}" :selected="old('class_teacher_id', $schoolClass->class_teacher_id ?? null) == $teacher->id">
-                    {{ $teacher->name }}
+                    <span translate="no">{{ $teacher->name }}</span>
                 </flux:select.option>
             @endforeach
         </flux:select>

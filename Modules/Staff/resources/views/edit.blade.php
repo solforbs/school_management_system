@@ -6,7 +6,7 @@
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Staff Member</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update profile and access rights for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $staff->name }}</span>.
+                    Update profile and access rights for <span class="font-semibold text-zinc-700 dark:text-zinc-300"><span translate="no">{{ $staff->name }}</span></span>.
                 </flux:text>
             </div>
             
@@ -66,7 +66,7 @@
                         <flux:select name="institution_id" label="Institution">
                             @foreach ($institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $staff->institution_id) == $institution->id">
-                                    {{ $institution->name }}
+                                    <span translate="no">{{ $institution->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>

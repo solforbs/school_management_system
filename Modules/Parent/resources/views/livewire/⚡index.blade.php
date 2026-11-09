@@ -98,7 +98,7 @@ new #[Title('Parent Management')] class extends Component
                         Guardian Directory
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Parents &amp; Guardians</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -227,7 +227,7 @@ new #[Title('Parent Management')] class extends Component
                                     <div class="min-w-0 flex-1">
                                         <a href="{{ route('parent.show', $parent->id) }}" wire:navigate.hover
                                             class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-sm truncate block">
-                                            {{ $parent->name }}
+                                            <span translate="no">{{ $parent->name }}</span>
                                         </a>
                                         <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate">
                                             <span>{{ $occupation }}</span>
@@ -264,7 +264,7 @@ new #[Title('Parent Management')] class extends Component
                                     @if($parent->email)
                                         <a href="mailto:{{ $parent->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[140px]">
                                             <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
-                                            <span class="truncate text-[11px]">{{ $parent->email }}</span>
+                                            <span class="truncate text-[11px]"><span translate="no">{{ $parent->email }}</span></span>
                                         </a>
                                     @endif
                                 </div>
@@ -333,10 +333,10 @@ new #[Title('Parent Management')] class extends Component
                                             </div>
                                             <div>
                                                 <a href="{{ route('parent.show', $parent->id) }}" class="font-bold text-zinc-900 dark:text-white hover:text-zinc-600 transition">
-                                                    {{ $parent->name }}
+                                                    <span translate="no">{{ $parent->name }}</span>
                                                 </a>
                                                 <div class="text-xs text-zinc-400 mt-0.5 font-medium">
-                                                    <a href="mailto:{{ $parent->email }}" class="hover:text-zinc-600 transition">{{ $parent->email }}</a>
+                                                    <a href="mailto:{{ $parent->email }}" class="hover:text-zinc-600 transition"><span translate="no">{{ $parent->email }}</span></a>
                                                 </div>
                                             </div>
                                         </div>
@@ -368,9 +368,9 @@ new #[Title('Parent Management')] class extends Component
                                                         <a href="{{ route('student.show', $child->student->id) }}" wire:navigate.hover
                                                             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-semibold transition border border-zinc-200/60"
                                                             title="View Student File">
-                                                            <span>{{ $child->student->name }}</span>
+                                                            <span><span translate="no">{{ $child->student->name }}</span></span>
                                                             @if($child->student->studentDetails?->schoolClass)
-                                                                <span class="text-[10px] text-zinc-400 font-normal">({{ $child->student->studentDetails->schoolClass->name }})</span>
+                                                                <span class="text-[10px] text-zinc-400 font-normal">(<span translate="no">{{ $child->student->studentDetails->schoolClass->name }}</span>)</span>
                                                             @endif
                                                         </a>
                                                     @endif

@@ -236,7 +236,7 @@ new #[Title('Lesson Attendance')] class extends Component {
             <flux:select wire:model.live="classId" label="Class">
                 <flux:select.option value="">Select a class&hellip;</flux:select.option>
                 @foreach ($this->classes as $schoolClass)
-                    <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
+                    <flux:select.option translate="no" value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
                 @endforeach
             </flux:select>
             <flux:input type="date" wire:model.live="date" label="Date" />
@@ -256,7 +256,7 @@ new #[Title('Lesson Attendance')] class extends Component {
         <flux:card class="mb-6" wire:loading.class="opacity-60">
             <div class="mb-4">
                 <flux:heading size="lg">
-                    {{ $this->selectedClass->name }} &mdash;
+                    <span translate="no">{{ $this->selectedClass->name }}</span> &mdash;
                     {{ \Illuminate\Support\Carbon::parse($date)->format('l, d M Y') }}
                 </flux:heading>
 
@@ -290,7 +290,7 @@ new #[Title('Lesson Attendance')] class extends Component {
                                         {{ $entry->end_time?->format('H:i') }}
                                     </flux:table.cell>
                                     <flux:table.cell>{{ $entry->subject }}</flux:table.cell>
-                                    <flux:table.cell>{{ $entry->teacher?->name ?? '—' }}</flux:table.cell>
+                                    <flux:table.cell><span translate="no">{{ $entry->teacher?->name ?? '—' }}</span></flux:table.cell>
                                     <flux:table.cell>
                                         <flux:select size="sm" wire:model="statuses.{{ $entry->id }}"
                                             :disabled="! $this->markable">

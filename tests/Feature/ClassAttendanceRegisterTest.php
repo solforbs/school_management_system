@@ -579,3 +579,53 @@ test('subject teacher who is not the class teacher gets a read-only register', f
 
     expect(Attendance::count())->toBe(1);
 });
+
+test('saving a class never records learners from another class', function () {
+    $otherClass = SchoolClass::create([
+        'institution_id' => $this->institution->id,
+        'name' => 'Grade 6 Red',
+        'curriculum_id' => $this->curriculum->id,
+        'class_teacher_id' => $this->teacher->id,
+    ]);
+    $otherStudent = User::factory()->create(['name' => 'Wanjiru Grace']);
+    StudentDetails::create([
+        'student_id' => $otherStudent->id,
+        'class_id' => $otherClass->id,
+        'institution_id' => $this->institution->id,
+        'admission_number' => 'ADM-101',
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($this->teacher);
+
+    // Ticks left over in the browser from Grade 6 Blue, saved while Grade 6 Red is open.
+    Livewire::test('attendance::register', ['classId' => $otherClass->id])
+        ->call('saveAttendance', [
+            $this->student1->id => 'present',
+            $this->student2->id => 'absent',
+            $otherStudent->id => 'present',
+        ], [], '');
+
+    expect(Attendance::where('school_class_id', $otherClass->id)->pluck('student_id')->all())
+        ->toBe([$otherStudent->id])
+        ->and(Attendance::where('school_class_id', $this->schoolClass->id)->count())->toBe(0);
+});
+
+test('switching class rebuilds the register so ticks do not carry over', function () {
+    $otherClass = SchoolClass::create([
+        'institution_id' => $this->institution->id,
+        'name' => 'Grade 6 Red',
+        'curriculum_id' => $this->curriculum->id,
+        'class_teacher_id' => $this->teacher->id,
+    ]);
+
+    $this->actingAs($this->teacher);
+
+    $component = Livewire::test('attendance::register', ['classId' => $this->schoolClass->id])
+        ->call('markAllPresent')
+        ->assertSee('wire:key="register-'.$this->schoolClass->id.'-'.today()->toDateString().'"', false)
+        ->set('classId', $otherClass->id)
+        ->assertSee('wire:key="register-'.$otherClass->id.'-'.today()->toDateString().'"', false);
+
+    expect($component->get('statuses'))->toBe([]);
+});

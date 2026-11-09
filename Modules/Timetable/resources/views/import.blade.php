@@ -58,7 +58,7 @@
                             @foreach ($classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}"
                                     :selected="old('class_id') == $schoolClass->id">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>

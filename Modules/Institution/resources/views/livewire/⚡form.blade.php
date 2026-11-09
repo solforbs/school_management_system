@@ -64,7 +64,7 @@ new #[Title('Institution')] class extends Component
                 <flux:icon icon="pencil-square" class="size-8 text-blue-600 dark:text-blue-400" />
             </div>
             <h1 class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
-                Editing <span class="text-blue-600 dark:text-blue-400">{{ $institution->name }}</span>
+                Editing <span class="text-blue-600 dark:text-blue-400"><span translate="no">{{ $institution->name }}</span></span>
             </h1>
             <p class="mt-4 text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
                 Update the workspace details and administrative controls below.
@@ -163,9 +163,9 @@ new #[Title('Institution')] class extends Component
                         @if ($institution->exists)
                             <div>
                                 <flux:select name="locale" label="Language"
-                                    description="The app loads in this language for everyone in your institution.">
+                                    description="The language everyone in your institution starts in. Each person can still switch for themselves from the Language menu.">
                                     @foreach (config('locales.available') as $code => $language)
-                                        <flux:select.option value="{{ $code }}" :selected="old('locale', $institution->locale ?? 'en') === $code">
+                                        <flux:select.option value="{{ $code }}" translate="no" class="notranslate" :selected="old('locale', $institution->locale ?? 'en') === $code">
                                             {{ $language['name'] }} — {{ $language['native'] }}
                                         </flux:select.option>
                                     @endforeach

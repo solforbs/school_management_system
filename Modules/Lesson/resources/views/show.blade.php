@@ -11,14 +11,14 @@
             <div class="border-b border-gray-200 px-6 py-4 bg-gray-50 rounded-t-lg">
                 <h4 class="text-lg font-semibold text-gray-900 mb-0">{{ $lesson->timetableEntry?->subject }}</h4>
                 <small class="text-sm text-gray-500">
-                    {{ $lesson->schoolClass?->name }} &middot; {{ $lesson->lesson_date->format('l, d M Y') }}
+                    <span translate="no">{{ $lesson->schoolClass?->name }}</span> &middot; {{ $lesson->lesson_date->format('l, d M Y') }}
                 </small>
             </div>
 
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <p class="text-xs text-gray-500 uppercase">Class</p>
-                    <p class="text-sm text-gray-900">{{ $lesson->schoolClass?->name }}</p>
+                    <p class="text-sm text-gray-900"><span translate="no">{{ $lesson->schoolClass?->name }}</span></p>
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 uppercase">Subject</p>
@@ -26,7 +26,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 uppercase">Teacher</p>
-                    <p class="text-sm text-gray-900">{{ $lesson->timetableEntry?->teacher?->name ?? '—' }}</p>
+                    <p class="text-sm text-gray-900"><span translate="no">{{ $lesson->timetableEntry?->teacher?->name ?? '—' }}</span></p>
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 uppercase">Time</p>

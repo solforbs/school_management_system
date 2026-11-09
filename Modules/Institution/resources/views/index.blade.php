@@ -215,7 +215,7 @@
                                 @endif
                                 <div>
                                     <h3 class="text-base font-bold text-zinc-900">
-                                        {{ $institute->name }}
+                                        <span translate="no">{{ $institute->name }}</span>
                                     </h3>
                                     <div class="flex items-center gap-2 mt-0.5">
                                         <span
@@ -310,13 +310,13 @@
                                 <div class="flex items-center gap-2">
                                     <flux:icon icon="envelope" class="size-3.5 text-zinc-400 shrink-0" />
                                     <a href="mailto:{{ $institute->email }}"
-                                        class="text-zinc-600 hover:text-zinc-900 truncate transition font-medium">{{ $institute->email }}</a>
+                                        class="text-zinc-600 hover:text-zinc-900 truncate transition font-medium"><span translate="no">{{ $institute->email }}</span></a>
                                 </div>
                             @endif
                             @if ($institute->phone)
                                 <div class="flex items-center gap-2">
                                     <flux:icon icon="phone" class="size-3.5 text-zinc-400 shrink-0" />
-                                    <span class="text-zinc-600 font-medium">{{ $institute->phone }}</span>
+                                    <span class="text-zinc-600 font-medium"><span translate="no">{{ $institute->phone }}</span></span>
                                 </div>
                             @endif
                         </div>
@@ -401,11 +401,11 @@
                                         @else
                                             <div
                                                 class="size-9 rounded-xl bg-zinc-100 font-bold text-xs flex items-center justify-center text-zinc-700 shrink-0">
-                                                {{ substr($institute->name, 0, 1) }}
+                                                <span translate="no">{{ substr($institute->name, 0, 1) }}</span>
                                             </div>
                                         @endif
                                         <div class="min-w-0">
-                                            <div class="font-bold text-zinc-900 truncate">{{ $institute->name }}</div>
+                                            <div class="font-bold text-zinc-900 truncate"><span translate="no">{{ $institute->name }}</span></div>
                                             <div class="text-xs text-zinc-400 font-mono">{{ $institute->code ?? '—' }}
                                             </div>
                                         </div>
@@ -413,8 +413,8 @@
                                 </td>
 
                                 <td class="py-4 px-4 sm:px-5 text-xs text-zinc-600 min-w-[160px]">
-                                    <div class="truncate">{{ $institute->email ?? '—' }}</div>
-                                    <div class="text-zinc-400 mt-0.5 truncate">{{ $institute->phone ?? '' }}</div>
+                                    <div class="truncate"><span translate="no">{{ $institute->email ?? '—' }}</span></div>
+                                    <div class="text-zinc-400 mt-0.5 truncate"><span translate="no">{{ $institute->phone ?? '' }}</span></div>
                                 </td>
 
                                 <td class="py-4 px-4 sm:px-5 text-xs font-semibold text-zinc-900 whitespace-nowrap">

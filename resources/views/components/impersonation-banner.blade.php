@@ -5,9 +5,9 @@
         <div class="flex items-center gap-2">
             <flux:icon icon="eye" class="size-4 shrink-0" />
             <span>
-                Viewing as <strong>{{ auth()->user()->name }}</strong>
+                Viewing as <strong><span translate="no">{{ auth()->user()->name }}</span></strong>
                 ({{ \App\Support\Impersonation::roleLabel(auth()->user()) }}) &mdash;
-                signed in as {{ $impersonator->name }}.
+                signed in as <span translate="no">{{ $impersonator->name }}</span>.
             </span>
         </div>
         <form method="POST" action="{{ route('impersonate.leave') }}">

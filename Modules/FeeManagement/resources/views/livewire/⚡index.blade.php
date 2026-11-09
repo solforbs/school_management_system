@@ -103,7 +103,7 @@ new #[Title('Fee Invoices')] class extends Component
                         Financial Treasury
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? 'Campus Accounts' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? 'Campus Accounts' }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Fee Management &amp; Invoicing</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -220,7 +220,7 @@ new #[Title('Fee Invoices')] class extends Component
                     <option value="">All Grade Levels</option>
                     @foreach ($this->classes as $c)
                         <option value="{{ $c->id }}" {{ $currentClass == $c->id ? 'selected' : '' }}>
-                            {{ $c->name }} ({{ $c->level }})
+                            <span translate="no">{{ $c->name }}</span> ({{ $c->level }})
                         </option>
                     @endforeach
                 </select>
@@ -299,7 +299,7 @@ new #[Title('Fee Invoices')] class extends Component
                                                 <div class="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5 font-mono">
                                                     <span class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200/80 dark:border-zinc-700 text-[10px]">{{ $admNum }}</span>
                                                     <span class="text-zinc-300">&bull;</span>
-                                                    <span class="font-sans text-[11px] text-zinc-500">{{ $fee->institution?->name ?? 'Main Campus' }}</span>
+                                                    <span class="font-sans text-[11px] text-zinc-500"><span translate="no">{{ $fee->institution?->name ?? 'Main Campus' }}</span></span>
                                                 </div>
                                             </div>
                                         </div>

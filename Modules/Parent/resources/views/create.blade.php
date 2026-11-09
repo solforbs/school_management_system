@@ -75,13 +75,13 @@
                                             @checked(collect(old('children'))->contains($studentDetails->student_id))
                                             class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-zinc-900 dark:text-white">{{ $studentDetails->student?->name }}</span>
+                                            <span class="text-sm font-medium text-zinc-900 dark:text-white"><span translate="no">{{ $studentDetails->student?->name }}</span></span>
                                             <span class="text-xs text-zinc-500">
                                                 @if ($studentDetails->admission_number)
-                                                    {{ $studentDetails->admission_number }}
+                                                    <span translate="no">{{ $studentDetails->admission_number }}</span>
                                                 @endif
                                                 @if (isAdmin())
-                                                    &mdash; {{ $studentDetails->institution?->name }}
+                                                    &mdash; <span translate="no">{{ $studentDetails->institution?->name }}</span>
                                                 @endif
                                             </span>
                                         </div>

@@ -20,7 +20,7 @@
                             <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" class="w-full h-full object-contain">
                         @else
                             <div class="text-xl font-bold bg-gradient-to-r from-[#00A3FF] to-[#0047FF] bg-clip-text text-transparent">
-                                {{ substr($institution->name, 0, 1) }}
+                                <span translate="no">{{ substr($institution->name, 0, 1) }}</span>
                             </div>
                         @endif
                     </span>
@@ -29,7 +29,7 @@
                 {{-- Title & Badges --}}
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-                        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ $institution->name }}</h1>
+                        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white"><span translate="no">{{ $institution->name }}</span></h1>
                         
                         {{-- Status Badges --}}
                         <flux:badge size="sm" :color="$institution->is_active ? 'emerald' : 'zinc'" class="font-semibold shrink-0">
@@ -127,7 +127,7 @@
                         <dt class="font-medium text-zinc-500 uppercase tracking-wider text-xs mb-1">Official Email</dt>
                         <dd class="text-zinc-900 dark:text-zinc-100">
                             @if($institution->email)
-                                <a href="mailto:{{ $institution->email }}" class="text-[#00A3FF] hover:underline break-all">{{ $institution->email }}</a>
+                                <a href="mailto:{{ $institution->email }}" class="text-[#00A3FF] hover:underline break-all"><span translate="no">{{ $institution->email }}</span></a>
                             @else
                                 <span class="text-zinc-400">Not Set</span>
                             @endif
@@ -145,7 +145,7 @@
                     </div>
                     <div>
                         <dt class="font-medium text-zinc-500 uppercase tracking-wider text-xs mb-1">Main Phone</dt>
-                        <dd class="text-zinc-900 dark:text-zinc-100">{{ $institution->phone ?? 'Not Set' }}</dd>
+                        <dd class="text-zinc-900 dark:text-zinc-100"><span translate="no">{{ $institution->phone ?? 'Not Set' }}</span></dd>
                     </div>
                     <div>
                         <dt class="font-medium text-zinc-500 uppercase tracking-wider text-xs mb-1">Alternative Phone</dt>

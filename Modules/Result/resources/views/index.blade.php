@@ -30,7 +30,7 @@
                         Academic Performance
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Examination Results</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -101,7 +101,7 @@
                     <option value="">All Classes ({{ count($classes) }})</option>
                     @foreach ($classes as $schoolClass)
                         <option value="{{ $schoolClass->id }}" {{ $currentClassId == $schoolClass->id ? 'selected' : '' }}>
-                            {{ $schoolClass->name }} ({{ $schoolClass->level }})
+                            <span translate="no">{{ $schoolClass->name }}</span> ({{ $schoolClass->level }})
                         </option>
                     @endforeach
                 </select>
@@ -155,7 +155,7 @@
                                             </div>
                                             <div style="min-width: 0; flex: 1;">
                                                 <a href="{{ route('result.show', $result->id) }}" class="font-bold text-zinc-900 group-hover:text-blue-600 transition truncate block text-sm" onclick="event.stopPropagation();">
-                                                    {{ $student?->name ?? 'Student Name' }}
+                                                    <span translate="no">{{ $student?->name ?? 'Student Name' }}</span>
                                                 </a>
                                                 <div class="text-xs text-zinc-400 font-mono mt-0.5">
                                                     {{ $admNo }}
@@ -167,7 +167,7 @@
                                     {{-- Class Column --}}
                                     <td class="py-4 px-5">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700 font-medium text-xs border border-zinc-200/60">
-                                            {{ $result->schoolClass?->name ?? 'Class Assigned' }}
+                                            <span translate="no">{{ $result->schoolClass?->name ?? 'Class Assigned' }}</span>
                                         </span>
                                     </td>
 

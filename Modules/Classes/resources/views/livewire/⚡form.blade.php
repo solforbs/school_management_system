@@ -81,7 +81,7 @@ new #[Title('Class')] class extends Component {
                         <a href="{{ route('classes.index') }}"
                             class="hover:text-zinc-800 dark:hover:text-zinc-200">Classes</a>
                         <span>/</span>
-                        <span class="text-zinc-800 dark:text-zinc-200 font-medium">Edit {{ $schoolClass->name }}</span>
+                        <span class="text-zinc-800 dark:text-zinc-200 font-medium">Edit <span translate="no">{{ $schoolClass->name }}</span></span>
                     </div>
                     <div class="flex items-center gap-3">
                         <div

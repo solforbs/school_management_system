@@ -237,7 +237,7 @@ new #[Title('Examinations')] class extends Component {
                                 {{ $sitting->papers_count }} {{ Str::plural('paper', $sitting->papers_count) }}
                             </span>
                             <span class="px-2 py-0.5 rounded-md {{ $sitting->class_id ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200/60' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/60' }} font-medium border">
-                                {{ $sitting->class_id ? ('Targeted: '.($sitting->schoolClass?->name ?? 'one class')) : 'All classes' }}
+                                <span translate="no">{{ $sitting->class_id ? ('Targeted: '.($sitting->schoolClass?->name ?? 'one class')) : 'All classes' }}</span>
                             </span>
                         </div>
                     </a>
@@ -255,7 +255,7 @@ new #[Title('Examinations')] class extends Component {
             <flux:select wire:model.live="class_id" placeholder="All Classes" class="w-full sm:w-44">
                 <flux:select.option value="">All Classes</flux:select.option>
                 @foreach ($this->classes as $class)
-                    <flux:select.option value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
+                    <flux:select.option translate="no" value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
                 @endforeach
             </flux:select>
 
@@ -333,7 +333,7 @@ new #[Title('Examinations')] class extends Component {
                                     </span>
                                     <div class="flex items-center gap-1 text-[11px] text-zinc-500">
                                         <flux:icon icon="user-group" class="size-3 text-zinc-400 shrink-0" />
-                                        <span>{{ $examination->schoolClass?->name ?? $examination->class_name ?? 'All classes' }}</span>
+                                        <span><span translate="no">{{ $examination->schoolClass?->name ?? $examination->class_name ?? 'All classes' }}</span></span>
                                     </div>
                                 </div>
                             </flux:table.cell>

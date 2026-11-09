@@ -50,7 +50,7 @@
                                 <flux:select.option value="">Select Staff Member...</flux:select.option>
                                 @foreach ($staffMembers as $member)
                                     <flux:select.option value="{{ $member->id }}" :selected="old('staff_details_id') == $member->id">
-                                        {{ $member->name }}{{ $member->job_title ? ' — '.$member->job_title : '' }}
+                                        <span translate="no">{{ $member->name }}</span>{{ $member->job_title ? ' — '.$member->job_title : '' }}
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>

@@ -377,7 +377,7 @@ new #[Title('Institutions')] class extends Component
                                 @endif
                                 <div class="min-w-0">
                                     <h3 class="text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate">
-                                        {{ $institute->name }}
+                                        <span translate="no">{{ $institute->name }}</span>
                                     </h3>
                                     <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5">
                                         <span class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono font-semibold text-[10px] sm:text-[11px] uppercase border border-zinc-200 dark:border-zinc-700">
@@ -440,13 +440,13 @@ new #[Title('Institutions')] class extends Component
                             @if($institute->email)
                                 <div class="flex items-center gap-2">
                                     <flux:icon icon="envelope" class="size-3.5 text-zinc-400 shrink-0" />
-                                    <a href="mailto:{{ $institute->email }}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 truncate transition font-medium">{{ $institute->email }}</a>
+                                    <a href="mailto:{{ $institute->email }}" class="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 truncate transition font-medium"><span translate="no">{{ $institute->email }}</span></a>
                                 </div>
                             @endif
                             @if($institute->phone)
                                 <div class="flex items-center gap-2">
                                     <flux:icon icon="phone" class="size-3.5 text-zinc-400 shrink-0" />
-                                    <span class="text-zinc-600 dark:text-zinc-400 font-medium truncate">{{ $institute->phone }}</span>
+                                    <span class="text-zinc-600 dark:text-zinc-400 font-medium truncate"><span translate="no">{{ $institute->phone }}</span></span>
                                 </div>
                             @endif
                         </div>
@@ -521,19 +521,19 @@ new #[Title('Institutions')] class extends Component
                                             <img src="{{ Storage::url($institute->logo) }}" class="size-9 rounded-xl border border-zinc-200 bg-white object-contain p-0.5 shrink-0">
                                         @else
                                             <div class="size-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 font-bold text-xs flex items-center justify-center text-zinc-700 dark:text-zinc-300 shrink-0">
-                                                {{ substr($institute->name, 0, 1) }}
+                                                <span translate="no">{{ substr($institute->name, 0, 1) }}</span>
                                             </div>
                                         @endif
                                         <div class="min-w-0">
-                                            <div class="font-bold text-zinc-900 dark:text-white truncate">{{ $institute->name }}</div>
+                                            <div class="font-bold text-zinc-900 dark:text-white truncate"><span translate="no">{{ $institute->name }}</span></div>
                                             <div class="text-xs text-zinc-400 font-mono">{{ $institute->code ?? '—' }}</div>
                                         </div>
                                     </div>
                                 </td>
 
                                 <td class="py-4 px-4 sm:px-5 text-xs text-zinc-600 dark:text-zinc-400 min-w-[160px]">
-                                    <div class="truncate">{{ $institute->email ?? '—' }}</div>
-                                    <div class="text-zinc-400 mt-0.5 truncate">{{ $institute->phone ?? '' }}</div>
+                                    <div class="truncate"><span translate="no">{{ $institute->email ?? '—' }}</span></div>
+                                    <div class="text-zinc-400 mt-0.5 truncate"><span translate="no">{{ $institute->phone ?? '' }}</span></div>
                                 </td>
 
                                 <td class="py-4 px-4 sm:px-5 text-xs font-semibold text-zinc-900 dark:text-zinc-100 whitespace-nowrap">

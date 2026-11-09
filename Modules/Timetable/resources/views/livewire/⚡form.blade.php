@@ -143,7 +143,7 @@ new #[Title('Timetable Entry')] class extends Component
                         <flux:select name="institution_id" label="Institution" required>
                             @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $entry->institution_id) == $institution->id">
-                                    {{ $institution->name }}
+                                    <span translate="no">{{ $institution->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -151,7 +151,7 @@ new #[Title('Timetable Entry')] class extends Component
                         <flux:select name="class_id" label="Class" required>
                             @foreach ($this->classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id', $entry->class_id) == $schoolClass->id">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -198,7 +198,7 @@ new #[Title('Timetable Entry')] class extends Component
                             <flux:select.option value="">Unassigned (TBA)</flux:select.option>
                             @foreach ($this->teachers as $teacher)
                                 <flux:select.option value="{{ $teacher->id }}" :selected="old('teacher_id', $entry->teacher_id) == $teacher->id">
-                                    {{ $teacher->name }}
+                                    <span translate="no">{{ $teacher->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -273,7 +273,7 @@ new #[Title('Timetable Entry')] class extends Component
                             <flux:select.option value="">Select Institution</flux:select.option>
                             @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
-                                    {{ $institution->name }}
+                                    <span translate="no">{{ $institution->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -282,7 +282,7 @@ new #[Title('Timetable Entry')] class extends Component
                             <flux:select.option value="">Select Class</flux:select.option>
                             @foreach ($this->classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id') == $schoolClass->id">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -330,7 +330,7 @@ new #[Title('Timetable Entry')] class extends Component
                             <flux:select.option value="">Unassigned (TBA)</flux:select.option>
                             @foreach ($this->teachers as $teacher)
                                 <flux:select.option value="{{ $teacher->id }}" :selected="old('teacher_id') == $teacher->id">
-                                    {{ $teacher->name }}
+                                    <span translate="no">{{ $teacher->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>

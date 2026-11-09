@@ -17,7 +17,7 @@
                         Human Resources
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Staff Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -161,7 +161,7 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             <a href="{{ route('staff.show', $member->id) }}" class="font-bold text-zinc-900 hover:text-blue-600 transition text-sm">
-                                                {{ $member->name }}
+                                                <span translate="no">{{ $member->name }}</span>
                                             </a>
                                             <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 font-mono text-[10px] font-semibold border border-zinc-200 whitespace-nowrap shrink-0">
                                                 {{ $staffNo }}
@@ -255,7 +255,7 @@
                                             </div>
                                             <div class="min-w-0 flex-1">
                                                 <a href="{{ route('staff.show', $member->id) }}" class="font-bold text-zinc-900 hover:text-zinc-600 transition truncate block">
-                                                    {{ $member->name }}
+                                                    <span translate="no">{{ $member->name }}</span>
                                                 </a>
                                                 <div class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">
                                                     <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-semibold border border-zinc-200 text-[11px]">{{ $staffNo }}</span>

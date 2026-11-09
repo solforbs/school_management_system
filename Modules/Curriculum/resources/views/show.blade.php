@@ -27,7 +27,7 @@
                 </div>
                 <flux:text class="text-zinc-500 text-sm mt-1 flex items-center gap-1.5">
                     <flux:icon icon="building-library" class="size-4 text-zinc-400 shrink-0" />
-                    {{ $curriculum->institution?->name ?? 'All Campuses' }}
+                    <span translate="no">{{ $curriculum->institution?->name ?? 'All Campuses' }}</span>
                 </flux:text>
             </div>
 
@@ -109,7 +109,7 @@
                                             <flux:icon icon="building-library" class="size-4" />
                                         </div>
                                         <span
-                                            class="font-semibold text-sm text-zinc-900 dark:text-white">{{ $curriculum->institution->name }}</span>
+                                            class="font-semibold text-sm text-zinc-900 dark:text-white"><span translate="no">{{ $curriculum->institution->name }}</span></span>
                                     </div>
                                 </flux:table.cell>
                                 <flux:table.cell class="text-xs text-zinc-600 dark:text-zinc-400">

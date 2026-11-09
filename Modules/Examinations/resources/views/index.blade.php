@@ -87,7 +87,7 @@
                     @foreach ($classes as $schoolClass)
                         <flux:select.option value="{{ $schoolClass->id }}"
                             :selected="request('class_id') == $schoolClass->id">
-                            {{ $schoolClass->name }}
+                            <span translate="no">{{ $schoolClass->name }}</span>
                         </flux:select.option>
                     @endforeach
                 </flux:select>
@@ -164,7 +164,7 @@
                                                 @endif
                                                 @if (isAdmin() && $examination->institution)
                                                     <span class="truncate max-w-[140px] text-zinc-400">&bull;
-                                                        {{ $examination->institution->name }}</span>
+                                                        <span translate="no">{{ $examination->institution->name }}</span></span>
                                                 @endif
                                             </div>
                                         </div>
@@ -179,7 +179,7 @@
                                         </span>
                                         <div class="flex items-center gap-1 text-[11px] text-zinc-500">
                                             <flux:icon icon="user-group" class="size-3 text-zinc-400 shrink-0" />
-                                            <span>{{ $examination->schoolClass?->name ?? $examination->class_name }}</span>
+                                            <span><span translate="no">{{ $examination->schoolClass?->name ?? $examination->class_name }}</span></span>
                                         </div>
                                     </div>
                                 </flux:table.cell>

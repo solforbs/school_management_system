@@ -200,7 +200,7 @@
                                         
                                         <div class="flex items-center justify-between gap-1 mt-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800 text-[10px]">
                                             <span class="font-medium text-zinc-600 dark:text-zinc-400 truncate flex-1" title="{{ $entry->teacher?->name ?? 'Teacher TBA' }}">
-                                                {{ $entry->teacher?->name ?? 'Teacher TBA' }}
+                                                <span translate="no">{{ $entry->teacher?->name ?? 'Teacher TBA' }}</span>
                                             </span>
 
                                             @if ($entry->room)
@@ -252,7 +252,7 @@
                                         
                                         <div class="flex items-center justify-between gap-1 mt-1.5 pt-1 border-t border-zinc-100 dark:border-zinc-800 text-[10px]">
                                             <span class="font-medium text-zinc-600 dark:text-zinc-400 truncate flex-1" title="{{ $entry->teacher?->name ?? ($entry->schoolClass?->name ?? $entry->class_name) }}">
-                                                {{ $entry->teacher?->name ?? ($entry->schoolClass?->name ?? $entry->class_name) }}
+                                                <span translate="no">{{ $entry->teacher?->name ?? ($entry->schoolClass?->name ?? $entry->class_name) }}</span>
                                             </span>
 
                                             @if ($entry->room)

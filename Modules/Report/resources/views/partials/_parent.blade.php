@@ -31,9 +31,9 @@
                                     {{ $name }}
                                 </div>
                                 <div class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                                    <span class="font-mono">{{ $child->admission_number }}</span>
+                                    <span class="font-mono"><span translate="no">{{ $child->admission_number }}</span></span>
                                     @if ($child->institution?->name)
-                                        &bull; {{ $child->institution->name }}
+                                        &bull; <span translate="no">{{ $child->institution->name }}</span>
                                     @endif
                                 </div>
                             </div>

@@ -19,7 +19,7 @@
                         Academic Enrollment
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Student Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -109,7 +109,7 @@
                     <option value="">All Classes</option>
                     @foreach ($classes as $c)
                         <option value="{{ $c->id }}" {{ $currentClassId == $c->id ? 'selected' : '' }}>
-                            {{ $c->name }} ({{ $c->level }})
+                            <span translate="no">{{ $c->name }}</span> ({{ $c->level }})
                         </option>
                     @endforeach
                 </select>
@@ -143,7 +143,7 @@
                     <a href="{{ route('student.index', ['search' => $currentSearch, 'status' => $currentStatus, 'gender' => $currentGender]) }}" 
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
                         title="Remove Class Filter">
-                        <span>Class: <strong>{{ $selectedClass->name }}</strong></span>
+                        <span>Class: <strong><span translate="no">{{ $selectedClass->name }}</span></strong></span>
                         <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
                     </a>
                 @endif
@@ -208,7 +208,7 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             <a href="{{ $user ? route('student.show', $user->id) : '#' }}" class="font-bold text-zinc-900 hover:text-blue-600 transition text-sm">
-                                                {{ $user?->name ?? 'Student' }}
+                                                <span translate="no">{{ $user?->name ?? 'Student' }}</span>
                                             </a>
                                             <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 font-mono text-[10px] font-semibold border border-zinc-200 whitespace-nowrap shrink-0">
                                                 {{ $admNo }}
@@ -310,7 +310,7 @@
                                             @endif
                                             <div class="min-w-0 flex-1">
                                                 <a href="{{ $user ? route('student.show', $user->id) : '#' }}" class="font-bold text-zinc-900 hover:text-blue-600 transition truncate block">
-                                                    {{ $user?->name ?? 'Student' }}
+                                                    <span translate="no">{{ $user?->name ?? 'Student' }}</span>
                                                 </a>
                                                 <div class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">
                                                     <span class="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-semibold border border-zinc-200 text-[11px]">{{ $admNo }}</span>

@@ -336,7 +336,7 @@ new #[Title('Manage Device')] class extends Component
                     @forelse ($this->users as $user)
                         <flux:table.row>
                             <flux:table.cell class="font-mono">{{ $user->pin }}</flux:table.cell>
-                            <flux:table.cell>{{ $user->name }}</flux:table.cell>
+                            <flux:table.cell><span translate="no">{{ $user->name }}</span></flux:table.cell>
                             <flux:table.cell>{{ $user->privilege === UserPrivilege::Admin ? 'Admin' : 'User' }}</flux:table.cell>
                             <flux:table.cell>{{ $user->is_enabled ? 'Yes' : 'No' }}</flux:table.cell>
                             <flux:table.cell>

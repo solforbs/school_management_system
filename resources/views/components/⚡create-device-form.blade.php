@@ -67,7 +67,7 @@ new class extends Component {
             <div class="sm:col-span-2">
                 <flux:select label="Select Institution" wire:model.live="institution_id" placeholder="Choose campus...">
                     @foreach ($institutions as $institution)
-                        <option value="{{ $institution->id }}">{{ $institution->name }}</option>
+                        <option translate="no" value="{{ $institution->id }}">{{ $institution->name }}</option>
                     @endforeach
                 </flux:select>
                 <flux:error for="institution_id" class="text-red-500 text-xs mt-1" />
