@@ -160,18 +160,9 @@ new #[Title('Institution')] class extends Component
                                 value="{{ old('timezone', $institution->timezone ?? 'Africa/Nairobi') }}" required />
                         </div>
 
-                        @if ($institution->exists)
-                            <div>
-                                <flux:select name="locale" label="Language"
-                                    description="The language everyone in your institution starts in. Each person can still switch for themselves from the Language menu.">
-                                    @foreach (config('locales.available') as $code => $language)
-                                        <flux:select.option value="{{ $code }}" translate="no" class="notranslate" :selected="old('locale', $institution->locale ?? 'en') === $code">
-                                            {{ $language['name'] }} — {{ $language['native'] }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </div>
-                        @endif
+                        <div>
+                            <x-institution::locale-select :selected="$institution->locale" />
+                        </div>
 
                         <div>
                             <flux:input type="number" name="min_electives" label="Minimum Electives"
@@ -430,6 +421,10 @@ new #[Title('Institution')] class extends Component
                                 <flux:select.option value="University" :selected="old('type') == 'University'">University</flux:select.option>
                                 <flux:select.option value="Training Centre" :selected="old('type') == 'Training Centre'">Training Centre</flux:select.option>
                             </flux:select>
+                        </div>
+
+                        <div>
+                            <x-institution::locale-select />
                         </div>
 
                         {{-- Live Image Preview & Drag and Drop --}}

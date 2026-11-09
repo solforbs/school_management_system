@@ -92,7 +92,9 @@
         // Leaving those nodes untranslated keeps them bound. Contact links
         // and avatars hold people's details, which must never be translated;
         // names elsewhere are marked translate="no" in the views.
-        var untranslatable = '[x-text],[x-html],a[href^="tel:"],a[href^="mailto:"],[data-flux-avatar],[data-flux-profile],[data-flux-sidebar-profile]';
+        // Email boxes too: Google turns the example address in their
+        // placeholder into e.g. "barua pepe@example.com".
+        var untranslatable = '[x-text],[x-html],a[href^="tel:"],a[href^="mailto:"],[data-flux-avatar],[data-flux-profile],[data-flux-sidebar-profile],input[type="email"]';
 
         function protectAlpineBindings(root) {
             if (!window.__autoTranslateTarget || !root || !root.querySelectorAll) {

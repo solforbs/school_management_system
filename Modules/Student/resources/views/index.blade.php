@@ -198,7 +198,7 @@
                             <div class="flex items-start justify-between gap-2.5">
                                 <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                     @if($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
-                                        <img src="{{ asset('storage/' . $student->profile_photo) }}" alt="{{ $user?->name }}" 
+                                        <img src="{{ asset('storage/' . $student->profile_photo) }}" alt="{{ $user?->name }}" translate="no" 
                                             class="size-10 rounded-xl object-cover border border-zinc-200 shrink-0">
                                     @else
                                         <div class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">
@@ -301,7 +301,7 @@
                                     <td class="py-4 px-5">
                                         <div class="flex items-center gap-3">
                                             @if($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
-                                                <img src="{{ asset('storage/' . $student->profile_photo) }}" alt="{{ $user?->name }}" 
+                                                <img src="{{ asset('storage/' . $student->profile_photo) }}" alt="{{ $user?->name }}" translate="no" 
                                                     class="size-10 rounded-xl object-cover border border-zinc-200 shrink-0">
                                             @else
                                                 <div class="size-10 rounded-xl bg-zinc-100 border border-zinc-200 font-bold text-xs flex items-center justify-center text-zinc-800 shrink-0">

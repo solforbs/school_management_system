@@ -106,7 +106,7 @@
                     @if (! empty($logoDataUri))
                         <img src="{{ $logoDataUri }}" alt="{{ $institution?->name ?? 'School Logo' }}" class="size-16 object-contain rounded-xl shrink-0">
                     @elseif ($institution?->logo)
-                        <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" class="size-16 object-contain rounded-xl shrink-0">
+                        <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" translate="no" class="size-16 object-contain rounded-xl shrink-0">
                     @else
                         <img src="{{ asset('logos/solforbs-logo.png') }}" alt="{{ config('app.name', 'Solforbs') }}" class="size-16 object-contain rounded-xl shrink-0">
                     @endif
