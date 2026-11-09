@@ -41,6 +41,7 @@ return [
                 'cancel' => 'Cancel',
                 'changed' => 'The language is now :language.',
                 'undo' => 'Go back to :language',
+                'translating' => 'Translating…',
             ],
         ],
         'ar' => [
@@ -55,6 +56,7 @@ return [
                 'cancel' => 'إلغاء',
                 'changed' => 'اللغة الآن :language.',
                 'undo' => 'العودة إلى :language',
+                'translating' => 'جارٍ الترجمة…',
             ],
         ],
         'fr' => [
@@ -68,6 +70,7 @@ return [
                 'cancel' => 'Annuler',
                 'changed' => 'La langue est maintenant : :language.',
                 'undo' => 'Revenir à :language',
+                'translating' => 'Traduction en cours…',
             ],
         ],
         'sw' => [
@@ -81,6 +84,7 @@ return [
                 'cancel' => 'Ghairi',
                 'changed' => 'Lugha sasa ni :language.',
                 'undo' => 'Rudi kwenye :language',
+                'translating' => 'Inatafsiri…',
             ],
         ],
     ],
