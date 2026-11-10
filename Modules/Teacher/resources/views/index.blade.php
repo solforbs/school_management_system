@@ -45,7 +45,7 @@
                         Faculty Management
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Teachers Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -240,13 +240,13 @@
                                     @if($teacherDetails->phone)
                                         <a href="tel:{{ $teacherDetails->phone }}" class="text-xs font-medium text-zinc-700 hover:text-blue-600 transition flex items-center gap-1 shrink-0">
                                             <flux:icon icon="phone" class="size-3 text-zinc-400 shrink-0" />
-                                            <span class="font-mono text-[11px]">{{ $teacherDetails->phone }}</span>
+                                            <span class="font-mono text-[11px]"><span translate="no">{{ $teacherDetails->phone }}</span></span>
                                         </a>
                                     @endif
                                     @if($teacherUser?->email)
                                         <a href="mailto:{{ $teacherUser->email }}" class="text-xs font-medium text-zinc-500 hover:text-blue-600 transition flex items-center gap-1 truncate max-w-[150px]">
                                             <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
-                                            <span class="truncate text-[11px]">{{ $teacherUser->email }}</span>
+                                            <span class="truncate text-[11px]"><span translate="no">{{ $teacherUser->email }}</span></span>
                                         </a>
                                     @endif
                                 </div>
@@ -298,11 +298,11 @@
                                                 </a>
                                                 <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.25rem; flex-wrap: nowrap;">
                                                     <span style="white-space: nowrap;" class="px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 font-mono font-semibold border border-zinc-200 text-[11px]">
-                                                        {{ $teacherDetails->employee_number ?? 'EMP-T-' . str_pad($teacherDetails->id, 3, '0', STR_PAD_LEFT) }}
+                                                        <span translate="no">{{ $teacherDetails->employee_number ?? 'EMP-T-' . str_pad($teacherDetails->id, 3, '0', STR_PAD_LEFT) }}</span>
                                                     </span>
                                                     <span class="text-zinc-300">&bull;</span>
                                                     <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="font-sans text-[11px] text-zinc-500">
-                                                        {{ $teacherDetails->institution?->name ?? 'Main Campus' }}
+                                                        <span translate="no">{{ $teacherDetails->institution?->name ?? 'Main Campus' }}</span>
                                                     </span>
                                                 </div>
                                             </div>
@@ -327,13 +327,13 @@
                                             @if($teacherDetails->phone)
                                                 <a href="tel:{{ $teacherDetails->phone }}" class="text-zinc-800 hover:text-blue-600 font-semibold transition inline-flex items-center gap-1.5" onclick="event.stopPropagation();">
                                                     <flux:icon icon="phone" class="size-3.5 text-zinc-400" />
-                                                    <span style="white-space: nowrap;">{{ $teacherDetails->phone }}</span>
+                                                    <span style="white-space: nowrap;"><span translate="no">{{ $teacherDetails->phone }}</span></span>
                                                 </a>
                                             @endif
                                             @if($teacherUser?->email)
                                                 <div class="text-zinc-400 text-[11px] truncate flex items-center gap-1">
                                                     <flux:icon icon="envelope" class="size-3 text-zinc-400 shrink-0" />
-                                                    <span class="truncate">{{ $teacherUser->email }}</span>
+                                                    <span class="truncate"><span translate="no">{{ $teacherUser->email }}</span></span>
                                                 </div>
                                             @endif
                                         </div>

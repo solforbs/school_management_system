@@ -6,7 +6,7 @@
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Student Profile</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update personal, academic, and guardian details for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $student->name }}</span>.
+                    Update personal, academic, and guardian details for <span class="font-semibold text-zinc-700 dark:text-zinc-300"><span translate="no">{{ $student->name }}</span></span>.
                 </flux:text>
             </div>
             
@@ -51,7 +51,7 @@
                             <div class="bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-800 rounded-xl p-4 flex items-start gap-4">
                                 <flux:icon icon="information-circle" class="size-5 text-zinc-500 mt-0.5 shrink-0" />
                                 <div class="text-sm text-zinc-700 dark:text-zinc-300">
-                                    <span class="font-medium">System Account Details:</span> The name ({{ $student->name }}) and email ({{ $student->email }}) are managed globally via the User Management module.
+                                    <span class="font-medium">System Account Details:</span> The name (<span translate="no">{{ $student->name }}</span>) and email (<span translate="no">{{ $student->email }}</span>) are managed globally via the User Management module.
                                 </div>
                             </div>
                         </div>

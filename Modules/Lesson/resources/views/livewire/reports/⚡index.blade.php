@@ -173,7 +173,7 @@ new #[Title('Lesson Reports')] class extends Component
         <flux:select wire:model.live="classId" label="Class" class="max-w-xs">
             <flux:select.option value="">Select a class&hellip;</flux:select.option>
             @foreach ($this->classes as $schoolClass)
-                <flux:select.option value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
+                <flux:select.option translate="no" value="{{ $schoolClass->id }}">{{ $schoolClass->name }}</flux:select.option>
             @endforeach
         </flux:select>
 
@@ -210,7 +210,7 @@ new #[Title('Lesson Reports')] class extends Component
         </flux:card>
     @else
         <flux:card>
-            <flux:heading size="lg" class="mb-4">{{ $this->selectedClass->name }} Reports</flux:heading>
+            <flux:heading size="lg" class="mb-4"><span translate="no">{{ $this->selectedClass->name }}</span> Reports</flux:heading>
 
             <flux:table wire:loading.class="opacity-60">
                 <flux:table.columns>

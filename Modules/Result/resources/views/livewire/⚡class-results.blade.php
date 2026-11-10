@@ -186,7 +186,7 @@ new #[Title('Class Results')] class extends Component {
                 <span>All classes</span>
             </a>
             <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">
-                {{ $this->schoolClass?->name ?? 'Class' }} — Results
+                <span translate="no">{{ $this->schoolClass?->name ?? 'Class' }}</span> — Results
             </flux:heading>
             <flux:text class="text-zinc-500 text-sm mt-0.5">
                 Recorded marks, grades and remarks for this class.

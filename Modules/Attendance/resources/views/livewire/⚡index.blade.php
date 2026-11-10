@@ -492,7 +492,7 @@ new #[Title('Attendance Logs')] class extends Component
                         <flux:select wire:model.live="class_id" :placeholder="$defaultClassLabel" class="w-full">
                             <flux:select.option value="">{{ $defaultClassLabel }}</flux:select.option>
                             @foreach ($classes as $class)
-                                <flux:select.option value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
+                                <flux:select.option translate="no" value="{{ $class->id }}">{{ $class->name }}</flux:select.option>
                             @endforeach
                         </flux:select>
                     </div>
@@ -581,7 +581,7 @@ new #[Title('Attendance Logs')] class extends Component
                                             {{ $log['student_name'] }}
                                         </span>
                                         <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
-                                            {{ $log['admission_number'] }}
+                                            <span translate="no">{{ $log['admission_number'] }}</span>
                                         </span>
                                     </div>
                                     <div class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium truncate flex items-center gap-1.5">
@@ -673,7 +673,7 @@ new #[Title('Attendance Logs')] class extends Component
                                         </div>
                                         <div class="flex flex-col">
                                             <span class="font-semibold text-sm text-zinc-900 dark:text-white leading-snug">{{ $log['student_name'] }}</span>
-                                            <span class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal">{{ $log['admission_number'] }}</span>
+                                            <span class="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 leading-normal"><span translate="no">{{ $log['admission_number'] }}</span></span>
                                         </div>
                                     </div>
                                 </flux:table.cell>

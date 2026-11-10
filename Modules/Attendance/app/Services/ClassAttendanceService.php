@@ -239,6 +239,17 @@ class ClassAttendanceService
         ?string $notes = null
     ): void {
         $parsedDate = Carbon::parse($date)->toDateString();
+
+        // Only learners actually enrolled in this class may be recorded
+        // against it - a stale browser state from another class must never
+        // write that class's marks into this register.
+        $enrolledIds = StudentDetails::query()
+            ->where('class_id', $class->id)
+            ->where('is_active', true)
+            ->pluck('student_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $entries = array_intersect_key($entries, array_flip($enrolledIds));
         $studentUserIds = array_keys($entries);
 
         // Fetch gate scans to detect overrides / verifications

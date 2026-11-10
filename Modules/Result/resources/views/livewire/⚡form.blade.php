@@ -78,7 +78,7 @@ new #[Title('Result')] class extends Component
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Result</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update the examination result for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $result->student?->name }}</span>.
+                    Update the examination result for <span class="font-semibold text-zinc-700 dark:text-zinc-300"><span translate="no">{{ $result->student?->name }}</span></span>.
                 </flux:text>
             </div>
             
@@ -119,7 +119,7 @@ new #[Title('Result')] class extends Component
                         <flux:select id="institution_id" name="institution_id" label="Institution">
                             @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id', $result->institution_id) == $institution->id">
-                                    {{ $institution->name }}
+                                    <span translate="no">{{ $institution->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -128,7 +128,7 @@ new #[Title('Result')] class extends Component
                             <flux:select.option value="">Select Class</flux:select.option>
                             @foreach ($this->classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" data-institution-id="{{ $schoolClass->institution_id }}" :selected="old('class_id', $result->class_id) == $schoolClass->id">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -137,9 +137,9 @@ new #[Title('Result')] class extends Component
                             <flux:select.option value="">Select Student</flux:select.option>
                             @foreach ($this->students as $studentDetail)
                                 <flux:select.option value="{{ $studentDetail->student_id }}" data-class-id="{{ $studentDetail->class_id }}" :selected="old('student_id', $result->student_id) == $studentDetail->student_id">
-                                    {{ $studentDetail->student?->name }}
+                                    <span translate="no">{{ $studentDetail->student?->name }}</span>
                                     @if ($studentDetail->admission_number)
-                                        ({{ $studentDetail->admission_number }})
+                                        (<span translate="no">{{ $studentDetail->admission_number }}</span>)
                                     @endif
                                 </flux:select.option>
                             @endforeach
@@ -314,7 +314,7 @@ new #[Title('Result')] class extends Component
                             <flux:select.option value="">Select Institution</flux:select.option>
                             @foreach ($this->institutions as $institution)
                                 <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
-                                    {{ $institution->name }}
+                                    <span translate="no">{{ $institution->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -323,7 +323,7 @@ new #[Title('Result')] class extends Component
                             <flux:select.option value="">Select Class</flux:select.option>
                             @foreach ($this->classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" data-institution-id="{{ $schoolClass->institution_id }}" :selected="old('class_id') == $schoolClass->id">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -332,9 +332,9 @@ new #[Title('Result')] class extends Component
                             <flux:select.option value="">Select Student</flux:select.option>
                             @foreach ($this->students as $studentDetail)
                                 <flux:select.option value="{{ $studentDetail->student_id }}" data-class-id="{{ $studentDetail->class_id }}" :selected="old('student_id') == $studentDetail->student_id">
-                                    {{ $studentDetail->student?->name }}
+                                    <span translate="no">{{ $studentDetail->student?->name }}</span>
                                     @if ($studentDetail->admission_number)
-                                        ({{ $studentDetail->admission_number }})
+                                        (<span translate="no">{{ $studentDetail->admission_number }}</span>)
                                     @endif
                                 </flux:select.option>
                             @endforeach

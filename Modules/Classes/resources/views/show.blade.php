@@ -19,11 +19,11 @@
                     <a href="{{ route('classes.index') }}" wire:navigate.hover
                         class="hover:text-zinc-800 dark:hover:text-zinc-200">Classes</a>
                     <span>/</span>
-                    <span class="text-zinc-800 dark:text-zinc-200 font-medium">{{ $schoolClass->name }}</span>
+                    <span class="text-zinc-800 dark:text-zinc-200 font-medium"><span translate="no">{{ $schoolClass->name }}</span></span>
                 </div>
                 <div class="flex items-center gap-3">
                     <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">
-                        {{ $schoolClass->name }}
+                        <span translate="no">{{ $schoolClass->name }}</span>
                     </flux:heading>
                     @if ($schoolClass->level)
                         <flux:badge size="sm" color="indigo" class="font-semibold">
@@ -33,7 +33,7 @@
                 </div>
                 <flux:text class="text-zinc-500 text-sm mt-1 flex items-center gap-1.5">
                     <flux:icon icon="building-library" class="size-4 text-zinc-400 shrink-0" />
-                    {{ $schoolClass->institution?->name }}
+                    <span translate="no">{{ $schoolClass->institution?->name }}</span>
                 </flux:text>
             </div>
 
@@ -176,7 +176,7 @@
                 <div>
                     <flux:heading size="md" class="font-semibold text-zinc-900 dark:text-white">Class Roster
                     </flux:heading>
-                    <flux:text class="text-xs text-zinc-500">Students enrolled in {{ $schoolClass->name }}</flux:text>
+                    <flux:text class="text-xs text-zinc-500">Students enrolled in <span translate="no">{{ $schoolClass->name }}</span></flux:text>
                 </div>
                 <div class="flex items-center gap-2">
                     <flux:badge size="sm" color="blue" class="font-medium text-[11px]">
@@ -240,7 +240,7 @@
                                     <flux:table.cell>
                                         <span
                                             class="font-mono text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded border border-zinc-200/50 dark:border-zinc-700/50">
-                                            {{ $studentDetails->admission_number }}
+                                            <span translate="no">{{ $studentDetails->admission_number }}</span>
                                         </span>
                                     </flux:table.cell>
 

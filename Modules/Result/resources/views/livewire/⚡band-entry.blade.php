@@ -166,7 +166,7 @@ new #[Title('Band Entry')] class extends Component
                 @if ($examination->subject)
                     <flux:badge size="sm" color="zinc">{{ $examination->subject->name }}</flux:badge>
                 @endif
-                <flux:badge size="sm" color="zinc">{{ $examination->class_name ?? $examination->schoolClass?->name }}</flux:badge>
+                <flux:badge size="sm" color="zinc"><span translate="no">{{ $examination->class_name ?? $examination->schoolClass?->name }}</span></flux:badge>
                 <span class="text-xs text-zinc-400">{{ $examination->exam_date?->format('d M Y') }}</span>
             </div>
         </div>
@@ -308,8 +308,8 @@ new #[Title('Band Entry')] class extends Component
                                     @endphp
                                     <tr class="hover:bg-zinc-50/50 transition">
                                         <td class="px-4 py-3 text-xs text-zinc-400 font-mono">{{ $i + 1 }}</td>
-                                        <td class="px-4 py-3 font-semibold text-zinc-900">{{ $details->student?->name ?? '—' }}</td>
-                                        <td class="px-3 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">{{ $details->admission_number ?? '—' }}</td>
+                                        <td class="px-4 py-3 font-semibold text-zinc-900"><span translate="no">{{ $details->student?->name ?? '—' }}</span></td>
+                                        <td class="px-3 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap"><span translate="no">{{ $details->admission_number ?? '—' }}</span></td>
                                         <td class="px-3 py-3 text-center whitespace-nowrap">
                                             <div x-show="bands[{{ $sId }}]" x-cloak>
                                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border transition shadow-xs"
@@ -385,8 +385,8 @@ new #[Title('Band Entry')] class extends Component
                             <div class="p-4 space-y-2.5">
                                 <div class="flex items-center justify-between gap-2">
                                     <div>
-                                        <p class="text-xs font-bold text-zinc-900">{{ $details->student?->name ?? '—' }}</p>
-                                        <p class="text-[11px] text-zinc-400 font-mono">{{ $details->admission_number ?? '—' }}</p>
+                                        <p class="text-xs font-bold text-zinc-900"><span translate="no">{{ $details->student?->name ?? '—' }}</span></p>
+                                        <p class="text-[11px] text-zinc-400 font-mono"><span translate="no">{{ $details->admission_number ?? '—' }}</span></p>
                                     </div>
                                     <div>
                                         <div x-show="bands[{{ $sId }}]" x-cloak>

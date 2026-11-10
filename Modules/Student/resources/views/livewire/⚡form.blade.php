@@ -111,7 +111,7 @@ new #[Title('Student Form')] class extends Component
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Student Profile</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update personal, academic, and guardian details for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $student->name }}</span>.
+                    Update personal, academic, and guardian details for <span class="font-semibold text-zinc-700 dark:text-zinc-300"><span translate="no">{{ $student->name }}</span></span>.
                 </flux:text>
             </div>
             
@@ -189,7 +189,7 @@ new #[Title('Student Form')] class extends Component
                         <flux:select name="class_id" label="Class / Grade" placeholder="Choose a classroom...">
                             @foreach ($this->classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id', $student->studentUserDetails?->class_id) == $schoolClass->id">
-                                    {{ $schoolClass->name }} ({{ $schoolClass->level }})
+                                    <span translate="no">{{ $schoolClass->name }}</span> ({{ $schoolClass->level }})
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -411,7 +411,7 @@ new #[Title('Student Form')] class extends Component
                             <flux:select.option value="">Unassigned Class</flux:select.option>
                             @foreach ($this->classes as $schoolClass)
                                 <flux:select.option value="{{ $schoolClass->id }}" :selected="old('class_id') == $schoolClass->id">
-                                    {{ $schoolClass->name }} ({{ $schoolClass->level }})
+                                    <span translate="no">{{ $schoolClass->name }}</span> ({{ $schoolClass->level }})
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
@@ -474,7 +474,7 @@ new #[Title('Student Form')] class extends Component
                                 <flux:select.option value="">Choose a parent...</flux:select.option>
                                 @foreach ($this->parents as $parent)
                                     <flux:select.option value="{{ $parent->id }}" :selected="old('parent_id') == $parent->id">
-                                        {{ $parent->name }} ({{ $parent->email }})
+                                        <span translate="no">{{ $parent->name }}</span> (<span translate="no">{{ $parent->email }}</span>)
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>

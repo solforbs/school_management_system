@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemoAccessController;
 use App\Http\Controllers\DevicesController;
 use App\Http\Controllers\ImpersonationController;
+use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PlanController;
@@ -35,6 +36,9 @@ Route::get('/plans', fn () => view('frontend.plans', [
 ]))->name('plans');
 Route::view('/contact', 'frontend.contact')->name('contact');
 // make sure to add the EnsureAccountIsActive middleware to all routes
+
+// Open to guests too, so the login page can be read in another language.
+Route::post('language', [LanguageController::class, 'update'])->name('language.update');
 
 // "Continue with Google" on the login page. Guests only - an existing
 // account is matched by google_id then e-mail; a new Google e-mail is

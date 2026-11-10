@@ -1,35 +1,115 @@
 <?php
 
 /**
+<<<<<<< HEAD
  * Languages an institution can run the app in, keyed by their folder /
  * JSON file name under lang/. The locale is applied per institution by
  * App\Http\Middleware\SetInstitutionLocale.
  *
  * To add one: php artisan lang:add <code>, php artisan translatable:export
  * <code>, php artisan lang:translate-missing <code>, then list it here.
+=======
+ * Languages the app can be shown in. An institution picks the default for
+ * its users and each person can switch for themselves (see
+ * App\Http\Middleware\SetInstitutionLocale). Pages are machine-translated
+ * from English by Google's page translator, so every code here must be
+ * one Google supports.
+>>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
  */
 return [
     'default' => 'en',
 
     /*
+<<<<<<< HEAD
      * Stop-gap while views are being moved to __() + lang/*.json: Google's
      * in-browser translator covers text that isn't wrapped yet. Turn off
      * (MACHINE_TRANSLATE_PAGES=false) once every module uses lang files.
      */
     'machine_translate_pages' => (bool) env('MACHINE_TRANSLATE_PAGES', true),
+=======
+     * Name of the cookie that holds a person's own language choice. It is
+     * only set while that choice differs from their institution's default.
+     */
+    'cookie' => 'locale',
+>>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
 
     /*
      * Google page-translator language codes where they differ from ours.
-     * null = render untranslated (English, or not supported by Google).
+     * null = render untranslated (the app is written in English).
      */
     'machine_translation_codes' => [
         'en' => null,
     ],
 
+    /*
+     * `switcher` holds the few phrases the language switcher shows. They
+     * are written by hand, never machine-translated, so someone who picked
+     * a language by mistake can still read how to get back.
+     */
     'available' => [
+<<<<<<< HEAD
         'en' => ['name' => 'English', 'native' => 'English'],
         'sw' => ['name' => 'Swahili', 'native' => 'Kiswahili'],
         'fr' => ['name' => 'French', 'native' => 'Français'],
         'ar' => ['name' => 'Arabic', 'native' => 'العربية', 'rtl' => true],
+=======
+        'en' => [
+            'name' => 'English',
+            'native' => 'English',
+            'switcher' => [
+                'language' => 'Language',
+                'question' => 'Switch the app language to :language?',
+                'note' => 'This only changes the language for you, not for anyone else.',
+                'confirm' => 'Yes, switch',
+                'cancel' => 'Cancel',
+                'changed' => 'The language is now :language.',
+                'undo' => 'Go back to :language',
+                'translating' => 'Translating…',
+            ],
+        ],
+        'ar' => [
+            'name' => 'Arabic',
+            'native' => 'العربية',
+            'rtl' => true,
+            'switcher' => [
+                'language' => 'اللغة',
+                'question' => 'هل تريد تغيير لغة التطبيق إلى :language؟',
+                'note' => 'هذا يغيّر اللغة لك وحدك، وليس لأي شخص آخر.',
+                'confirm' => 'نعم، غيّر اللغة',
+                'cancel' => 'إلغاء',
+                'changed' => 'اللغة الآن :language.',
+                'undo' => 'العودة إلى :language',
+                'translating' => 'جارٍ الترجمة…',
+            ],
+        ],
+        'fr' => [
+            'name' => 'French',
+            'native' => 'Français',
+            'switcher' => [
+                'language' => 'Langue',
+                'question' => 'Passer l’application en :language ?',
+                'note' => 'Cela change la langue pour vous seulement, pas pour les autres.',
+                'confirm' => 'Oui, changer',
+                'cancel' => 'Annuler',
+                'changed' => 'La langue est maintenant : :language.',
+                'undo' => 'Revenir à :language',
+                'translating' => 'Traduction en cours…',
+            ],
+        ],
+        'sw' => [
+            'name' => 'Swahili',
+            'native' => 'Kiswahili',
+            'switcher' => [
+                'language' => 'Lugha',
+                'question' => 'Badilisha lugha ya programu kuwa :language?',
+                'note' => 'Hii inabadilisha lugha kwako tu, si kwa watu wengine.',
+                'confirm' => 'Ndiyo, badilisha',
+                'cancel' => 'Ghairi',
+                'changed' => 'Lugha sasa ni :language.',
+                'undo' => 'Rudi kwenye :language',
+                'translating' => 'Inatafsiri…',
+            ],
+        ],
+>>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
     ],
 ];

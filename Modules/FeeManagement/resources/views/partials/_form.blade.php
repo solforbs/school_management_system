@@ -17,11 +17,11 @@
                 <flux:select name="student_id" label="Student" placeholder="Select Student" required>
                     @foreach ($students as $studentDetails)
                         <flux:select.option value="{{ $studentDetails->student_id }}" :selected="old('student_id', $currentFee?->student_id) == $studentDetails->student_id">
-                            {{ $studentDetails->student?->name }} 
+                            <span translate="no">{{ $studentDetails->student?->name }}</span> 
                             @if ($studentDetails->admission_number)
-                                ({{ $studentDetails->admission_number }})
+                                (<span translate="no">{{ $studentDetails->admission_number }}</span>)
                             @endif
-                            &mdash; {{ $studentDetails->institution?->name }}
+                            &mdash; <span translate="no">{{ $studentDetails->institution?->name }}</span>
                         </flux:select.option>
                     @endforeach
                 </flux:select>

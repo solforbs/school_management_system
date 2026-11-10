@@ -67,9 +67,9 @@
                         </div>
 
                         <div class="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mt-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-800/60">
-                            <span>{{ $entry->schoolClass?->name ?? $entry->class_name }}</span>
+                            <span><span translate="no">{{ $entry->schoolClass?->name ?? $entry->class_name }}</span></span>
                             @if ($entry->teacher && !$isTeacher)
-                                <span class="text-zinc-400">{{ $entry->teacher->name }}</span>
+                                <span class="text-zinc-400"><span translate="no">{{ $entry->teacher->name }}</span></span>
                             @endif
                         </div>
                     </div>

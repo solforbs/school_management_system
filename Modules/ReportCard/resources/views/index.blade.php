@@ -18,7 +18,7 @@
                         Evaluations & Grading
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Report Cards & Term Performance</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -92,7 +92,7 @@
                     <option value="">All Class Streams ({{ count($classes) }})</option>
                     @foreach ($classes as $c)
                         <option value="{{ $c->id }}" {{ $currentClassId == $c->id ? 'selected' : '' }}>
-                            {{ $c->name }} ({{ $c->level }})
+                            <span translate="no">{{ $c->name }}</span> ({{ $c->level }})
                         </option>
                     @endforeach
                 </select>
@@ -103,7 +103,7 @@
                     <a href="{{ route('reportcard.index', ['level' => $currentLevel, 'search' => $currentSearch]) }}" 
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold transition border border-zinc-200/60"
                         title="Remove Class Filter">
-                        <span>Class: <strong>{{ $selectedClass->name }}</strong></span>
+                        <span>Class: <strong><span translate="no">{{ $selectedClass->name }}</span></strong></span>
                         <span class="text-zinc-400 hover:text-zinc-700 font-bold">✕</span>
                     </a>
                 @endif
@@ -165,7 +165,7 @@
 
                                     <td class="py-4 px-5">
                                         <div class="font-bold text-xs text-zinc-900">
-                                            {{ $reportCard->schoolClass?->name ?? 'Class Form' }}
+                                            <span translate="no">{{ $reportCard->schoolClass?->name ?? 'Class Form' }}</span>
                                         </div>
                                         <div class="text-xs text-zinc-400 mt-0.5 font-mono font-medium">
                                             Level {{ $reportCard->schoolClass?->level ?? 'Standard' }}

@@ -2,7 +2,7 @@
     'title' => null,
 ])
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ config('locales.available.'.app()->getLocale().'.rtl') ? 'rtl' : 'ltr' }}" class="scroll-smooth">
+<html lang="en" dir="{{ config('locales.available.'.app()->getLocale().'.rtl') ? 'rtl' : 'ltr' }}" class="scroll-smooth">
 
 <head>
     @include('partials.head')

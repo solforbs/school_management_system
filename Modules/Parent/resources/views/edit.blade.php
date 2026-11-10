@@ -6,7 +6,7 @@
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Parent</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update information and linked students for {{ $parent->name }}.
+                    Update information and linked students for <span translate="no">{{ $parent->name }}</span>.
                 </flux:text>
             </div>
             
@@ -79,10 +79,10 @@
                                             @checked(in_array($child->student_id, $linkedIds))
                                             class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">{{ $child->student?->name }}</span>
+                                            <span class="text-sm font-semibold text-blue-900 dark:text-blue-100"><span translate="no">{{ $child->student?->name }}</span></span>
                                             <span class="text-xs text-blue-700 dark:text-blue-300">
                                                 @if ($child->admission_number)
-                                                    {{ $child->admission_number }}
+                                                    <span translate="no">{{ $child->admission_number }}</span>
                                                 @endif
                                             </span>
                                         </div>
@@ -96,13 +96,13 @@
                                             @checked(in_array($studentDetails->student_id, $linkedIds))
                                             class="mt-1 border-zinc-300 text-blue-600 focus:ring-blue-500 rounded">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-zinc-900 dark:text-white">{{ $studentDetails->student?->name }}</span>
+                                            <span class="text-sm font-medium text-zinc-900 dark:text-white"><span translate="no">{{ $studentDetails->student?->name }}</span></span>
                                             <span class="text-xs text-zinc-500">
                                                 @if ($studentDetails->admission_number)
-                                                    {{ $studentDetails->admission_number }}
+                                                    <span translate="no">{{ $studentDetails->admission_number }}</span>
                                                 @endif
                                                 @if (isAdmin())
-                                                    &mdash; {{ $studentDetails->institution?->name }}
+                                                    &mdash; <span translate="no">{{ $studentDetails->institution?->name }}</span>
                                                 @endif
                                             </span>
                                         </div>

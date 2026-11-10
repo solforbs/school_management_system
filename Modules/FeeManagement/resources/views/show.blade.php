@@ -29,7 +29,7 @@
                         </span>
                     </div>
                     <flux:text class="text-zinc-500 text-sm mt-0.5">
-                        {{ $studentName }} &middot; {{ $admNum }} &middot; {{ $fee->institution?->name }}
+                        {{ $studentName }} &middot; {{ $admNum }} &middot; <span translate="no">{{ $fee->institution?->name }}</span>
                     </flux:text>
                 </div>
             </div>
@@ -103,9 +103,9 @@
                     <div>
                         <p class="text-xs text-zinc-400 font-medium">Parent / Guardian</p>
                         <p class="text-sm font-semibold text-zinc-800 mt-0.5">
-                            {{ $fee->parent?->name ?? 'Parent record not linked' }}</p>
+                            <span translate="no">{{ $fee->parent?->name ?? 'Parent record not linked' }}</span></p>
                         @if ($fee->parent?->email)
-                            <p class="text-xs text-zinc-500 mt-0.5">{{ $fee->parent->email }}</p>
+                            <p class="text-xs text-zinc-500 mt-0.5"><span translate="no">{{ $fee->parent->email }}</span></p>
                         @endif
                     </div>
                 </div>

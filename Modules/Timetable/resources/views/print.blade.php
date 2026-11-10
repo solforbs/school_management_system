@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-zinc-100">
+<html lang="en" class="h-full bg-zinc-100">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -106,7 +106,7 @@
                     @if (! empty($logoDataUri))
                         <img src="{{ $logoDataUri }}" alt="{{ $institution?->name ?? 'School Logo' }}" class="size-16 object-contain rounded-xl shrink-0">
                     @elseif ($institution?->logo)
-                        <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" class="size-16 object-contain rounded-xl shrink-0">
+                        <img src="{{ Storage::url($institution->logo) }}" alt="{{ $institution->name }}" translate="no" class="size-16 object-contain rounded-xl shrink-0">
                     @else
                         <img src="{{ asset('logos/solforbs-logo.png') }}" alt="{{ config('app.name', 'Solforbs') }}" class="size-16 object-contain rounded-xl shrink-0">
                     @endif

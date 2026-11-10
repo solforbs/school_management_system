@@ -139,7 +139,7 @@ new #[Title('Curricula & Frameworks')] class extends Component {
                                 <flux:table.cell>
                                     <div class="flex items-center gap-1.5 text-zinc-500 text-xs truncate max-w-[150px]">
                                         <flux:icon icon="building-library" class="size-3.5 text-zinc-400 shrink-0" />
-                                        <span>{{ $curriculum->institution?->name ?? '—' }}</span>
+                                        <span><span translate="no">{{ $curriculum->institution?->name ?? '—' }}</span></span>
                                     </div>
                                 </flux:table.cell>
                             @endif

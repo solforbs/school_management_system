@@ -111,7 +111,7 @@ new #[Title('Academic Performance')] class extends Component {
                     Academic Performance
                 </span>
                 <span class="text-zinc-300">&bull;</span>
-                <span class="text-xs text-zinc-500 font-medium">{{ $this->institution?->name ?? 'Campus Records' }}</span>
+                <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $this->institution?->name ?? 'Campus Records' }}</span></span>
             </div>
             <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Exam Results</flux:heading>
             <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -169,7 +169,7 @@ new #[Title('Academic Performance')] class extends Component {
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="font-bold text-zinc-900 dark:text-white truncate group-hover:text-blue-600 transition">
-                                {{ $schoolClass->name }}
+                                <span translate="no">{{ $schoolClass->name }}</span>
                             </div>
                             <div class="text-[11px] text-zinc-400 mt-0.5">
                                 {{ $schoolClass->level ?? 'Class' }} &bull; {{ $stat['students'] }} student(s)

@@ -60,11 +60,11 @@
                 <div class="flex items-center gap-3.5">
                     <div
                         class="size-12 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-base shadow-sm">
-                        {{ strtoupper(substr($payment->institution?->name ?? (currentInstitution()?->name ?? 'SC'), 0, 2)) }}
+                        <span translate="no">{{ strtoupper(substr($payment->institution?->name ?? (currentInstitution()?->name ?? 'SC'), 0, 2)) }}</span>
                     </div>
                     <div>
                         <h3 class="text-base font-black text-zinc-900">
-                            {{ $payment->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</h3>
+                            <span translate="no">{{ $payment->institution?->name ?? (currentInstitution()?->name ?? __('Institution')) }}</span></h3>
                         <p class="text-xs text-zinc-500">Monthly Compensation & Statutory Disbursement Voucher</p>
                     </div>
                 </div>
@@ -85,7 +85,7 @@
                     <div class="font-black text-zinc-900 text-sm">
                         @if ($staff)
                             <a href="{{ route('staff.show', $staff->id) }}" class="hover:text-blue-600 transition">
-                                {{ $staff->name }}
+                                <span translate="no">{{ $staff->name }}</span>
                             </a>
                         @else
                             <span>Staff Member</span>
@@ -162,7 +162,7 @@
                 </div>
                 <div class="sm:text-right">
                     <span class="text-zinc-400 block mb-0.5">Authorized & Logged By:</span>
-                    <strong class="text-zinc-800">{{ $payment->recordedBy?->name ?? 'Accounts Officer' }}</strong>
+                    <strong class="text-zinc-800"><span translate="no">{{ $payment->recordedBy?->name ?? 'Accounts Officer' }}</span></strong>
                 </div>
             </div>
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ config('locales.available.'.app()->getLocale().'.rtl') ? 'rtl' : 'ltr' }}" >
+<html lang="en" dir="{{ config('locales.available.'.app()->getLocale().'.rtl') ? 'rtl' : 'ltr' }}" >
 
 <head>
     @include('partials.head')
@@ -23,7 +23,7 @@
                     <a href="{{ route('institution.index') }}" wire:navigate.hover class="group flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 transition shadow-2xs" title="Switch or Manage Campuses">
                         <div class="min-w-0 flex-1">
                             <flux:text size="sm" class="font-bold text-zinc-900 dark:text-zinc-100 truncate block group-hover:text-blue-600 transition">
-                                {{ currentInstitution()->name }}
+                                <span translate="no">{{ currentInstitution()->name }}</span>
                             </flux:text>
                             <span class="text-[11px] text-zinc-400 font-mono block mt-0.5">{{ __('Active Campus') }}</span>
                         </div>
@@ -250,6 +250,8 @@
 
         <flux:spacer />
 
+        <x-language-switcher class="px-2" />
+
         <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
 
         {{-- Revealed by resources/js/pwa.js once the browser offers to install the app --}}
@@ -270,6 +272,8 @@
 
         <flux:spacer />
 
+        <x-language-switcher position="bottom" align="end" class="me-2" />
+
         <flux:dropdown position="top" align="end">
             <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
 
@@ -280,8 +284,8 @@
                             <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" />
 
                             <div class="grid flex-1 text-start text-sm leading-tight">
-                                <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
-                                <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
+                                <flux:heading class="truncate"><span translate="no">{{ auth()->user()->name }}</span></flux:heading>
+                                <flux:text class="truncate"><span translate="no">{{ auth()->user()->email }}</span></flux:text>
                             </div>
                         </div>
                     </div>
@@ -310,6 +314,7 @@
 
     {{-- Own grid row above the page content (see app.css); left to auto-placement these land in the sidebar column --}}
     <div class="sticky top-0 z-40 [grid-area:banners]" data-app-banners>
+        <x-language-undo-banner />
         <x-impersonation-banner />
         <x-demo-banner />
     </div>

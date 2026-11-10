@@ -26,7 +26,7 @@ class SaveInstitution
      * The onboarding form asks for far less than the settings screen: this
      * is someone signing their school up, not configuring it.
      *
-     * @return array<string, string>
+     * @return array<string, mixed>
      */
     public static function createRules(): array
     {
@@ -44,6 +44,7 @@ class SaveInstitution
             'postal_address' => 'nullable|string|max:255',
             'physical_address' => 'nullable|string',
             'logo' => 'nullable|image|max:2048',
+            'locale' => ['nullable', 'string', Rule::in(array_keys(config('locales.available')))],
         ];
     }
 
@@ -58,7 +59,8 @@ class SaveInstitution
             'type' => 'required|string|in:School,College,University,Training Centre',
             'education_level' => 'nullable|string|max:100',
             'timezone' => 'required|string|max:50',
-            'locale' => ['required', 'string', Rule::in(array_keys(config('locales.available')))],
+            // `sometimes`: an update that leaves the language out keeps the current one.
+            'locale' => ['sometimes', 'required', 'string', Rule::in(array_keys(config('locales.available')))],
             'logo' => 'nullable|image|max:2048',
             'min_electives' => 'nullable|integer|min:0',
             'max_electives' => 'nullable|integer|gte:min_electives',
@@ -109,6 +111,11 @@ class SaveInstitution
 
         if (empty($data['country'])) {
             $data['country'] = 'Kenya';
+        }
+
+        // The column is not nullable; a form without the field means English.
+        if (empty($data['locale'])) {
+            $data['locale'] = config('locales.default');
         }
 
         // New institutions start unapproved regardless of the column's

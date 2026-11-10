@@ -61,7 +61,7 @@
                                 <flux:select.option value="">Select Institution...</flux:select.option>
                                 @foreach ($institutions as $institution)
                                     <flux:select.option value="{{ $institution->id }}" :selected="old('institution_id') == $institution->id">
-                                        {{ $institution->name }}
+                                        <span translate="no">{{ $institution->name }}</span>
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
@@ -130,7 +130,7 @@
                                             $institution_ids = $parent->parent?->students->pluck('institution_id')->unique()->implode(' ');
                                         @endphp
                                         <option value="{{ $parent->id }}" data-institution-ids="{{ $institution_ids }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
-                                            {{ $parent->name }} ({{ $parent->email }})
+                                            <span translate="no">{{ $parent->name }}</span> (<span translate="no">{{ $parent->email }}</span>)
                                         </option>
                                     @endforeach
                                 @endisset

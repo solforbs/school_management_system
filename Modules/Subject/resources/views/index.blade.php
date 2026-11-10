@@ -17,7 +17,7 @@
                         Academic Curriculum
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-600 font-medium">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-600 font-medium"><span translate="no">{{ $institution?->name ?? currentInstitution()?->name ?? __('Institution') }}</span></span>
                 </div>
                 <h1 class="text-2xl font-black tracking-tight text-zinc-900">Subjects Directory</h1>
                 <p class="text-zinc-500 text-xs mt-0.5">
@@ -173,7 +173,7 @@
                                                         {{ $subject->code ?: 'SUB-' . str_pad($subject->id, 3, '0', STR_PAD_LEFT) }}
                                                     </span>
                                                     <span class="text-zinc-300">&bull;</span>
-                                                    <span class="font-sans text-[11px] text-zinc-500">{{ $subject->institution?->name ?? 'Main Campus' }}</span>
+                                                    <span class="font-sans text-[11px] text-zinc-500"><span translate="no">{{ $subject->institution?->name ?? 'Main Campus' }}</span></span>
                                                 </div>
                                             </div>
                                         </div>

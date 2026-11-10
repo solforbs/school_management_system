@@ -94,7 +94,7 @@
                             <option value="">Select Account</option>
                             @foreach ($accounts as $account)
                                 <option value="{{ $account->id }}" {{ old('user_id') == $account->id ? 'selected' : '' }}>
-                                    {{ $account->name }} ({{ $account->getRoleNames()->first() ?? 'Staff' }})
+                                    <span translate="no">{{ $account->name }}</span> ({{ $account->getRoleNames()->first() ?? 'Staff' }})
                                 </option>
                             @endforeach
                         </flux:select>

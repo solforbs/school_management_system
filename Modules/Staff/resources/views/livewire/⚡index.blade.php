@@ -107,7 +107,7 @@ new #[Title('Staff Directory')] class extends Component
                         Human Resources
                     </span>
                     <span class="text-zinc-300">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? 'Campus Operations' }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ currentInstitution()?->name ?? 'Campus Operations' }}</span></span>
                 </div>
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white">Staff Directory</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -248,7 +248,7 @@ new #[Title('Staff Directory')] class extends Component
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-1.5 flex-wrap">
                                             <a href="{{ route('staff.show', $member->id) }}" wire:navigate.hover class="font-bold text-zinc-900 dark:text-white hover:text-blue-600 transition text-sm">
-                                                {{ $member->name }}
+                                                <span translate="no">{{ $member->name }}</span>
                                             </a>
                                             <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
                                                 {{ $staffNo }}
@@ -347,7 +347,7 @@ new #[Title('Staff Directory')] class extends Component
                                             </div>
                                             <div class="min-w-0 flex-1">
                                                 <a href="{{ route('staff.show', $member->id) }}" wire:navigate.hover class="font-bold text-zinc-900 dark:text-white hover:text-zinc-600 transition truncate block">
-                                                    {{ $member->name }}
+                                                    <span translate="no">{{ $member->name }}</span>
                                                 </a>
                                                 <div class="text-xs text-zinc-400 mt-0.5 flex items-center gap-1.5 font-mono">
                                                     <span class="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200 dark:border-zinc-700 text-[11px]">{{ $staffNo }}</span>

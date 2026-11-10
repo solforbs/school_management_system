@@ -283,7 +283,7 @@
                                                     {{ $absent['student_name'] }}
                                                 </div>
                                                 <div class="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 mt-0.5">
-                                                    <span class="font-mono">{{ $absent['admission_number'] }}</span>
+                                                    <span class="font-mono"><span translate="no">{{ $absent['admission_number'] }}</span></span>
                                                     <span>&bull;</span>
                                                     <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ $absent['class_name'] }}</span>
                                                 </div>
@@ -309,7 +309,7 @@
 
                                         <div class="mt-3 pt-2.5 border-t border-zinc-200/60 dark:border-zinc-800/80 flex items-center justify-between text-xs">
                                             <div class="truncate text-zinc-600 dark:text-zinc-400 font-medium">
-                                                {{ $absent['parent_name'] }}
+                                                <span translate="no">{{ $absent['parent_name'] }}</span>
                                             </div>
                                             <div class="flex items-center gap-1 shrink-0">
                                                 @if ($absent['parent_phone'])
@@ -448,7 +448,7 @@
                             <div>
                                 <div class="flex items-center justify-between gap-2 mb-2">
                                     <span class="px-2 py-0.5 rounded-md text-[10.5px] font-bold uppercase tracking-wider bg-zinc-200/80 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
-                                        {{ $allocation->schoolClass?->name ?? 'Class' }}
+                                        <span translate="no">{{ $allocation->schoolClass?->name ?? 'Class' }}</span>
                                     </span>
                                     <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
                                         {{ $allocation->schoolClass?->curriculum?->name ?? 'Curriculum' }}

@@ -256,7 +256,7 @@ new #[Title('Student Directory')] class extends Component
                     Academic Enrollment
                 </span>
                 <span class="text-xs text-zinc-400">&bull;</span>
-                <span class="text-xs text-zinc-500 font-medium">{{ $institution?->name ?? 'Campus Operations' }}</span>
+                <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ $institution?->name ?? 'Campus Operations' }}</span></span>
             </div>
             <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">Student Directory</flux:heading>
             <flux:text class="text-zinc-500 text-sm mt-0.5">
@@ -368,7 +368,7 @@ new #[Title('Student Directory')] class extends Component
                     class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 py-2 px-3 text-xs font-medium text-zinc-800 dark:text-zinc-200 focus:bg-white dark:focus:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 cursor-pointer transition">
                     <option value="">All Classes</option>
                     @foreach ($this->classes as $c)
-                        <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->level }})</option>
+                        <option translate="no" value="{{ $c->id }}">{{ $c->name }} ({{ $c->level }})</option>
                     @endforeach
                 </select>
 
@@ -425,7 +425,7 @@ new #[Title('Student Directory')] class extends Component
                 @endif
                 @if ($this->classId && ($selectedClass = $this->classes->firstWhere('id', $this->classId)))
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold border border-zinc-200/80 dark:border-zinc-700">
-                        <span>Class: <strong>{{ $selectedClass->name }}</strong></span>
+                        <span>Class: <strong><span translate="no">{{ $selectedClass->name }}</span></strong></span>
                         <button type="button" wire:click="$set('classId', '')" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-bold ml-0.5 cursor-pointer">×</button>
                     </span>
                 @endif
@@ -480,7 +480,7 @@ new #[Title('Student Directory')] class extends Component
                             <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                 @if ($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
                                     <img src="{{ asset('storage/' . $student->profile_photo) }}"
-                                        alt="{{ $user?->name }}"
+                                        alt="{{ $user?->name }}" translate="no"
                                         class="size-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0">
                                 @else
                                     <div class="size-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs flex items-center justify-center text-zinc-800 dark:text-zinc-200 shrink-0">
@@ -492,7 +492,7 @@ new #[Title('Student Directory')] class extends Component
                                         <a href="{{ $user ? route('student.show', $user->id) : '#' }}"
                                             wire:navigate.hover
                                             class="font-bold text-zinc-900 dark:text-white hover:text-zinc-600 transition text-sm">
-                                            {{ $user?->name ?? 'Student' }}
+                                            <span translate="no">{{ $user?->name ?? 'Student' }}</span>
                                         </a>
                                         <span class="inline-flex px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-mono text-[10px] font-semibold border border-zinc-200 dark:border-zinc-700 whitespace-nowrap shrink-0">
                                             {{ $admNo }}
@@ -616,7 +616,7 @@ new #[Title('Student Directory')] class extends Component
                                     <div class="flex items-center gap-3">
                                         @if ($student->profile_photo && Storage::disk('public')->exists($student->profile_photo))
                                             <img src="{{ asset('storage/' . $student->profile_photo) }}"
-                                                alt="{{ $user?->name }}"
+                                                alt="{{ $user?->name }}" translate="no"
                                                 class="size-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-700 shrink-0">
                                         @else
                                             <div
@@ -628,7 +628,7 @@ new #[Title('Student Directory')] class extends Component
                                             <a href="{{ $user ? route('student.show', $user->id) : '#' }}"
                                                 wire:navigate.hover
                                                 class="font-bold text-zinc-900 dark:text-white hover:text-zinc-600 transition truncate block">
-                                                {{ $user?->name ?? 'Student' }}
+                                                <span translate="no">{{ $user?->name ?? 'Student' }}</span>
                                             </a>
                                             <div
                                                 class="text-xs text-zinc-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-mono">

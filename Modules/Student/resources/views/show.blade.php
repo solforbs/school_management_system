@@ -24,7 +24,7 @@
                     <span class="text-xs text-zinc-300">&bull;</span>
                     <span class="text-xs text-zinc-500 font-medium">Student Dossier</span>
                 </div>
-                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900">{{ $student->name }}</flux:heading>
+                <flux:heading size="xl" class="font-black tracking-tight text-zinc-900"><span translate="no">{{ $student->name }}</span></flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-0.5">
                     Official learner profile, academic enrollment, guardian contacts, and medical history.
                 </flux:text>
@@ -59,7 +59,7 @@
         <div class="bg-white rounded-3xl p-5 sm:p-8 border border-zinc-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
             <div class="flex items-start sm:items-center gap-4">
                 @if($details?->profile_photo && Storage::disk('public')->exists($details->profile_photo))
-                    <img src="{{ asset('storage/' . $details->profile_photo) }}" alt="{{ $student->name }}" 
+                    <img src="{{ asset('storage/' . $details->profile_photo) }}" alt="{{ $student->name }}" translate="no" 
                         class="size-16 sm:size-20 rounded-2xl object-cover border border-zinc-200 shadow-sm shrink-0">
                 @else
                     <div class="size-16 sm:size-20 rounded-2xl bg-zinc-900 text-white flex items-center justify-center font-black text-xl sm:text-2xl shadow-sm shrink-0">
@@ -69,7 +69,7 @@
 
                 <div class="min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h2 class="text-lg sm:text-xl font-black text-zinc-900 tracking-tight truncate">{{ $student->name }}</h2>
+                        <h2 class="text-lg sm:text-xl font-black text-zinc-900 tracking-tight truncate"><span translate="no">{{ $student->name }}</span></h2>
                         <span class="px-2.5 py-0.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0
                             {{ $status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                                ($status === 'suspended' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-zinc-100 text-zinc-700 border border-zinc-200') }}">
@@ -82,7 +82,7 @@
                         <span class="text-zinc-300">&bull;</span>
                         <span class="font-sans font-semibold text-zinc-700 truncate">{{ $className }}</span>
                         <span class="text-zinc-300">&bull;</span>
-                        <span class="font-sans text-zinc-500 truncate">{{ $student->email }}</span>
+                        <span class="font-sans text-zinc-500 truncate"><span translate="no">{{ $student->email }}</span></span>
                     </div>
                 </div>
             </div>
@@ -124,7 +124,7 @@
 
                         <div class="col-span-2 sm:col-span-1">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Direct Phone</span>
-                            <div class="font-bold text-zinc-900 font-mono">{{ $details?->phone ?: 'None Provided' }}</div>
+                            <div class="font-bold text-zinc-900 font-mono"><span translate="no">{{ $details?->phone ?: 'None Provided' }}</span></div>
                         </div>
                     </div>
 
@@ -237,7 +237,7 @@
                     <div class="space-y-3.5 text-xs">
                         <div>
                             <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">Enrolled Institution</span>
-                            <strong class="text-zinc-900 font-bold text-sm">{{ $details?->institution?->name ?? currentInstitution()?->name ?? __('Not Assigned') }}</strong>
+                            <strong class="text-zinc-900 font-bold text-sm"><span translate="no">{{ $details?->institution?->name ?? currentInstitution()?->name ?? __('Not Assigned') }}</span></strong>
                         </div>
 
                         <div>

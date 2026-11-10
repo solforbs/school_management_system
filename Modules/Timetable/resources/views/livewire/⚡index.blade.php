@@ -1689,7 +1689,7 @@ new #[Title('Timetable')] class extends Component
                         Academic Schedule
                     </span>
                     <span class="text-xs text-zinc-400">&bull;</span>
-                    <span class="text-xs text-zinc-500 font-medium">{{ currentInstitution()?->name ?? __('Institution') }}</span>
+                    <span class="text-xs text-zinc-500 font-medium"><span translate="no">{{ currentInstitution()?->name ?? __('Institution') }}</span></span>
                     @if ($isDraftMode)
                         <span class="text-xs text-zinc-400">&bull;</span>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
@@ -1881,7 +1881,7 @@ new #[Title('Timetable')] class extends Component
                             <option value="">Select a class...</option>
                             @foreach ($classes as $schoolClass)
                                 <option value="{{ $schoolClass->id }}">
-                                    {{ $schoolClass->name }}
+                                    <span translate="no">{{ $schoolClass->name }}</span>
                                 </option>
                             @endforeach
                         </select>
@@ -1966,12 +1966,12 @@ new #[Title('Timetable')] class extends Component
                 <div class="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div class="flex items-center gap-3 flex-wrap">
                         <flux:heading size="lg" class="font-bold">
-                            {{ $selectedClass->name }} {{ $isDraftMode ? 'Draft Preview' : 'Master Schedule' }}
+                            <span translate="no">{{ $selectedClass->name }}</span> {{ $isDraftMode ? 'Draft Preview' : 'Master Schedule' }}
                         </flux:heading>
                         @if ($selectedClass->classTeacher)
                             <div class="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">
                                 <flux:icon icon="user" class="size-3.5 text-indigo-500" />
-                                Class Teacher: <span class="font-bold text-zinc-900 dark:text-white">{{ $selectedClass->classTeacher->name }}</span>
+                                Class Teacher: <span class="font-bold text-zinc-900 dark:text-white"><span translate="no">{{ $selectedClass->classTeacher->name }}</span></span>
                             </div>
                         @endif
                         @if ($selectedClass->curriculum)
@@ -2280,7 +2280,7 @@ new #[Title('Timetable')] class extends Component
                                     <label class="cursor-pointer border rounded-2xl p-3 text-center transition-all {{ $generatorScope === 'class' ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30' : 'border-zinc-200 dark:border-zinc-800' }}">
                                         <input type="radio" wire:model.live="generatorScope" value="class" class="sr-only" />
                                         <div class="text-xs font-bold text-zinc-900 dark:text-white">Current Class</div>
-                                        <div class="text-[10px] text-zinc-500 mt-0.5">{{ $selectedClass?->name ?? 'Single class' }}</div>
+                                        <div class="text-[10px] text-zinc-500 mt-0.5"><span translate="no">{{ $selectedClass?->name ?? 'Single class' }}</span></div>
                                     </label>
                                     <label class="cursor-pointer border rounded-2xl p-3 text-center transition-all {{ $generatorScope === 'stream' ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30' : 'border-zinc-200 dark:border-zinc-800' }}">
                                         <input type="radio" wire:model.live="generatorScope" value="stream" class="sr-only" />
@@ -2672,7 +2672,7 @@ new #[Title('Timetable')] class extends Component
                                     {{ $lessonEntryId ? 'Edit Lesson Slot' : 'Assign Lesson Slot' }}
                                 </flux:heading>
                                 <flux:text class="text-xs text-zinc-500">
-                                    <strong class="text-zinc-800 dark:text-zinc-200 font-bold">{{ $selectedClass?->name ?? 'Class' }}</strong> &bull; {{ $lessonDay }} &bull; {{ $lessonPeriod }}
+                                    <strong class="text-zinc-800 dark:text-zinc-200 font-bold"><span translate="no">{{ $selectedClass?->name ?? 'Class' }}</span></strong> &bull; {{ $lessonDay }} &bull; {{ $lessonPeriod }}
                                 </flux:text>
                             </div>
                         </div>

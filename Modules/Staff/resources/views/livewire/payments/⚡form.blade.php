@@ -58,7 +58,7 @@ new #[Title('Staff Payment')] class extends Component
             <div>
                 <flux:heading size="xl" class="font-bold tracking-tight text-zinc-900 dark:text-white">Edit Payment</flux:heading>
                 <flux:text class="text-zinc-500 text-sm mt-1">
-                    Update the payroll transaction for <span class="font-semibold text-zinc-700 dark:text-zinc-300">{{ $payment->staff?->name }}</span>.
+                    Update the payroll transaction for <span class="font-semibold text-zinc-700 dark:text-zinc-300"><span translate="no">{{ $payment->staff?->name }}</span></span>.
                 </flux:text>
             </div>
             
@@ -102,7 +102,7 @@ new #[Title('Staff Payment')] class extends Component
                             <flux:select name="staff_details_id" label="Staff Member" required>
                                 @foreach ($this->staffMembers as $member)
                                     <flux:select.option value="{{ $member->id }}" :selected="old('staff_details_id', $payment->staff_details_id) == $member->id">
-                                        {{ $member->name }}{{ $member->job_title ? ' — '.$member->job_title : '' }}
+                                        <span translate="no">{{ $member->name }}</span>{{ $member->job_title ? ' — '.$member->job_title : '' }}
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>
@@ -231,7 +231,7 @@ new #[Title('Staff Payment')] class extends Component
                                 <flux:select.option value="">Select Staff Member...</flux:select.option>
                                 @foreach ($this->staffMembers as $member)
                                     <flux:select.option value="{{ $member->id }}" :selected="old('staff_details_id') == $member->id">
-                                        {{ $member->name }}{{ $member->job_title ? ' — '.$member->job_title : '' }}
+                                        <span translate="no">{{ $member->name }}</span>{{ $member->job_title ? ' — '.$member->job_title : '' }}
                                     </flux:select.option>
                                 @endforeach
                             </flux:select>

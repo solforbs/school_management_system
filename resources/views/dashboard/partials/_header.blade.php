@@ -18,10 +18,20 @@
         'hon',
         'hon.',
     ];
-    if (count($parts) > 1 && in_array(strtolower($parts[0]), $honorifics)) {
+    // Shared and demo accounts are often named after the school or a role
+    // ("Green Valley Director"); greeting by their first word gives
+    // "Welcome back, Green." - so those get a plain "Welcome back".
+    $notAPersonWords = ['director', 'admin', 'administrator', 'principal', 'headteacher', 'accountant', 'bursar', 'secretary', 'office', 'school', 'academy', 'college', 'university', 'institution', 'campus', 'demo'];
+    $institutionFirstWord = strtolower(strtok(trim((string) currentInstitution()?->name), ' ') ?: '');
+    $looksLikeAPerson = ! array_intersect(array_map('strtolower', $parts), $notAPersonWords)
+        && ($institutionFirstWord === '' || strtolower($parts[0]) !== $institutionFirstWord);
+
+    if (! $looksLikeAPerson) {
+        $greetingName = null;
+    } elseif (count($parts) > 1 && in_array(strtolower($parts[0]), $honorifics)) {
         $greetingName = $parts[0] . ' ' . $parts[1];
     } else {
-        $greetingName = $parts[0] ?? 'User';
+        $greetingName = $parts[0] ?: null;
     }
 
     $portalBadge =
@@ -50,7 +60,11 @@
         </div>
 
         <flux:heading size="xl" class="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white break-words">
-            Welcome back, {{ $greetingName }}
+            @if ($greetingName)
+                Welcome back, <span translate="no">{{ $greetingName }}</span>
+            @else
+                Welcome back
+            @endif
         </flux:heading>
 
         <flux:text class="text-xs text-zinc-500">

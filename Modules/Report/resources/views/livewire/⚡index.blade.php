@@ -52,7 +52,7 @@ new #[Title('Financial & Operational Reports')] class extends Component
                     {{ ucfirst(auth()->user()->getRoleNames()->first() ?? 'Institutional') }} Intelligence
                 </span>
                 <span class="text-xs text-zinc-400">&bull;</span>
-                <span class="text-xs text-zinc-500 font-medium truncate" data-institution-name>{{ $stats['institution']?->name ?? currentInstitution()?->name ?? 'Campus Analytics' }}</span>
+                <span class="text-xs text-zinc-500 font-medium truncate" data-institution-name><span translate="no">{{ $stats['institution']?->name ?? currentInstitution()?->name ?? 'Campus Analytics' }}</span></span>
             </div>
             @if (auth()->user()->hasRole('Teacher'))
                 <flux:heading size="xl" class="font-black tracking-tight text-zinc-900 dark:text-white break-words">Classroom &amp; Academic Analytics</flux:heading>

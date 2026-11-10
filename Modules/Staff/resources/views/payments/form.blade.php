@@ -39,7 +39,7 @@
                 <option value="">Select Staff Member</option>
                 @foreach ($this->staffMembers as $s)
                     <option value="{{ $s->id }}" {{ $selectedStaffId == $s->id ? 'selected' : '' }}>
-                        {{ $s->name }} ({{ $s->staff_number ?? 'EMP-S-' . $s->id }}) - {{ $s->job_title ?? 'Staff' }}
+                        <span translate="no">{{ $s->name }}</span> (<span translate="no">{{ $s->staff_number ?? 'EMP-S-' . $s->id }}</span>) - {{ $s->job_title ?? 'Staff' }}
                     </option>
                 @endforeach
             </select>
