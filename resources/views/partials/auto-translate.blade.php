@@ -15,7 +15,7 @@
 @php
     $locale = app()->getLocale();
     $overrides = config('locales.machine_translation_codes', []);
-<<<<<<< HEAD
+    $translatingLabel = config('locales.available.'.$locale.'.switcher.translating');
     $translateTo = config('locales.machine_translate_pages')
         ? (array_key_exists($locale, $overrides) ? $overrides[$locale] : $locale)
         : null;
@@ -31,10 +31,6 @@
             ARRAY_FILTER_USE_BOTH,
         )));
     }
-=======
-    $translateTo = array_key_exists($locale, $overrides) ? $overrides[$locale] : $locale;
-    $translatingLabel = config('locales.available.'.$locale.'.switcher.translating');
->>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
 @endphp
 
 <script>

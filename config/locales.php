@@ -1,37 +1,32 @@
 <?php
 
 /**
-<<<<<<< HEAD
- * Languages an institution can run the app in, keyed by their folder /
- * JSON file name under lang/. The locale is applied per institution by
- * App\Http\Middleware\SetInstitutionLocale.
+ * Languages the app can be shown in, keyed by their folder / JSON file name
+ * under lang/. An institution picks the default for its users and each
+ * person can switch for themselves (see App\Http\Middleware\SetInstitutionLocale).
+ *
+ * Text wrapped in __() comes from lang/{code}.json; anything not wrapped yet
+ * is machine-translated in the browser by Google's page translator, so every
+ * code here must be one Google supports.
  *
  * To add one: php artisan lang:add <code>, php artisan translatable:export
  * <code>, php artisan lang:translate-missing <code>, then list it here.
-=======
- * Languages the app can be shown in. An institution picks the default for
- * its users and each person can switch for themselves (see
- * App\Http\Middleware\SetInstitutionLocale). Pages are machine-translated
- * from English by Google's page translator, so every code here must be
- * one Google supports.
->>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
  */
 return [
     'default' => 'en',
 
     /*
-<<<<<<< HEAD
      * Stop-gap while views are being moved to __() + lang/*.json: Google's
      * in-browser translator covers text that isn't wrapped yet. Turn off
      * (MACHINE_TRANSLATE_PAGES=false) once every module uses lang files.
      */
     'machine_translate_pages' => (bool) env('MACHINE_TRANSLATE_PAGES', true),
-=======
+
+    /*
      * Name of the cookie that holds a person's own language choice. It is
      * only set while that choice differs from their institution's default.
      */
     'cookie' => 'locale',
->>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
 
     /*
      * Google page-translator language codes where they differ from ours.
@@ -47,12 +42,6 @@ return [
      * a language by mistake can still read how to get back.
      */
     'available' => [
-<<<<<<< HEAD
-        'en' => ['name' => 'English', 'native' => 'English'],
-        'sw' => ['name' => 'Swahili', 'native' => 'Kiswahili'],
-        'fr' => ['name' => 'French', 'native' => 'Français'],
-        'ar' => ['name' => 'Arabic', 'native' => 'العربية', 'rtl' => true],
-=======
         'en' => [
             'name' => 'English',
             'native' => 'English',
@@ -110,6 +99,5 @@ return [
                 'translating' => 'Inatafsiri…',
             ],
         ],
->>>>>>> 27c4899612f3bcc849318ab521ed33eb578ae140
     ],
 ];
